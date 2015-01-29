@@ -8,21 +8,19 @@
  * You must not remove this notice, or any other, from this software.
  */
 
-package flatgui.core.websocket;
+package flatgui.core2;
 
-import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
-import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+import flatgui.core.IFGContainer;
+import flatgui.core.websocket.FGContainerSession;
 
 /**
-* @author Denis Lebedev
-*/
-public class FGWebSocketServlet extends WebSocketServlet
+ * @author Denis Lebedev
+ */
+public class FGSessionContainerHost implements IFGContainerHost<FGContainerSession>
 {
-
     @Override
-    public void configure(WebSocketServletFactory factory)
+    public FGContainerSession hostContainer(IFGContainer container)
     {
-        factory.register(FGContainerSessionProvider.class);
-        factory.getPolicy().setIdleTimeout(24 * 60 * 60 * 1000);
+        return new FGContainerSession(container);
     }
 }

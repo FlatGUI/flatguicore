@@ -6,11 +6,11 @@
 ; the terms of this license.
 ; You must not remove this notice, or any other, from this software.
 
-(ns flatgui.app
+(ns flatgui._old_app
   ;; Following namespaces are necessary for all applications
   ;; even though they are not used by client code explicitly
-  (:require [flatgui.appcontainer]
+  (:require [flatgui._old_appcontainer]
             [flatgui.access]
-            [flatgui.widgets.componentbase]))
+            [flatgui.widgets._old_componentbase]))
 
-(def defroot flatgui.widgets.componentbase/initialize)
+(def defroot flatgui.widgets._old_componentbase/initialize)

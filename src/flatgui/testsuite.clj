@@ -7,8 +7,7 @@
 ; You must not remove this notice, or any other, from this software.
 
 (ns flatgui.testsuite
-  (:require [flatgui.widgets._old_componentbase]
-            [flatgui.comlogic :as fgc]
+  (:require [flatgui.comlogic :as fgc]
             [flatgui.util.matrix :as m]
             [flatgui.awt :as awt])
   (:import (java.awt.event MouseEvent KeyEvent)

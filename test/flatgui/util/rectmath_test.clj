@@ -117,23 +117,23 @@
         rf {:x 0 :y 0 :w 4 :h 4}
         rg {:x 1 :y 1 :w 2 :h 2}
         rfg {:x 0 :y 0 :w 4 :h 4}]
-    (test/is (= r1 (rect+ r1 r1)))
-    (test/is (= r12 (rect+ r1 r2)))
-    (test/is (= r12 (rect+ r2 r1)))
-    (test/is (= r34 (rect+ r3 r4)))
-    (test/is (= r34 (rect+ r4 r3)))
-    (test/is (nil? (rect+ r5 r6)))
-    (test/is (nil? (rect+ r6 r5)))
-    (test/is (nil? (rect+ r7 r8)))
-    (test/is (nil? (rect+ r8 r7)))
-    (test/is (= r9a (rect+ r9 ra)))
-    (test/is (= r9a (rect+ ra r9)))
-    (test/is (= rbc (rect+ rb rc)))
-    (test/is (= rbc (rect+ rc rb)))
-    (test/is (= rde (rect+ rd re)))
-    (test/is (= rde (rect+ re rd)))
-    (test/is (= rfg (rect+ rf rg)))
-    (test/is (= rfg (rect+ rg rf)))))
+    (test/is (= r1 (r/rect+ r1 r1)))
+    (test/is (= r12 (r/rect+ r1 r2)))
+    (test/is (= r12 (r/rect+ r2 r1)))
+    (test/is (= r34 (r/rect+ r3 r4)))
+    (test/is (= r34 (r/rect+ r4 r3)))
+    (test/is (nil? (r/rect+ r5 r6)))
+    (test/is (nil? (r/rect+ r6 r5)))
+    (test/is (nil? (r/rect+ r7 r8)))
+    (test/is (nil? (r/rect+ r8 r7)))
+    (test/is (= r9a (r/rect+ r9 ra)))
+    (test/is (= r9a (r/rect+ ra r9)))
+    (test/is (= rbc (r/rect+ rb rc)))
+    (test/is (= rbc (r/rect+ rc rb)))
+    (test/is (= rde (r/rect+ rd re)))
+    (test/is (= rde (r/rect+ re rd)))
+    (test/is (= rfg (r/rect+ rf rg)))
+    (test/is (= rfg (r/rect+ rg rf)))))
 
 (test/deftest get-largest-adjacent-test
   (let [r1 {:x 2 :y 0 :w 5 :h 2}
@@ -142,6 +142,6 @@
         r4 {:x 2 :y 5 :w 1 :h 1}
         r5 {:x 4 :y 5 :w 3 :h 1}
         res {:x 2 :y 0 :w 5 :h 5}]
-    (test/is (= res (get-largest-adjacent [r1 r2 r3 r4 r5])))))
+    (test/is (= res (r/get-largest-adjacent [r1 r2 r3 r4 r5])))))
 
 

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * @author Denis Lebedev
  */
-public class FGPaintVectorBinaryCoder_utest extends Assert
+public class FGPaintVectorBinaryCoderTest extends Assert
 {
     private FGPaintVectorBinaryCoder.RectAreaCoder rectAreaCoder_;
     private Invocable decoder_;

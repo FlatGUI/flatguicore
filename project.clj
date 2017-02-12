@@ -25,7 +25,7 @@
                  [junit/junit "4.12"]]
   :deploy-repositories {"releases" {:url "https://oss.sonatype.org/service/local/staging/deploy/maven2/" :creds :gpg}
                         "snapshots" {:url "https://oss.sonatype.org/content/repositories/snapshots/" :creds :gpg}}
-  :java-source-paths ["src/java"]
+  :java-source-paths ["src/java" "test/java"]
   :omit-source true
   :aot :all
 

@@ -10,6 +10,7 @@
 
 package flatgui.core.websocket;
 
+import flatgui.core.websocket.FGPaintVectorBinaryCoder;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.junit.Assert;
 import org.junit.Before;

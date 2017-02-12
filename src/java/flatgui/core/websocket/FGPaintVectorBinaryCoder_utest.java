@@ -47,7 +47,7 @@ public class FGPaintVectorBinaryCoder_utest extends Assert
             }
         };
 
-        URL javaScriptCodeURL = ClassLoader.getSystemResource("java/flatgui/core/websocket/fgdecoder.js");
+        URL javaScriptCodeURL = ClassLoader.getSystemResource("js/fgdecoder.js");
         String script = Files.readAllLines(Paths.get(javaScriptCodeURL.toURI())).stream().map(l -> l+"\n").collect(Collectors.joining());
 
         ScriptEngineManager factory = new ScriptEngineManager();
@@ -68,7 +68,7 @@ public class FGPaintVectorBinaryCoder_utest extends Assert
         writtenBytes = rectAreaCoder_.writeCommand(stream, 4, cmd(null, 0, 0, 127, 31));
         assertEquals(2, writtenBytes);
         ScriptObjectMirror decoded0 = (ScriptObjectMirror)decoder_.invokeFunction("decodeRect", stream, 0);
-        assertEquals(0, decoded0.get("w"));
+        assertEquals(0, decoded0.get("test"));//("w"));
         assertEquals(0, decoded0.get("h"));
         ScriptObjectMirror decoded2 = (ScriptObjectMirror)decoder_.invokeFunction("decodeRect", stream, 2);
         assertEquals(112, decoded2.get("w"));

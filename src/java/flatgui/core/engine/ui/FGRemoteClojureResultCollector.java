@@ -64,19 +64,22 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         lookVecStringPoolMapTransmitter_ = new FGWebContainerWrapper.StringPoolMapTransmitter(keyCache_, null);
         componentIdToResourceStringPool_ = new HashMap<>();
         lookVecResourceStringPoolMapTransmitter_ = new FGWebContainerWrapper.ResourceStringPoolMapTransmitter(keyCache_, null);
-        propertyToTransWrapper_ = new HashMap<>();
+        propertyToTransWrapper_ = new LinkedHashMap<>();
 
         diffsToTransmit_ = new ArrayList<>(3 + propertyToTransWrapper_.size());
 
-        addTransmitterWrapper(new BooleanFlagsMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
-        addTransmitterWrapper(new ClipSizeMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
                 glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
+        addTransmitterWrapper(new BooleanFlagsMapTransmitterWrapper(keyCache_));
+        //addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
+        addTransmitterWrapper(new ClipSizeMapTransmitterWrapper(keyCache_));
+//        addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
+//                glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
         addTransmitterWrapper(new ViewportMatrixMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new PositionMatrixMapTransmitterWrapper(keyCache_));
         // TODO client evolver, but that has to be redesigned into property change transition function, to be more generic
-        allWrappers_ = new HashSet<>(propertyToTransWrapper_.values());
+        allWrappers_ = new LinkedHashSet<>(propertyToTransWrapper_.values());
     }
 
     void initialize(Supplier<List<Object>> paintAllSequenceSupplier)

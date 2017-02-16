@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>FlatGUI WebSocket Client / Canvas</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+	<style>
+	body { 
+	    display: block;
+	    margin: 0px;
+	} 
+	</style>
+    </head>
+    <body bgcolor="#09111A">
+	<div id="messages"></div>
+	<canvas id="hostCanvas" height="1216" width="1600"></canvas>
+	<script type="text/javascript">
+		var serverWebSocketUris = ["ws://localhost:13100", "ws://localhost:13101", "ws://localhost:13102"];
+	</script>
+    <script type="text/javascript" src="fgdecoder.js"></script>
+    <script type="text/javascript" src="maincomm.js"></script>
+    <script type="text/javascript" src="maincanvas.js"></script>
+    </body>
+</html>

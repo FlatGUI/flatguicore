@@ -86,10 +86,23 @@ function addImageToG(gElem, imageUrl, x, y, w, h)
 
 function setClipToG(gElem, codeObj)
 {
-//   currentTx = currentTransform[0][2];
-//   currentTy = currentTransform[1][2];
-//   currentClip = {x: currentTx, y: currentTy, w: codeObj.w, h: codeObj.h};
-//   applyCurrentClip();
+}
+
+function setColorToPrimitive(gElem, p, fill)
+{
+    if (fill)
+    {
+        p.setAttribute('fill', currentlyDecodedColorStr);
+    }
+    else
+    {
+        p.setAttribute('stroke', currentlyDecodedColorStr);
+    }
+}
+
+function setFontToPrimitive(gElem, p, fill)
+{
+    p.style.font = currentFont
 }
 
 function setTextToG(gElem, text, x, y)
@@ -103,33 +116,30 @@ function setTextToG(gElem, text, x, y)
     var t = document.createElementNS(svgNS, 'text');
     t.setAttribute('x', x);
     t.setAttribute('y', y);
-//    if (currentlyDecodedColorStr)
-//    {
-//        t.setAttribute('fill', currentlyDecodedColorStr);
-//    }
-    t.setAttribute('fill', '#FFFFFF');
+    setColorToPrimitive(gElem, t, true);
+    setFontToPrimitive(gElem, t);
     t.textContent = text;
     gElem.appendChild(t);
 }
 
-function setRectToG(gElem, x, y, w, h)
+function setRectToG(gElem, x, y, w, h, fill)
 {
     var r = document.createElementNS(svgNS,'rect');
     r.setAttribute('x',x);
     r.setAttribute('y',y);
     r.setAttribute('width',w);
     r.setAttribute('height',h);
-    //r.setAttribute('fill','#35F3D7'); TODO ?? maintain 'current color for a g' while decoding new look vector?
+    setColorToPrimitive(gElem, r, fill);
     gElem.appendChild(r);
 }
 
-function setCircleToG(gElem, x, y, r)
+function setCircleToG(gElem, x, y, r, fill)
 {
     var c = document.createElementNS(svgNS,'circle');
     c.setAttribute('cx',x);
     c.setAttribute('cy',y);
     c.setAttribute('r',r);
-    //c.setAttribute('fill','#D795B3');
+    setColorToPrimitive(gElem, c, fill);
     gElem.appendChild(c);
 }
 
@@ -140,7 +150,7 @@ function setLineToG(gElem, x1, y1, x2, y2)
     l.setAttribute('y1', y1);
     l.setAttribute('x2', x2);
     l.setAttribute('y2', y2);
-    l.setAttribute('stroke', '#000000');
+    setColorToPrimitive(gElem, l, false);
     l.setAttribute('stroke-width', 1);
     gElem.appendChild(l);
 }
@@ -166,7 +176,7 @@ function decodeLog(msg)
 
 function decodeCVLog(msg)
 {
-    //console.log(msg);
+    console.log(msg);
 }
 
 function decodeLookVector(componentIndex, stream, byteLength)
@@ -271,7 +281,8 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                        currentFont = stringPools[componentIndex][codeObj.i];
                        applyCurrentFont();
-                       gElem.style.font = currentFont
+
+                       //gElem.style.font = currentFont
                     }
                     if (opcodeBase == CODE_SET_FONT_AND_REQUEST_METRICS && currentFont)
                     {
@@ -300,7 +311,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
                         //ctx.fillStyle=colorStr;
                         //ctx.strokeStyle=colorStr;
-                        gElem.style.fill = currentlyDecodedColorStr;
+                        //gElem.style.fill = currentlyDecodedColorStr;
 
                         c += codeObj.len;
                     }
@@ -347,7 +358,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     decodeLog( "drawRect " + JSON.stringify(codeObj));
 
                     //ctx.strokeRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w, codeObj.h);
-                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, false);
 
                     c+= codeObj.len;
                     break;
@@ -356,7 +367,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     decodeLog( "fillRect " + JSON.stringify(codeObj));
 
                     //ctx.fillRect(codeObj.x, codeObj.y, codeObj.w, codeObj.h);
-                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h); // TODO fill??
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, true);
 
                     c+= codeObj.len;
                     break;
@@ -368,7 +379,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     //ctx.beginPath();
                     //ctx.arc(codeObj.x+r+0.5, codeObj.y+r+0.5, codeObj.w/2, 0, 2*Math.PI);
                     //ctx.stroke();
-                    setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r);
+                    setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r, false);
 
                     c+= codeObj.len;
                     break;
@@ -385,7 +396,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     //ctx.beginPath();
                     //ctx.arc(codeObj.x+r+0.5, codeObj.y+r+0.5, r, 0, 2*Math.PI);
                     //ctx.fill();
-                    setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r); // TODO fill
+                    setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r, true);
 
                     c+= codeObj.len;
                     break;
@@ -460,9 +471,22 @@ function processViewportMatrixUpdate(index)
 function processClipSizeUpdate(index)
 {
     var gElem = gElems[index];
-    // TODO take into account popups
-    gElem.setAttribute('width', clipSizes.w);
-    gElem.setAttribute('height', clipSizes.h);
+
+    gElem.setAttribute('width', clipSizes[index].w);
+    gElem.setAttribute('height', clipSizes[index].h);
+
+    // TODO Take into account popups. Most like they will have to be reassigned to the root when popped up and then returned back
+    var clipId = 'clip'+index;
+    var clippath = document.createElementNS(svgNS, 'clipPath');
+    var cr = document.createElementNS(svgNS, 'rect');
+    cr.setAttribute('x', '0');
+    cr.setAttribute('y', '0');
+    cr.setAttribute('width', clipSizes[index].w);
+    cr.setAttribute('height', clipSizes[index].h);
+    clippath.setAttribute('id', clipId);
+    clippath.appendChild(cr);
+    gElem.appendChild(clippath);
+    gElem.setAttribute('clip-path', 'url(#'+clipId+')');
 }
 
 function processLookVectorUpdate(index)
@@ -540,19 +564,24 @@ function constructDOMIfPossible()
 
 function createGElem(parent, index)
 {
-    var childCount = childCounts[paintAllArray[index]];
+    var componentUid = paintAllArray[index];
+    var childCount = childCounts[componentUid];
 
-    console.log("Creating " + index + " and adding " + childCount + " children")
+    console.log("Creating " + index +"->"+componentUid + " and adding " + childCount + " children")
 
     var g = document.createElementNS(svgNS, "g");
-    gElems[paintAllArray[index]] = g;
+    gElems[componentUid] = g;
 
     var gShapes = document.createElementNS(svgNS, "g");
-    gShapes.setAttribute('id', genShapesSubElemId(index));
+    gShapes.setAttribute('id', genShapesSubElemId(componentUid));
     g.appendChild(gShapes);
-    var gChildren = document.createElementNS(svgNS, "g");
-    gChildren.setAttribute('id', genChildrenSubElemId(index));
-    g.appendChild(gChildren);
+
+    if (childCount > 0)
+    {
+        var gChildren = document.createElementNS(svgNS, "g");
+        gChildren.setAttribute('id', genChildrenSubElemId(componentUid));
+        g.appendChild(gChildren);
+    }
 
     if (parent)
     {

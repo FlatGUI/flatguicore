@@ -816,7 +816,7 @@ function getEncodedMouseEvent(x, y, id)
 
 function storeMouseEventAndGetEncoded(evt, id)
 {
-    var rect = canvas.getBoundingClientRect();
+    var rect = getHostBoundingClientRect();
     var x = evt.clientX - rect.left;
     var y = evt.clientY - rect.top;
 
@@ -901,11 +901,6 @@ function sendMouseClickEventToServer(evt)
     sendEventToServer(storeMouseEventAndGetEncoded(evt, 500));
 }
 
-function isComponentReadyForMouseRollover(i)
-{
-    return absPositions[i] && !checkFlagForComponent(i, STATE_FLAGS_ROLLOVER_DISABLED_MASK);
-}
-
 function sendMouseMoveEventToServer(evt)
 {
     if (evt.preventDefault)
@@ -913,7 +908,7 @@ function sendMouseMoveEventToServer(evt)
         evt.preventDefault();
     }
 
-    var rect = canvas.getBoundingClientRect();
+    var rect = getHostBoundingClientRect();
     var x = evt.clientX - rect.left;
     var y = evt.clientY - rect.top;
 
@@ -969,28 +964,10 @@ function sendMouseMoveEventToServer(evt)
         }
         else
         {
-            var indexUnderMouse;
+            var indexUnderMouse = getIndexUnderMouse(x,y);
             var onEdge = false;
-            var t = function(a,b) {return Math.abs(a-b) < 2;};
-            // Iterate from the end to hit tompost children first. Root is always at i=0.
-            for (var i=absPositions.length-1; i>=0; i--)
-            {
-                if (isComponentReadyForMouseRollover(i))
-                {
-                    var ix = absPositions[i][0][2];
-                    var iy = absPositions[i][1][2];
 
-                    if (x >= ix && y >= iy
-                        && x < ix+clipSizes[i].w && y < iy+clipSizes[i].h)
-                    {
-                        indexUnderMouse = i;
-                        onEdge = t(x, ix) || t(y, iy) || t(x, ix+clipSizes[i].w-1) || t(y, iy+clipSizes[i].h-1);
-                        break;
-                    }
-                }
-            }
-
-            if (!onEdge && lastIndexUnderMouse && isComponentReadyForMouseRollover(lastIndexUnderMouse))
+            if (!onEdge && lastIndexUnderMouse && /*isComponentReadyForMouseRollover(lastIndexUnderMouse)*/absPositions[lastIndexUnderMouse])
             {
                 var i = lastIndexUnderMouse;
                 var ix = absPositions[i][0][2];

@@ -18,6 +18,10 @@ var paintAllSequenceReceived = false;
 var childCountMapReceived = false;
 var domConstructed = false;
 
+var lastMouseDetectX = -1;
+var lastMouseDetectY = -1;
+var indexUnderMouse;
+
 var textMeasurer = document.createElementNS(svgNS, 'textMeasurer');
 textMeasurer.setAttribute('x', '0');
 textMeasurer.setAttribute('y', '0');
@@ -440,7 +444,6 @@ function decodeLookVector(componentIndex, stream, byteLength)
     }
 }
 
-// TODO absPositions is needed for mouse handling
 function updateTransform(index)
 {
     var tx=0, ty=0;
@@ -570,7 +573,21 @@ function createGElem(parent, index)
     console.log("Creating " + index +"->"+componentUid + " and adding " + childCount + " children")
 
     var g = document.createElementNS(svgNS, "g");
+    g.setAttribute('id', componentUid);
     gElems[componentUid] = g;
+    g.addEventListener('mousemove', function(evt)
+    {
+        var rect = getHostBoundingClientRect();
+        var x = evt.clientX - rect.left;
+        var y = evt.clientY - rect.top;
+        if (x != lastMouseDetectX || y != lastMouseDetectY)
+        {
+            console.log("->" + this.getAttribute('id'))
+            indexUnderMouse = this.getAttribute('id')
+            lastMouseDetectX = x;
+            lastMouseDetectY = y;
+        }
+    });
 
     var gShapes = document.createElementNS(svgNS, "g");
     gShapes.setAttribute('id', genShapesSubElemId(componentUid));
@@ -598,6 +615,26 @@ function createGElem(parent, index)
 
     return index;
 }
+
+function getHostBoundingClientRect()
+{
+    return hostSVG.getBoundingClientRect();
+}
+
+function getIndexUnderMouse(x, y)
+{
+    console.log("getIndexUnderMouse=" + indexUnderMouse)
+    return indexUnderMouse;
+}
+
+hostSVG.addEventListener("mousedown", sendMouseDownEventToServer, false);
+hostSVG.addEventListener("mouseup", sendMouseUpEventToServer, false);
+hostSVG.addEventListener("click", sendMouseClickEventToServer, false);
+hostSVG.addEventListener("mousemove", sendMouseMoveEventToServer, false);
+//hostSVG.addEventListener("mousedown", function(){console.log("D")}, false);
+//hostSVG.addEventListener("mouseup", function(){console.log("U")}, false);
+//hostSVG.addEventListener("click", function(){console.log("C")}, false);
+//hostSVG.addEventListener("mousemove", function(){console.log("M")}, false);
 
 function getEncodedHostResizeEvent()
 {

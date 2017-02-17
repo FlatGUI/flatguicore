@@ -686,6 +686,41 @@ function processClientEvolvers()
 
 window.setInterval(processClientEvolvers, 33); // 33 for 30 FPS processing
 
+function getHostBoundingClientRect()
+{
+    return canvas.getBoundingClientRect();
+}
+
+function isComponentReadyForMouseRollover(i)
+{
+    return absPositions[i] && !checkFlagForComponent(i, STATE_FLAGS_ROLLOVER_DISABLED_MASK);
+}
+
+// TODO do we really still need onEdge?
+function getIndexUnderMouse(x, y)
+{
+    var indexUnderMouse;
+    var onEdge = false;
+    var t = function(a,b) {return Math.abs(a-b) < 2;};
+    // Iterate from the end to hit tompost children first. Root is always at i=0.
+    for (var i=absPositions.length-1; i>=0; i--)
+    {
+        if (isComponentReadyForMouseRollover(i))
+        {
+            var ix = absPositions[i][0][2];
+            var iy = absPositions[i][1][2];
+
+            if (x >= ix && y >= iy
+                && x < ix+clipSizes[i].w && y < iy+clipSizes[i].h)
+            {
+                indexUnderMouse = i;
+                onEdge = t(x, ix) || t(y, iy) || t(x, ix+clipSizes[i].w-1) || t(y, iy+clipSizes[i].h-1);
+                break;
+            }
+        }
+    }
+}
+
 canvas.addEventListener("mousedown", sendMouseDownEventToServer, false);
 canvas.addEventListener("mouseup", sendMouseUpEventToServer, false);
 canvas.addEventListener("click", sendMouseClickEventToServer, false);

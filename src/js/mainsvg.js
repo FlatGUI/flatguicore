@@ -187,29 +187,16 @@ function decodeLookVector(componentIndex, stream, byteLength)
 {
     var gCElem = gElems[componentIndex]
 
-//    var gShapesOld = gCElem.getElementById(genShapesSubElemId(index));
-//    var gShapes = gShapesOld.cloneNode(false);
-//    gCElem.replaceChild(gShapes, gShapesOld);
     var gShapes = document.getElementById(genShapesSubElemId(componentIndex));
 
-    var gElem = gShapes;
-
-    if (gElem.childElementCount > 0)
+    if (gShapes.childElementCount > 0)
     {
-//        var gElemOld = gElem;
-//        gElem = gElem.cloneNode(false);
-//        gElems[componentIndex] = gElem;
-//        if (componentIndex != 0)
-//        {
-//            gElemOld.parentNode.replaceChild(gElem, gElemOld);
-//        }
-
-//        var childComponents = gElemOld.getElementsByTagName('g');
-//        for (var cg=0; cg<childComponents.length; cg++)
-//        {
-//            gElem.appendChild(childComponents[cg]);
-//        }
+        var gShapesNew = gShapes.cloneNode(false);
+        gCElem.replaceChild(gShapesNew, gShapes);
+        gShapes = gShapesNew;
     }
+
+    var gElem = gShapes;
 
     var c = 0;
     while (c < byteLength)
@@ -526,7 +513,7 @@ function processPaintAllList()
     }
     else
     {
-        throw new Error("Paint all seq has been received already");
+        console.log("Error: paint all seq has been received already");
     }
 }
 

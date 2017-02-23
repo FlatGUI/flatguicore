@@ -49,6 +49,7 @@ public class FGPaintVectorBinaryCoder
         registerCoder("drawRect", new DrawRectCoder());
         registerCoder("fillRect", new FillRectCoder());
         registerCoder("drawRoundRect", new DrawRoundRectCoder());
+        registerCoder("fillRoundRect", new FillRoundRectCoder());
         registerCoder("drawOval", new DrawOvalCoder());
         registerCoder("fillOval", new FillOvalCoder());
 
@@ -56,11 +57,16 @@ public class FGPaintVectorBinaryCoder
         registerCoder("drawString", drawStringCoder);
 
         registerCoder("drawLine", new DrawLineCoder());
-        registerCoder("transform", new TransformCoder());
-        registerCoder("clipRect", new ClipRectCoder());
-        registerCoder("setClip", new SetClipCoder());
-        registerCoder("pushCurrentClip", new PushCurrentClipCoder());
-        registerCoder("popCurrentClip", new PopCurrentClipCoder());
+
+// Commands 110/111 are now used for drawRoundRect/fillRoundRect
+//        registerCoder("transform", new TransformCoder());
+//        registerCoder("clipRect", new ClipRectCoder());
+// Free commands:
+//  - setClip allows rect (all combinations except 127x31), see commented out SetClipCoder impl
+//  - pushCurrentClip/popCurrentClip are 1-byte instructions
+//        registerCoder("setClip", new SetClipCoder());
+//        registerCoder("pushCurrentClip", new PushCurrentClipCoder());
+//        registerCoder("popCurrentClip", new PopCurrentClipCoder());
 
         ICommandCoder drawImageCoder = new DrawImageStrPoolCoder(stringPoolIdSupplier);
         ICommandCoder fitImageCoder = new FitImageStrPoolCoder(stringPoolIdSupplier);
@@ -546,6 +552,11 @@ public class FGPaintVectorBinaryCoder
         }
 
         protected abstract byte getOpCode();
+
+        BiFunction<List, Integer, Integer> getCoordProvider()
+        {
+            return coordProvider_;
+        }
     }
 
 
@@ -740,82 +751,155 @@ public class FGPaintVectorBinaryCoder
         }
     }
 
-    public static class TransformCoder extends RectAreaCoder
+//    public static class TransformCoder extends RectAreaCoder
+//    {
+//        public TransformCoder()
+//        {
+//            super(true, (l,i) -> {
+//                AffineTransform at = (AffineTransform) l.get(1);
+//                return i==3
+//                        ? (int)Math.round(at.getTranslateX()) // TODO why is it scaled for unit size already?
+//                        : i==4
+//                            ? (int)Math.round(at.getTranslateY())
+//                            : 0;});
+//        }
+//
+//        @Override
+//        public int writeCommand(byte[] stream, int n, List command)
+//        {
+//            return super.writeCommand(stream, n, command);
+//        }
+//
+//        @Override
+//        protected byte getOpCode()
+//        {
+//            return 0b110;
+//        }
+//    }
+//
+//    public static class ClipRectCoder extends RectAreaCoder
+//    {
+//        @Override
+//        protected byte getOpCode()
+//        {
+//            return 0b111;
+//        }
+//    }
+//
+//    public static class SetClipCoder extends RectAreaCoder
+//    {
+//        public SetClipCoder()
+//        {
+//            super(false);
+//        }
+//
+//        @Override
+//        protected byte getOpCode()
+//        {
+//            return 0b000;
+//        }
+//    }
+//
+//    public static class PushCurrentClipCoder implements ICommandCoder
+//    {
+//        @Override
+//        public int writeCommand(byte[] stream, int n, List command)
+//        {
+//            stream[n] = 0b00010000;
+//            return 1;
+//        }
+//    }
+//
+//    public static class PopCurrentClipCoder implements ICommandCoder
+//    {
+//        @Override
+//        public int writeCommand(byte[] stream, int n, List command)
+//        {
+//            stream[n] = 0b00110000;
+//            return 1;
+//        }
+//    }
+
+    public static abstract class RoundRectCoder implements ICommandCoder
     {
-        public TransformCoder()
+        private final RectAreaCoder rectAreaCoder_;
+
+        public RoundRectCoder()
         {
-            super(true, (l,i) -> {
-                AffineTransform at = (AffineTransform) l.get(1);
-                return i==3
-                        ? (int)Math.round(at.getTranslateX()) // TODO why is it scaled for unit size already?
-                        : i==4
-                            ? (int)Math.round(at.getTranslateY())
-                            : 0;});
+            rectAreaCoder_ = new RectAreaCoder()
+            {
+                @Override
+                protected byte getOpCode()
+                {
+                    return RoundRectCoder.this.getRoundRectOpCode();
+                }
+            };
+        }
+
+        public RoundRectCoder(BiFunction<List, Integer, Integer> coordProvider)
+        {
+            rectAreaCoder_ = new RectAreaCoder(true, coordProvider)
+            {
+                @Override
+                protected byte getOpCode()
+                {
+                    return RoundRectCoder.this.getRoundRectOpCode();
+                }
+            };
         }
 
         @Override
         public int writeCommand(byte[] stream, int n, List command)
         {
-            return super.writeCommand(stream, n, command);
+            int written = 0;
+
+            written += rectAreaCoder_.writeCommand(stream, n, command);
+
+            int r = rectAreaCoder_.getCoordProvider().apply(command, 5);
+            stream[n+written] = (byte)r;
+            written++;
+
+            return written;
+        }
+
+        protected abstract byte getRoundRectOpCode();
+    }
+
+    public static class DrawRoundRectCoder extends RoundRectCoder
+    {
+        public DrawRoundRectCoder()
+        {
+            super();
+        }
+
+        public DrawRoundRectCoder(BiFunction<List, Integer, Integer> coordProvider)
+        {
+            super(coordProvider);
         }
 
         @Override
-        protected byte getOpCode()
+        protected byte getRoundRectOpCode()
         {
             return 0b110;
         }
     }
 
-    public static class ClipRectCoder extends RectAreaCoder
+    public static class FillRoundRectCoder extends RoundRectCoder
     {
+        public FillRoundRectCoder()
+        {
+            super();
+        }
+
+        public FillRoundRectCoder(BiFunction<List, Integer, Integer> coordProvider)
+        {
+            super(coordProvider);
+        }
+
         @Override
-        protected byte getOpCode()
+        protected byte getRoundRectOpCode()
         {
             return 0b111;
-        }
-    }
-
-    public static class SetClipCoder extends RectAreaCoder
-    {
-        public SetClipCoder()
-        {
-            super(false);
-        }
-
-        @Override
-        protected byte getOpCode()
-        {
-            return 0b000;
-        }
-    }
-
-    public static class PushCurrentClipCoder implements ICommandCoder
-    {
-        @Override
-        public int writeCommand(byte[] stream, int n, List command)
-        {
-            stream[n] = 0b00010000;
-            return 1;
-        }
-    }
-
-    public static class PopCurrentClipCoder implements ICommandCoder
-    {
-        @Override
-        public int writeCommand(byte[] stream, int n, List command)
-        {
-            stream[n] = 0b00110000;
-            return 1;
-        }
-    }
-
-    @Deprecated
-    public static class DrawRoundRectCoder implements ICommandCoder
-    {
-        @Override
-        public int writeCommand(byte[] stream, int n, List command)
-        {
-            return 0;
         }
     }
 

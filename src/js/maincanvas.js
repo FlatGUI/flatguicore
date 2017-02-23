@@ -237,6 +237,43 @@ function fillMultilineTextNoWrap(text, x, y)
     }
 }
 
+function fillRoundRect(x, y, w, h, r)
+{
+    ctx.fillRect(x+r-0.5, y+r-0.5, w-2*r, h-2*r);
+    ctx.beginPath();
+    ctx.arc(r+0.5, r+0.5, r, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(w-r+0.5, r+0.5, r, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(r+0.5, h-r, r, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(w-r, h-r, r, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.fillRect(x+r, y, w-2*r, r);
+    ctx.fillRect(x+r, h-r, w-2*r, r);
+    ctx.fillRect(x, y+r, r, h-2*r);
+    ctx.fillRect(w-r, y+r, r, h-2*r);
+}
+
+function strokeRoundRect(x, y, w, h, r)
+{
+    ctx.beginPath();
+    ctx.arc(r+0.5, r+0.5, r, Math.PI, 1.5*Math.PI);
+    ctx.lineTo(w-r, 0);
+    ctx.arc(w-r, r+0.5, r, 1.5*Math.PI, 0);
+    ctx.moveTo(w-0.5, r);
+    ctx.lineTo(w-0.5, h-r);
+    ctx.arc(w-r, h-r-0.5, r, 0, 0.5*Math.PI);
+    ctx.moveTo(w-r, h-0.5);
+    ctx.lineTo(r, h-0.5);
+    ctx.arc(r, h-r-0.5, r, 0.5*Math.PI, Math.PI);
+    ctx.lineTo(0, r);
+    ctx.stroke();
+}
+
 function measureTextImpl(s)
 {
     return ctx.measureText(s).width
@@ -367,25 +404,25 @@ function decodeLookVector(componentIndex, stream, byteLength)
                         ctx.strokeStyle=colorStr;
                         c += codeObj.len;
                     }
-                    else if ((stream[c] & MASK_SET_CLIP) == CODE_SET_CLIP)
-                    {
-                        codeObj = decodeRect(stream, c);
-                        decodeLog( "setClip " + JSON.stringify(codeObj));
-                        setClip(codeObj);
-                        c += codeObj.len;
-                    }
-                    else if (stream[c] == CODE_PUSH_CLIP)
-                    {
-                        decodeLog( "pushCurrentClip");
-                        pushCurrentClip();
-                        c++;
-                    }
-                    else if (stream[c] == CODE_POP_CLIP)
-                    {
-                        decodeLog( "popCurrentClip");
-                        popCurrentClip();
-                        c++;
-                    }
+//                    else if ((stream[c] & MASK_SET_CLIP) == CODE_SET_CLIP)
+//                    {
+//                        codeObj = decodeRect(stream, c);
+//                        decodeLog( "setClip " + JSON.stringify(codeObj));
+//                        setClip(codeObj);
+//                        c += codeObj.len;
+//                    }
+//                    else if (stream[c] == CODE_PUSH_CLIP)
+//                    {
+//                        decodeLog( "pushCurrentClip");
+//                        pushCurrentClip();
+//                        c++;
+//                    }
+//                    else if (stream[c] == CODE_POP_CLIP)
+//                    {
+//                        decodeLog( "popCurrentClip");
+//                        popCurrentClip();
+//                        c++;
+//                    }
                     else
                     {
                         codeObj = decodeString(stream, c);
@@ -400,7 +437,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                 case CODE_DRAW_RECT:
                     codeObj = decodeRect(stream, c);
                     decodeLog( "drawRect " + JSON.stringify(codeObj));
-                    ctx.strokeRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w, codeObj.h);
+                    ctx.strokeRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w-1, codeObj.h-1);
                     c+= codeObj.len;
                     break;
                 case CODE_FILL_RECT:
@@ -440,19 +477,30 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     ctx.stroke();
                     c+= codeObj.len;
                     break;
-                // TODO
                 // Actually transfrom and clip are never used in a particular look vector (they are used between
                 // painting components) so these commands may free places in the set of 1-byte commands
-                case CODE_TRANSFORM:
-                    codeObj = decodeRect(stream, c);
-                    decodeLog( "transform " + JSON.stringify(codeObj));
-                    applyTransform(codeObj);
+//                case CODE_TRANSFORM:
+//                    codeObj = decodeRect(stream, c);
+//                    decodeLog( "transform " + JSON.stringify(codeObj));
+//                    applyTransform(codeObj);
+//                    c+= codeObj.len;
+//                    break;
+//                case CODE_CLIP_RECT:
+//                    codeObj = decodeRect(stream, c);
+//                    decodeLog( "clipRect " + JSON.stringify(codeObj));
+//                    clipRect(codeObj);
+//                    c+= codeObj.len;
+//                    break;
+                case CODE_DRAW_ROUND_RECT:
+                    codeObj = decodeRoundRect(stream, c);
+                    decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
+                    strokeRoundRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w-1, codeObj.h-1, codeObj.r);
                     c+= codeObj.len;
                     break;
-                case CODE_CLIP_RECT:
-                    codeObj = decodeRect(stream, c);
-                    decodeLog( "clipRect " + JSON.stringify(codeObj));
-                    clipRect(codeObj);
+                case CODE_FILL_ROUND_RECT:
+                    codeObj = decodeRoundRect(stream, c);
+                    decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
+                    fillRoundRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w, codeObj.h, codeObj.r);
                     c+= codeObj.len;
                     break;
                 default:

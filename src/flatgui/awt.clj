@@ -126,13 +126,14 @@
 
 (defn drawRect [x y w h] ["drawRect" x y w h])              ;2  [xxxxx|001]
 (defn fillRect [x y w h] ["fillRect" x y w h])              ;3  [xxxxx|010]
-(defn drawRoundRect [x y w h arcW arcH] ["drawRoundRect" x y w h arcW arcH]) ;4
 (defn drawOval [x y w h] ["drawOval" x y w h])              ;5  [xxxxx|011]
 (defn fillOval [x y w h] ["fillOval" x y w h])              ;6  [xxxxx|100]
 (defn drawString [t x y] ["drawString" (if t t "") x y])    ;7  [x1010|000] [x1110|000]
 (defn drawLine [x1 y1 x2 y2] ["drawLine" x1 y1 x2 y2])      ;8  [xxxxx|101]
-(defn transform [at] ["transform" at])                      ;9  [xxxxx|110]
-(defn clipRect [x y w h] ["clipRect" x y w h])              ;10 [xxxxx|111]
+(defn transform [at] ["transform" at])                      ;9
+(defn clipRect [x y w h] ["clipRect" x y w h])              ;10
+(defn drawRoundRect [x y w h r] ["drawRoundRect" x y w h r r]) ;[xxxxx|110]
+(defn fillRoundRect [x y w h r] ["fillRoundRect" x y w h r r]) ;[xxxxx|111]
 (defn setClip [x y w h] ["setClip" x y w h])                ;11 [xxxx1|000]  Point-based all combinations except 127x31
 (defn pushCurrentClip [] ["pushCurrentClip"])               ;12 [00010|000]
 (defn popCurrentClip [] ["popCurrentClip"])                 ;13 [00110|000]

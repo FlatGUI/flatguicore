@@ -34,17 +34,19 @@ var CODE_FILL_RECT = b('00000010');
 var CODE_DRAW_OVAL = b('00000011');
 var CODE_FILL_OVAL = b('00000100');
 var CODE_DRAW_LINE = b('00000101');
-var CODE_TRANSFORM = b('00000110');
-var CODE_CLIP_RECT = b('00000111');
+//var CODE_TRANSFORM = b('00000110');
+//var CODE_CLIP_RECT = b('00000111');
+var CODE_DRAW_ROUND_RECT = b('00000110');
+var CODE_FILL_ROUND_RECT = b('00000111');
 
 var MASK_SET_COLOR = b('00011111');
 var CODE_SET_COLOR = 0;
 
-var MASK_SET_CLIP = b('00001000');
-var CODE_SET_CLIP = b('00001000');
-
-var CODE_PUSH_CLIP = b('00010000');
-var CODE_POP_CLIP = b('00110000');
+//var MASK_SET_CLIP = b('00001000');
+//var CODE_SET_CLIP = b('00001000');
+//
+//var CODE_PUSH_CLIP = b('00010000');
+//var CODE_POP_CLIP = b('00110000');
 
 var MASK_RECT_1 = b('00001000');
 var MASK_RECT_3 = b('00111000');
@@ -283,6 +285,18 @@ function decodeRect(stream, c)
     }
     
     return {x: x, y: y, w: w, h: h, len: len}
+}
+
+// Returns object {x: <x> y: <y> w: <w> h: <h> :r <r> :len <actual length of command in bytes>}
+function decodeRoundRect(stream, c)
+{
+    var rect = decodeRect(stream, c)
+    var cr_hbit = (stream[c+rect.len] & MASK_HBIT) >> 7;
+    var cr_7bit = stream[c+rect.len] & MASK_7BIT;
+    r = 0x0000 | (cr_7bit + cr_hbit*128);  // Without 0x0000 it becomes Double type
+    rect.r = r;
+    rect.len = rect.len+1;
+    return rect;
 }
 
 // Returns object {r: <r> g: <g> b: <b> :len <actual length of command in bytes>}

@@ -127,11 +127,16 @@ function setTextToG(gElem, text, x, y)
     gElem.appendChild(t);
 }
 
-function setRectToG(gElem, x, y, w, h, fill)
+function setRectToG(gElem, x, y, w, h, rad, fill)
 {
     var r = document.createElementNS(svgNS,'rect');
     r.setAttribute('x',x);
     r.setAttribute('y',y);
+    if (rad > 0)
+    {
+        r.setAttribute('rx',rad);
+        r.setAttribute('ry',rad);
+    }
     r.setAttribute('width',w);
     r.setAttribute('height',h);
     setColorToPrimitive(gElem, r, fill);
@@ -307,31 +312,31 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
                         c += codeObj.len;
                     }
-                    else if ((stream[c] & MASK_SET_CLIP) == CODE_SET_CLIP)
-                    {
-                        codeObj = decodeRect(stream, c);
-                        decodeLog( "setClip " + JSON.stringify(codeObj) + " -- IGNORED");
-
-                        //setClip(codeObj);
-
-                        c += codeObj.len;
-                    }
-                    else if (stream[c] == CODE_PUSH_CLIP)
-                    {
-                        decodeLog( "pushCurrentClip -- IGNORED");
-
-                        //pushCurrentClip();
-
-                        c++;
-                    }
-                    else if (stream[c] == CODE_POP_CLIP)
-                    {
-                        decodeLog( "popCurrentClip -- IGNORED");
-
-                        //popCurrentClip();
-
-                        c++;
-                    }
+//                    else if ((stream[c] & MASK_SET_CLIP) == CODE_SET_CLIP)
+//                    {
+//                        codeObj = decodeRect(stream, c);
+//                        decodeLog( "setClip " + JSON.stringify(codeObj) + " -- IGNORED");
+//
+//                        //setClip(codeObj);
+//
+//                        c += codeObj.len;
+//                    }
+//                    else if (stream[c] == CODE_PUSH_CLIP)
+//                    {
+//                        decodeLog( "pushCurrentClip -- IGNORED");
+//
+//                        //pushCurrentClip();
+//
+//                        c++;
+//                    }
+//                    else if (stream[c] == CODE_POP_CLIP)
+//                    {
+//                        decodeLog( "popCurrentClip -- IGNORED");
+//
+//                        //popCurrentClip();
+//
+//                        c++;
+//                    }
                     else
                     {
                         codeObj = decodeString(stream, c);
@@ -350,7 +355,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     decodeLog( "drawRect " + JSON.stringify(codeObj));
 
                     //ctx.strokeRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w, codeObj.h);
-                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, false);
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, 0, false);
 
                     c+= codeObj.len;
                     break;
@@ -359,7 +364,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     decodeLog( "fillRect " + JSON.stringify(codeObj));
 
                     //ctx.fillRect(codeObj.x, codeObj.y, codeObj.w, codeObj.h);
-                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, true);
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, 0, true);
 
                     c+= codeObj.len;
                     break;
@@ -404,24 +409,34 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
                     c+= codeObj.len;
                     break;
-                // TODO 1
                 // Actually transfrom and clip are never used in a particular look vector (they are used between
                 // painting components) so these commands may free places in the set of 1-byte commands
-                // TODO 2 - ... and round rect is really needed
-                case CODE_TRANSFORM:
-                    codeObj = decodeRect(stream, c);
-                    decodeLog( "transform " + JSON.stringify(codeObj) + " -- IGNORED");
-
-                    //applyTransform(codeObj);
-
+//                case CODE_TRANSFORM:
+//                    codeObj = decodeRect(stream, c);
+//                    decodeLog( "transform " + JSON.stringify(codeObj) + " -- IGNORED");
+//
+//                    //applyTransform(codeObj);
+//
+//                    c+= codeObj.len;
+//                    break;
+//                case CODE_CLIP_RECT:
+//                    codeObj = decodeRect(stream, c);
+//                    decodeLog( "clipRect " + JSON.stringify(codeObj) + " -- IGNORED");
+//
+//                    //clipRect(codeObj);
+//
+//                    c+= codeObj.len;
+//                    break;
+                case CODE_DRAW_ROUND_RECT:
+                    codeObj = decodeRoundRect(stream, c);
+                    decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, codeObj.r, false);
                     c+= codeObj.len;
                     break;
-                case CODE_CLIP_RECT:
-                    codeObj = decodeRect(stream, c);
-                    decodeLog( "clipRect " + JSON.stringify(codeObj) + " -- IGNORED");
-
-                    //clipRect(codeObj);
-
+                case CODE_FILL_ROUND_RECT:
+                    codeObj = decodeRoundRect(stream, c);
+                    decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
+                    setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, codeObj.r, true);
                     c+= codeObj.len;
                     break;
                 default:

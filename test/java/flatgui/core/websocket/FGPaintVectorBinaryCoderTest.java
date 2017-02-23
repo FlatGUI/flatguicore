@@ -10,7 +10,6 @@
 
 package flatgui.core.websocket;
 
-import flatgui.core.websocket.FGPaintVectorBinaryCoder;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.junit.Assert;
 import org.junit.Before;
@@ -20,7 +19,6 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -251,22 +249,6 @@ public class FGPaintVectorBinaryCoderTest extends Assert
     }
 
     @Test
-    public void testRect10111_1() // 10111  | [XXXX|XXXX][YYYY|YYYY][WWWW|WWWW][HHHH|HHHH][HHWW|YYXX]    | Up to 1023,1023/1023,1023
-            throws Exception
-    {
-        byte[] stream = new byte[24];
-        AffineTransform t = new AffineTransform();
-        t.setToTranslation(448.0, 448.0);
-        int writtenBytes = new FGPaintVectorBinaryCoder.TransformCoder().writeCommand(stream, 0, cmd(null, t));
-        assertEquals(3, writtenBytes);
-        ScriptObjectMirror decoded0 = (ScriptObjectMirror)decoder_.invokeFunction("decodeRect", stream, 0);
-        assertEquals(0, decoded0.get("x"));
-        assertEquals(0, decoded0.get("y"));
-        assertEquals(448, decoded0.get("w"));
-        assertEquals(448, decoded0.get("h"));
-    }
-
-    @Test
     public void testRect11111() // 11111  | [XXXX|XXXX][XXXX|XXXX][YYYY|YYYY][YYYY|YYYY][WWWW|WWWW][WWWW|WWWW][HHHH|HHHH][HHHH|HHHH] | Up to 65535,65535/65535,65535
             throws Exception
     {
@@ -327,6 +309,31 @@ public class FGPaintVectorBinaryCoderTest extends Assert
         assertEquals(-12395, decoded18.get("y"));
         assertEquals(-11, decoded18.get("w"));
         assertEquals(-9, decoded18.get("h"));
+    }
+
+    @Test
+    public void testRoundRects()
+            throws Exception
+    {
+        byte[] stream = new byte[13];
+        int writtenBytes = new FGPaintVectorBinaryCoder.DrawRoundRectCoder((l,i)->(Integer)(l.get(i))).writeCommand(stream, 0, cmd(null, 22, 33, 129, 200, 5));
+        assertEquals(6, writtenBytes);
+        ScriptObjectMirror decoded0 = (ScriptObjectMirror)decoder_.invokeFunction("decodeRoundRect", stream, 0);
+        writtenBytes = new FGPaintVectorBinaryCoder.FillRoundRectCoder((l,i)->(Integer)(l.get(i))).writeCommand(stream, 6, cmd(null, 0, 0, 1020, 1021, 10));
+        assertEquals(7, writtenBytes);
+        ScriptObjectMirror decoded6 = (ScriptObjectMirror)decoder_.invokeFunction("decodeRoundRect", stream, 6);
+        assertEquals(22, decoded0.get("x"));
+        assertEquals(33, decoded0.get("y"));
+        assertEquals(129, decoded0.get("w"));
+        assertEquals(200, decoded0.get("h"));
+        assertEquals(5, decoded0.get("r"));
+        assertEquals(6.0d, decoded0.get("len"));
+        assertEquals(0, decoded6.get("x"));
+        assertEquals(0, decoded6.get("y"));
+        assertEquals(1020, decoded6.get("w"));
+        assertEquals(1021, decoded6.get("h"));
+        assertEquals(10, decoded6.get("r"));
+        assertEquals(7.0d, decoded6.get("len"));
     }
 
     @Test

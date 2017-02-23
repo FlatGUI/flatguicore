@@ -101,6 +101,7 @@ function setColorToPrimitive(gElem, p, fill)
     else
     {
         p.setAttribute('stroke', currentlyDecodedColorStr);
+        p.setAttribute('fill-opacity', '0');
     }
 }
 
@@ -479,6 +480,13 @@ function processClipSizeUpdate(index)
     gElem.setAttribute('clip-path', 'url(#'+clipId+')');
 }
 
+function processBooleanFlagMap(index)
+{
+    var gElem = gElems[index];
+    var visible = checkFlagForComponent(index, STATE_FLAGS_VISIBILITY_MASK);
+    gElem.setAttribute('visibility', visible ? 'visible' : 'hidden');
+}
+
 function processLookVectorUpdate(index)
 {
     var lookVector = lookVectors[index];
@@ -569,7 +577,6 @@ function createGElem(parent, index)
         var y = evt.clientY - rect.top;
         if (x != lastMouseDetectX || y != lastMouseDetectY)
         {
-            console.log("->" + this.getAttribute('id'))
             indexUnderMouse = this.getAttribute('id')
             lastMouseDetectX = x;
             lastMouseDetectY = y;
@@ -610,7 +617,6 @@ function getHostBoundingClientRect()
 
 function getIndexUnderMouse(x, y)
 {
-    console.log("getIndexUnderMouse=" + indexUnderMouse)
     return indexUnderMouse;
 }
 

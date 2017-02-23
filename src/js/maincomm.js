@@ -447,6 +447,7 @@ function decodeCommandVector(stream, byteLength)
                 c+=2;
                 booleanStateFlags[index] = stream[c];
                 c++;
+                processBooleanFlagMap(index);
             }
             break;
         case STRING_POOL_MAP_COMMAND_CODE:

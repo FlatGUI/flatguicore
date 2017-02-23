@@ -483,6 +483,11 @@ function processLookVectorUpdate(index)
  // Do nothing: with canvas impl, whole cache is repainted at once
 }
 
+function processBooleanFlagMap(index)
+{
+ // Do nothing: with canvas impl, whole cache is repainted at once
+}
+
 function processPaintAllList()
 {
     var c = 1;

@@ -239,23 +239,24 @@ function fillMultilineTextNoWrap(text, x, y)
 
 function fillRoundRect(x, y, w, h, r)
 {
-    ctx.fillRect(x+r-0.5, y+r-0.5, w-2*r, h-2*r);
+    ctx.fillRect(x+r-0.5, y+r-0.5, w-2*r+1, h-2*r+1);
     ctx.beginPath();
-    ctx.arc(r+0.5, r+0.5, r, 0, 2*Math.PI);
+    ctx.arc(x+r, y+r, r, 0, 2*Math.PI);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(w-r+0.5, r+0.5, r, 0, 2*Math.PI);
+    ctx.arc(x+w-r-1, y+r, r, 0, 2*Math.PI);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(r+0.5, h-r, r, 0, 2*Math.PI);
+    ctx.arc(x+r, y+h-r-0.5, r, 0, 2*Math.PI);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(w-r, h-r, r, 0, 2*Math.PI);
+    ctx.arc(x+w-r-1, y+h-r-0.5, r, 0, 2*Math.PI);
+
     ctx.fill();
     ctx.fillRect(x+r, y, w-2*r, r);
-    ctx.fillRect(x+r, h-r, w-2*r, r);
+    ctx.fillRect(x+r, h-r, w-2*r, r+2);
     ctx.fillRect(x, y+r, r, h-2*r);
-    ctx.fillRect(w-r, y+r, r, h-2*r);
+    ctx.fillRect(w-r, y+r, r+1, h-2*r);
 }
 
 function strokeRoundRect(x, y, w, h, r)
@@ -263,13 +264,13 @@ function strokeRoundRect(x, y, w, h, r)
     ctx.beginPath();
     ctx.arc(r+0.5, r+0.5, r, Math.PI, 1.5*Math.PI);
     ctx.lineTo(w-r, 0);
-    ctx.arc(w-r, r+0.5, r, 1.5*Math.PI, 0);
-    ctx.moveTo(w-0.5, r);
-    ctx.lineTo(w-0.5, h-r);
-    ctx.arc(w-r, h-r-0.5, r, 0, 0.5*Math.PI);
-    ctx.moveTo(w-r, h-0.5);
-    ctx.lineTo(r, h-0.5);
-    ctx.arc(r, h-r-0.5, r, 0.5*Math.PI, Math.PI);
+    ctx.arc(w-r+0.5, r+0.5, r, 1.5*Math.PI, 0);
+    ctx.moveTo(w+0.5, r);
+    ctx.lineTo(w+0.5, h-r);
+    ctx.arc(w-r+0.5, h-r+0.5, r, 0, 0.5*Math.PI);
+    ctx.moveTo(w-r, h+0.5);
+    ctx.lineTo(r, h+0.5);
+    ctx.arc(r, h-r+0.5, r, 0.5*Math.PI, Math.PI);
     ctx.lineTo(0, r);
     ctx.stroke();
 }

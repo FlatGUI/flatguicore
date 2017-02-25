@@ -18,11 +18,13 @@ var paintAllSequenceReceived = false;
 var childCountMapReceived = false;
 var domConstructed = false;
 
+var LETTER_SPACING = 1;
+
 var lastMouseDetectX = -1;
 var lastMouseDetectY = -1;
 var indexUnderMouse;
 
-var textMeasurer = document.createElementNS(svgNS, 'textMeasurer');
+var textMeasurer = document.createElementNS(svgNS, 'text');
 textMeasurer.setAttribute('x', '0');
 textMeasurer.setAttribute('y', '0');
 textMeasurer.setAttribute('fill', '#000');
@@ -44,9 +46,9 @@ window.onresize = handleResize;
 function measureTextImpl(s)
 {
     textMeasurer.textContent = s;
-    var w = text.getComputedTextLength();
+    var w = textMeasurer.getComputedTextLength();
     textMeasurer.textContent = '';
-    return w;
+    return w+LETTER_SPACING;
 }
 
 function applyCurrentFont()
@@ -121,6 +123,9 @@ function setTextToG(gElem, text, x, y)
     var t = document.createElementNS(svgNS, 'text');
     t.setAttribute('x', x);
     t.setAttribute('y', y);
+    t.setAttribute('kerning', 0);
+    t.setAttribute('letter-spacing', LETTER_SPACING);
+    t.setAttribute('word-spacing', 0);
     setColorToPrimitive(gElem, t, true);
     setFontToPrimitive(gElem, t);
     t.textContent = text;
@@ -186,7 +191,7 @@ function decodeLog(msg)
 
 function decodeCVLog(msg)
 {
-    console.log(msg);
+    //console.log(msg);
 }
 
 function decodeLookVector(componentIndex, stream, byteLength)

@@ -507,14 +507,11 @@ function processLookVectorUpdate(index)
     var lookVector = lookVectors[index];
     if (lookVector)
     {
-        if (lookVector.length > 0)
-        {
-            decodeLookVector(index, lookVector, lookVector.length);
-        }
+        decodeLookVector(index, lookVector, lookVector.length);
     }
     else
     {
-       console.log("Look undefined for " + index);
+        console.log("Look undefined for " + index);
     }
 }
 

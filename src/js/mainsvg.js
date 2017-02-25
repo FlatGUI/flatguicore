@@ -447,6 +447,11 @@ function decodeLookVector(componentIndex, stream, byteLength)
     }
 }
 
+function getClipId(index)
+{
+    return 'clip'+index;
+}
+
 function updateTransform(index)
 {
     var tx=0, ty=0;
@@ -472,27 +477,44 @@ function processPositionMatrixUpdate(index)
 function processViewportMatrixUpdate(index)
 {
     updateTransform(index);
+    if (viewports[index])
+    {
+        var clipId = getClipId(index);
+        var clippath = document.getElementById(clipId);
+        if (clippath)
+        {
+            var cr = clippath.childNodes[0]
+            cr.setAttribute('x', -viewports[index].w);
+            cr.setAttribute('y', -viewports[index].h);
+        }
+    }
 }
 
 function processClipSizeUpdate(index)
 {
     var gElem = gElems[index];
 
-    gElem.setAttribute('width', clipSizes[index].w);
-    gElem.setAttribute('height', clipSizes[index].h);
-
     // TODO Take into account popups. Most like they will have to be reassigned to the root when popped up and then returned back
-    var clipId = 'clip'+index;
-    var clippath = document.createElementNS(svgNS, 'clipPath');
-    var cr = document.createElementNS(svgNS, 'rect');
-    cr.setAttribute('x', '0');
-    cr.setAttribute('y', '0');
+    var clipId = getClipId(index);
+    var clippath = document.getElementById(clipId);
+    var cr;
+    if (clippath)
+    {
+        cr = clippath.childNodes[0];
+    }
+    else
+    {
+        clippath = document.createElementNS(svgNS, 'clipPath');
+        cr = document.createElementNS(svgNS, 'rect');
+        cr.setAttribute('x', '0');
+        cr.setAttribute('y', '0');
+        clippath.setAttribute('id', clipId);
+        clippath.appendChild(cr);
+        gElem.appendChild(clippath);
+        gElem.setAttribute('clip-path', 'url(#'+clipId+')');
+    }
     cr.setAttribute('width', clipSizes[index].w);
     cr.setAttribute('height', clipSizes[index].h);
-    clippath.setAttribute('id', clipId);
-    clippath.appendChild(cr);
-    gElem.appendChild(clippath);
-    gElem.setAttribute('clip-path', 'url(#'+clipId+')');
 }
 
 function processBooleanFlagMap(index)

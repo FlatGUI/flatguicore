@@ -19,7 +19,7 @@ public abstract class FGFocusTargetedEventParser<Reason, FGEvent> implements IIn
     public Map<FGEvent, Integer> parseInputEvent(Container container, Reason inputEvent)
     {
         Integer targetUid = getFocusedComponentUid(0, container);
-        System.out.println("-DLTEMP- FGFocusTargetedEventParser.parseInputEvent " + targetUid);
+        //System.out.println("-DLTEMP- FGFocusTargetedEventParser.parseInputEvent " + targetUid);
         if (targetUid != null)
         {
             FGEvent event = reasonToEvent(inputEvent);

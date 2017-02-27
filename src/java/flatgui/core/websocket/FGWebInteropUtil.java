@@ -55,11 +55,7 @@ public class FGWebInteropUtil implements IFGInteropUtil
                 widthPx = 0;
                 for (int i = 0; i < str.length(); i++)
                 {
-                    // TODO bug here:
-                    // At least with Firefox, arrow buttons cause text field generate text string containing zeros
-                    // or control chars. So below gives AIOB and that exception happens to prevent garbage to get
-                    // into text field model
-                    //if (str.charAt(i) >= 32)
+                    if (str.charAt(i) >= 32)
                     {
                         widthPx += charMetrics[str.charAt(i) - 32];
                     }

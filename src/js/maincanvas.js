@@ -209,11 +209,6 @@ function setClip(codeObj)
     applyCurrentClip();
 }
 
-function getTextLineHeight() // TODO implement properly
-{
-    return ctx.measureText("M").width;
-}
-
 // Saves us from discrepancy between string rendering on different devices (e.g. DirectWrite vs GDI)
 // This is important given the way metrics are sent to server
 function fillText(s, x, y)
@@ -224,16 +219,6 @@ function fillText(s, x, y)
         var c = s.charAt(i);
         ctx.fillText(c, p, y);
         p += ctx.measureText(c).width;
-    }
-}
-
-function fillMultilineTextNoWrap(text, x, y)
-{
-    var lines = text.split("\n");
-    var lineHeight = getTextLineHeight();
-    for (var i=0; i<lines.length; i++)
-    {
-        fillText(lines[i], x, y + i*1.5*lineHeight);
     }
 }
 
@@ -428,9 +413,10 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                         codeObj = decodeString(stream, c);
                         decodeLog( "drawString " + JSON.stringify(codeObj));
+                        console.log( "drawString " + JSON.stringify(codeObj));
                         if (stringPools[componentIndex] && stringPools[componentIndex][codeObj.i])
                         {
-                            fillMultilineTextNoWrap(stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
+                            fillText(stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
                         }
                         c += codeObj.len;
                     }

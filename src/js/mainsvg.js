@@ -18,7 +18,7 @@ var paintAllSequenceReceived = false;
 var childCountMapReceived = false;
 var domConstructed = false;
 
-var LETTER_SPACING = 1;
+var LETTER_SPACING = 0;// Firefox does not support this yet https://bugzilla.mozilla.org/show_bug.cgi?id=371787
 
 var lastMouseDetectX = -1;
 var lastMouseDetectY = -1;
@@ -45,6 +45,10 @@ window.onresize = handleResize;
 
 function measureTextImpl(s)
 {
+    if (s == " ")
+    {
+        s = "i";
+    }
     textMeasurer.textContent = s;
     var w = textMeasurer.getComputedTextLength();
     textMeasurer.textContent = '';
@@ -114,22 +118,22 @@ function setFontToPrimitive(gElem, p, fill)
 
 function setTextToG(gElem, text, x, y)
 {
-//    var lines = text.split("\n");
-//    var lineHeight = getTextLineHeight();
-//    for (var i=0; i<lines.length; i++)
-//    {
-//        fillText(lines[i], x, y + i*1.5*lineHeight);
-//    }
-    var t = document.createElementNS(svgNS, 'text');
-    t.setAttribute('x', x);
-    t.setAttribute('y', y);
-    t.setAttribute('kerning', 0);
-    t.setAttribute('letter-spacing', LETTER_SPACING);
-    t.setAttribute('word-spacing', 0);
-    setColorToPrimitive(gElem, t, true);
-    setFontToPrimitive(gElem, t);
-    t.textContent = text;
-    gElem.appendChild(t);
+    var g = document.createElementNS(svgNS, "g");
+    setColorToPrimitive(gElem, g, true);
+    setFontToPrimitive(gElem, g);
+
+    for (var j=0; j<text.length; j++)
+    {
+        var c = text.charAt(j);
+        var t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.textContent = c;
+        g.appendChild(t);
+        x += measureTextImpl(c);
+    }
+
+    gElem.appendChild(g);
 }
 
 function setRectToG(gElem, x, y, w, h, rad, fill)

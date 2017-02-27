@@ -25,7 +25,12 @@
 
 (channelbase/definputparser get-key-char KeyEvent (int (.getKeyChar repaint-reason)))
 
-(channelbase/definputparser get-key-str KeyEvent (str (.getKeyChar repaint-reason)))
+(channelbase/definputparser get-key-str KeyEvent
+  (let [c (.getKeyChar repaint-reason)
+        ic (int c)]
+    (if (or (>= ic 32) (= ic 10))
+      (str c)
+      "")))
 
 (channelbase/definputparser get-key-code KeyEvent (.getKeyCode repaint-reason))
 

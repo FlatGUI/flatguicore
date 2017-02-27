@@ -45,7 +45,7 @@
 (fg/defaccessorfn get-hgap-impl [component]
   (hsh (get-property component [:this] :interop) (get-property component [:this] :font)))
 
-(defn text-str-h-impl [interop font] (* (sh interop font) 2.5))
+(defn text-str-h-impl [interop font] (sh interop font))
 
 ;; TODO unify gaps with layout
 (fg/defaccessorfn get-text-preferred-size [component lines]

@@ -428,10 +428,12 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         private static final byte STATE_FLAGS_VISIBILITY_MASK = 1;
         private static final byte STATE_FLAGS_POPUP_MASK = 2;
         private static final byte STATE_FLAGS_ROLLOVER_DISABLED_MASK = 4;
+        private static final byte STATE_FLAGS_PRECISE_TEXT_MEASUREMENT = 8;
 
         private static final Keyword ROLLOWER_NOTIFY_DISABLED_KW = Keyword.intern("rollover-notify-disabled");
         private static final Keyword POPUP_KW = Keyword.intern("popup");
         private static final Keyword VISIBLE_KW = Keyword.intern("visible");
+        private static final Keyword EDITABLE_KW = Keyword.intern("editable");
 
         private boolean hasDataToTransmit_;
 
@@ -445,7 +447,8 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         {
             return setOf(ROLLOWER_NOTIFY_DISABLED_KW,
                          POPUP_KW,
-                         VISIBLE_KW);
+                         VISIBLE_KW,
+                         EDITABLE_KW);
         }
 
         @Override
@@ -467,6 +470,10 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
                 else if (propertyId == VISIBLE_KW)
                 {
                     newFlags = changeFlag(oldFlags, STATE_FLAGS_VISIBILITY_MASK, newValIsTrue);
+                }
+                else if (propertyId == EDITABLE_KW)
+                {
+                    newFlags = changeFlag(oldFlags, STATE_FLAGS_PRECISE_TEXT_MEASUREMENT, newValIsTrue);
                 }
                 else
                 {

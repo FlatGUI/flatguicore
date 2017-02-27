@@ -116,24 +116,39 @@ function setFontToPrimitive(gElem, p, fill)
     p.style.font = currentFont
 }
 
-function setTextToG(gElem, text, x, y)
+function setTextToG(gElem, componentIndex, text, x, y)
 {
-    var g = document.createElementNS(svgNS, "g");
-    setColorToPrimitive(gElem, g, true);
-    setFontToPrimitive(gElem, g);
-
-    for (var j=0; j<text.length; j++)
+    var preciseTextMeasurement = checkFlagForComponent(componentIndex, STATE_FLAGS_PRECISE_TEXT_MEASUREMENT);
+    if (preciseTextMeasurement)
     {
-        var c = text.charAt(j);
+        var g = document.createElementNS(svgNS, "g");
+        setColorToPrimitive(gElem, g, true);
+        setFontToPrimitive(gElem, g);
+        for (var j=0; j<text.length; j++)
+        {
+            var c = text.charAt(j);
+            var t = document.createElementNS(svgNS, 'text');
+            t.setAttribute('x', x);
+            t.setAttribute('y', y);
+            t.textContent = c;
+            g.appendChild(t);
+            x += measureTextImpl(c);
+        }
+        gElem.appendChild(g);
+    }
+    else
+    {
         var t = document.createElementNS(svgNS, 'text');
         t.setAttribute('x', x);
         t.setAttribute('y', y);
-        t.textContent = c;
-        g.appendChild(t);
-        x += measureTextImpl(c);
+        t.setAttribute('kerning', 0);
+        t.setAttribute('letter-spacing', LETTER_SPACING);
+        t.setAttribute('word-spacing', 0);
+        setColorToPrimitive(gElem, t, true);
+        setFontToPrimitive(gElem, t);
+        t.textContent = text;
+        gElem.appendChild(t);
     }
-
-    gElem.appendChild(g);
 }
 
 function setRectToG(gElem, x, y, w, h, rad, fill)
@@ -354,7 +369,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                         {
 
                             //fillMultilineTextNoWrap(stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
-                            setTextToG(gElem, stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
+                            setTextToG(gElem, componentIndex, stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
                         }
                         c += codeObj.len;
                     }
@@ -531,6 +546,13 @@ function processBooleanFlagMap(index)
     var gElem = gElems[index];
     var visible = checkFlagForComponent(index, STATE_FLAGS_VISIBILITY_MASK);
     gElem.setAttribute('visibility', visible ? 'visible' : 'hidden');
+
+    if (index == 8)
+    {
+        console.log("Element " + index + " receives " + checkFlagForComponent(index, STATE_FLAGS_PRECISE_TEXT_MEASUREMENT))
+    }
+
+    processLookVectorUpdate(index);
 }
 
 function processLookVectorUpdate(index)

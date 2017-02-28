@@ -262,7 +262,11 @@ public class FGContainerWebSocket implements WebSocketListener
     {
         Var containerVar = clojure.lang.RT.var(template_.getContainerNamespace(), template_.getContainerVarName());
         Map<Keyword, Object> container = (Map<Keyword, Object>) containerVar.get();
-        return getFonts(container);
+        Set<String> fonts = getFonts(container);
+        //FGWebInteropUtil interop = ??? TODO
+        //fonts.add(interop.getReferenceFontStr());
+        fonts.add(FGWebInteropUtil.getDefaultFontStr());
+        return fonts;
     }
 
     private Set<String> getFonts(Map<Keyword, Object> container)

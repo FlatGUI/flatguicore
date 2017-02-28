@@ -8,6 +8,7 @@
  * You must not remove this notice, or any other, from this software.
  */
 
+// Default font in case application does not define its own. This is equal to FGWebInteropUtil.getDefaultFont
 var referenceFont = '12px Tahoma';
 var canvas = document.getElementById("hostCanvas");
 var ctx = canvas.getContext("2d");

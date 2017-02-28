@@ -618,7 +618,7 @@ function constructDOMIfPossible()
         createGElem(null, 0);
         hostSVG.appendChild(gElems[0]);
 
-        // TODO temporary
+        // Default font in case application does not define its own. This is equal to FGWebInteropUtil.getDefaultFont
         gElems[0].style.font = '12px Tahoma'
 
         domConstructed=true;
@@ -629,8 +629,6 @@ function createGElem(parent, index)
 {
     var componentUid = paintAllArray[index];
     var childCount = childCounts[componentUid];
-
-    console.log("Creating " + index +"->"+componentUid + " and adding " + childCount + " children")
 
     var g = document.createElementNS(svgNS, "g");
     g.setAttribute('id', componentUid);

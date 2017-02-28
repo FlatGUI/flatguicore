@@ -34,6 +34,7 @@ public class FGWebInteropUtil implements IFGInteropUtil
     public FGWebInteropUtil(int unitSizePx)
     {
         unitSizePx_ = unitSizePx;
+        referenceFontStr_ = getDefaultFontStr();
         referenceFont_ = getDefaultFont();
         fontStrToCharMetrics_ = new HashMap<>();
         updateFontMetrics();
@@ -110,11 +111,18 @@ public class FGWebInteropUtil implements IFGInteropUtil
         return fontStr;
     }
 
+    @Override
     public void setReferenceFont(String fontStr, Font font)
     {
         referenceFontStr_ = fontStr;
         referenceFont_ = font;
         updateFontMetrics();
+    }
+
+    @Override
+    public String getReferenceFontStr()
+    {
+        return referenceFontStr_;
     }
 
     // Non-public
@@ -128,7 +136,13 @@ public class FGWebInteropUtil implements IFGInteropUtil
 
     private static Font getDefaultFont()
     {
-        return new Font("Tahoma", Font.PLAIN, 12);
+        return (Font) strToFont_.invoke(getDefaultFontStr());
+    }
+
+    // TODO The code that calls this should use getReferenceFontStr()
+    public static String getDefaultFontStr()
+    {
+        return "12px Tahoma";
     }
 
     private static FontMetrics getDefaultReferenceFontMetrics(Font font)

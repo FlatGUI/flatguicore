@@ -75,6 +75,12 @@ public class FGAWTInteropUtil implements IFGInteropUtil
         updateReferenceFontMetrics();
     }
 
+    @Override
+    public String getReferenceFontStr()
+    {
+        return referenceFontStr_;
+    }
+
     // Non-public
 
     private void applyFontIfNeeded(String font)

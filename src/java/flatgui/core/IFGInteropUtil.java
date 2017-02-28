@@ -24,4 +24,6 @@ public interface IFGInteropUtil
     double getFontAscent(String font);
 
     void setReferenceFont(String fontStr, Font font);
+
+    String getReferenceFontStr();
 }

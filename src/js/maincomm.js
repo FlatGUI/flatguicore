@@ -222,17 +222,19 @@ var PAINT_ALL_LIST_COMMAND_CODE = 64;
 var REPAINT_CACHED_COMMAND_CODE = 65;
 var SET_CURSOR_COMMAND_CODE = 66;
 var PUSH_TEXT_TO_CLIPBOARD = 67;
+var PUSH_TEXT_TO_CLIPBOARD = 67;
+var TEXT_SELECTION_MODEL_COMMAND_CODE = 68;
 
-var TRANSMISSION_MODE_FIRST = 68;
-var TRANSMISSION_MODE_LAST = 75;
+var TRANSMISSION_MODE_FIRST = 100;
+var TRANSMISSION_MODE_LAST = 107;
 var FINISH_PREDICTION_TRANSMISSION = TRANSMISSION_MODE_FIRST;
-var MOUSE_LEFT_DOWN_PREDICTION = 69;
-var MOUSE_LEFT_UP_PREDICTION = 70;
-var MOUSE_LEFT_CLICK_PREDICTION = 71;
-var MOUSE_MOVE_OR_DRAG_PREDICTION_HEADER = 72;
-var MOUSE_MOVE_OR_DRAG_PREDICTION = 73;
-var PING_RESPONSE = 74;
-var METRICS_REQUEST = 75;
+var MOUSE_LEFT_DOWN_PREDICTION = 101;
+var MOUSE_LEFT_UP_PREDICTION = 102;
+var MOUSE_LEFT_CLICK_PREDICTION = 103;
+var MOUSE_MOVE_OR_DRAG_PREDICTION_HEADER = 104;
+var MOUSE_MOVE_OR_DRAG_PREDICTION = 105;
+var PING_RESPONSE = 106;
+var METRICS_REQUEST = 107;
 
 var CURSORS_BY_CODE = [
   "alias",
@@ -830,6 +832,11 @@ function storeMouseEventAndGetEncoded(evt, id)
 
 function sendMouseDownEventToServer(evt)
 {
+    if(evt.preventDefault) evt.preventDefault();
+    if(evt.stopPropagation) evt.stopPropagation();
+    //evt.cancelBubble=true;
+    //evt.returnValue=false;
+
     if (transmissionMode == FINISH_PREDICTION_TRANSMISSION && mouseDownPredictionCounter > 0)
     {
         //console.log("mouse down - hit prediction (" + mouseDownPredictionCounter + " predictions)");
@@ -871,6 +878,40 @@ function commitPendingMouseEvents()
 
 function sendMouseUpEventToServer(evt)
 {
+    if(evt.preventDefault) evt.preventDefault();
+    if(evt.stopPropagation) evt.stopPropagation();
+    //evt.cancelBubble=true;
+    //evt.returnValue=false;
+    ////////////////////////////////////
+
+//    messages.innerHTML = "acbdefg";
+//    var r = document.createRange();
+//    var s = window.getSelection();
+//    var range = document.createRange();
+//    range.setStart(messages, 0);
+//    range.setEnd(messages, 1);
+//    s.addRange(range);
+
+    var textsel = document.createElementNS(svgNS, 'text');
+    textsel.setAttribute('x', '110');
+    textsel.setAttribute('y', '16');
+    textsel.setAttribute('width', '1000');
+    textsel.setAttribute('height', '1000');
+    textsel.setAttribute('fill', '#000');
+    textsel.textContent = 'acbdefg';
+    hostSVG.appendChild(textsel);
+    var r = document.createRange();
+    var s = window.getSelection();
+    var range = document.createRange();
+    range.setStart(textsel, 0);
+    range.setEnd(textsel, 1);
+    s.addRange(range);
+
+
+
+    ////////////////////////////////////
+
+
     if (transmissionMode == FINISH_PREDICTION_TRANSMISSION && mouseUpPredictionCounter > 0)
     {
         //console.log("mouse Up - hit prediction (" + mouseUpPredictionCounter + " predictions)");
@@ -889,6 +930,11 @@ function sendMouseUpEventToServer(evt)
 
 function sendMouseClickEventToServer(evt)
 {
+    if(evt.preventDefault) evt.preventDefault();
+    if(evt.stopPropagation) evt.stopPropagation();
+    //evt.cancelBubble=true;
+    //evt.returnValue=false;
+
     if (transmissionMode == FINISH_PREDICTION_TRANSMISSION && mouseClickPredictionCounter > 0)
     {
         //console.log("mouse Click - hit prediction (" + mouseClickPredictionCounter + " predictions)");
@@ -905,10 +951,10 @@ function sendMouseClickEventToServer(evt)
 
 function sendMouseMoveEventToServer(evt)
 {
-    if (evt.preventDefault)
-    {
-        evt.preventDefault();
-    }
+    if(evt.preventDefault) evt.preventDefault();
+    if(evt.stopPropagation) evt.stopPropagation();
+    //evt.cancelBubble=true;
+    //evt.returnValue=false;
 
     var rect = getHostBoundingClientRect();
     var x = evt.clientX - rect.left;

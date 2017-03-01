@@ -46,15 +46,16 @@ public class FGWebContainerWrapper
     public static final byte REPAINT_CACHED_COMMAND_CODE = 65;
     public static final byte SET_CURSOR_COMMAND_CODE = 66;
     public static final byte PUSH_TEXT_TO_CLIPBOARD = 67;
+    public static final byte TEXT_SELECTION_MODEL_COMMAND_CODE = 68;
 
-    public static final byte FINISH_PREDICTION_TRANSMISSION = 68;
-    public static final byte MOUSE_LEFT_DOWN_PREDICTION = 69;
-    public static final byte MOUSE_LEFT_UP_PREDICTION = 70;
-    public static final byte MOUSE_LEFT_CLICK_PREDICTION = 71;
-    public static final byte MOUSE_MOVE_OR_DRAG_PREDICTION_HEADER = 72;
-    public static final byte MOUSE_MOVE_OR_DRAG_PREDICTION = 73;
-    public static final byte PING_RESPONSE = 74;
-    public static final byte METRICS_REQUEST = 75;
+    public static final byte FINISH_PREDICTION_TRANSMISSION = 100;
+    public static final byte MOUSE_LEFT_DOWN_PREDICTION = 101;
+    public static final byte MOUSE_LEFT_UP_PREDICTION = 102;
+    public static final byte MOUSE_LEFT_CLICK_PREDICTION = 103;
+    public static final byte MOUSE_MOVE_OR_DRAG_PREDICTION_HEADER = 104;
+    public static final byte MOUSE_MOVE_OR_DRAG_PREDICTION = 105;
+    public static final byte PING_RESPONSE = 106;
+    public static final byte METRICS_REQUEST = 107;
 
     public static String DEBUG_OP = "OLD";
 
@@ -239,6 +240,13 @@ public class FGWebContainerWrapper
     public synchronized boolean markFontAsHavingReceivedMetrics(String font)
     {
         return fontsWithMetricsAlreadyReceived_.add(font);
+    }
+
+    public static int wtireShort(ByteArrayOutputStream stream, int num)
+    {
+        stream.write((byte)(num & 0xFF));
+        stream.write((byte)((num >> 8) & 0xFF));
+        return 2;
     }
 
     private void obtainForkIfNeeded(FGEvolveInputData evolveInputData)
@@ -455,7 +463,7 @@ public class FGWebContainerWrapper
         public ByteBuffer convertToBinary(byte commandCode, S data);
     }
 
-    static abstract class AbstractTransmitter<S> implements IDataTransmitter<S>
+    public static abstract class AbstractTransmitter<S> implements IDataTransmitter<S>
     {
         @Override
         public ByteBuffer convertToBinary(byte commandCode, S data)

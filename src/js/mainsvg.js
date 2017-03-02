@@ -603,6 +603,15 @@ function processChildCountMap()
     }
 }
 
+function getComponentAbsPosition(index)
+{
+    var gElem = gElems[index]
+    var clientRect = gElem.getBoundingClientRect();
+    var x = clientRect.left;
+    var y = clientRect.top;
+    return {x: x, y: y}
+}
+
 function constructDOMIfPossible()
 {
     if (paintAllSequenceReceived && childCountMapReceived && !domConstructed)

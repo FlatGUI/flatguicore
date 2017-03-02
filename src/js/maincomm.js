@@ -535,6 +535,7 @@ function decodeCommandVector(stream, byteLength)
             if (c >= byteLength)
             {
                 console.log("SELECT: received empty selection")
+                applyTextSelection(null, "");
                 break;
             }
             var index = readShort(stream, c);
@@ -549,9 +550,10 @@ function decodeCommandVector(stream, byteLength)
                 // Single line selection
                 var endStartLinePos = readShort(stream, c);
                 c+=2;
-                selStr += stringPools[index][selStartLinePoolId].substring(selStartLinePos,endStartLinePos);
+                selStr = stringPools[index][selStartLinePoolId].substring(selStartLinePos,endStartLinePos);
                 //console.log("Text single selection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + selStartLinePoolId + "-" + endStartLinePos);
-                console.log("SELECT: s " + selStr)
+                var absPos = getComponentAbsPosition(index);
+                console.log("SELECT: s " + selStr + " x=" + absPos.x + " y=" + absPos.y);
             }
             else
             {
@@ -572,10 +574,52 @@ function decodeCommandVector(stream, byteLength)
                 selStr += stringPools[index][endStartLinePoolId].substring(0,endStartLinePos);
                 console.log("SELECT: m " + selStr)
             }
+            applyTextSelection(index, selStr);
             break;
         default:
            throw new Error("Unknown command code: " + stream[0]);
     }
+}
+
+var TEXT_SEL_ID = "textSel";
+function applyTextSelection(index, selStr)
+{
+    var d = document.getElementById(TEXT_SEL_ID);
+    var t;
+    if (d == null)
+    {
+        d = document.createElement("div")
+        d.id = TEXT_SEL_ID
+        d.style.position = 'absolute'
+        d.style.opacity = '0'
+        d.onclick = function(evt){if (evt.button != 2) {this.style.width=0;this.style.height=0}};
+        t = document.createTextNode(selStr);
+        d.appendChild(t);
+        document.body.appendChild(d);
+    }
+    else
+    {
+        t = d.childNodes[0];
+        t.nodeValue = selStr;
+    }
+
+    if (index)
+    {
+        var absPos = getComponentAbsPosition(index);
+        console.log("APLSELECT: s " + selStr + " x=" + absPos.x + " y=" + absPos.y);
+        d.style.left = absPos.x + 'px';
+        d.style.top = absPos.y + 'px';
+        d.style.width = clipSizes[index].w + 'px';
+        d.style.height = clipSizes[index].h + 'px';
+    }
+
+    var r = document.createRange();
+    var s = window.getSelection();
+    var range = document.createRange();
+    range.setStart(t, 0);
+    range.setEnd(t, selStr.length);
+    s.removeAllRanges();
+    s.addRange(range);
 }
 
 var messages = document.getElementById("messages");
@@ -923,37 +967,6 @@ function sendMouseUpEventToServer(evt)
 {
     if(evt.preventDefault) evt.preventDefault();
     if(evt.stopPropagation) evt.stopPropagation();
-    //evt.cancelBubble=true;
-    //evt.returnValue=false;
-    ////////////////////////////////////
-
-//    messages.innerHTML = "acbdefg";
-//    var r = document.createRange();
-//    var s = window.getSelection();
-//    var range = document.createRange();
-//    range.setStart(messages, 0);
-//    range.setEnd(messages, 1);
-//    s.addRange(range);
-
-//    var textsel = document.createElementNS(svgNS, 'text');
-//    textsel.setAttribute('x', '110');
-//    textsel.setAttribute('y', '16');
-//    textsel.setAttribute('width', '1000');
-//    textsel.setAttribute('height', '1000');
-//    textsel.setAttribute('fill', '#000');
-//    textsel.textContent = 'acbdefg';
-//    hostSVG.appendChild(textsel);
-//    var r = document.createRange();
-//    var s = window.getSelection();
-//    var range = document.createRange();
-//    range.setStart(textsel, 0);
-//    range.setEnd(textsel, 1);
-//    s.addRange(range);
-
-
-
-    ////////////////////////////////////
-
 
     if (transmissionMode == FINISH_PREDICTION_TRANSMISSION && mouseUpPredictionCounter > 0)
     {

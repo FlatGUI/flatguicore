@@ -669,7 +669,10 @@ function repaintWholeCache()
     //console.log("painting spentTime=" + spentTime);
 }
 
-
+function getComponentAbsPosition(index)
+{
+    return {x: absPositions[index][0][2], y: absPositions[index][1][2]}
+}
 
 /**
  * Client evolver processing

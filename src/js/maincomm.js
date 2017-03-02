@@ -515,6 +515,7 @@ function decodeCommandVector(stream, byteLength)
             break;
         case PUSH_TEXT_TO_CLIPBOARD:
             decodeCVLog("Push text to clipboard");
+            // TODO why do we transmit size - isn't byteLength (used for decoding paint all list) enough?
             var sSize = readShort(stream, c);
             c+=2;
             var str = "";
@@ -528,6 +529,48 @@ function decodeCommandVector(stream, byteLength)
             {
                 window.prompt("Copy to clipboard: Ctrl+C, Enter", pendingServerClipboardObject);
                 userRequestsDataExport = false;
+            }
+            break;
+        case TEXT_SELECTION_MODEL_COMMAND_CODE:
+            if (c >= byteLength)
+            {
+                console.log("SELECT: received empty selection")
+                break;
+            }
+            var index = readShort(stream, c);
+            c+=2;
+            var selStartLinePoolId = readShort(stream, c);
+            c+=2;
+            var selStartLinePos = readShort(stream, c);
+            c+=2;
+            var selStr = "";
+            if (byteLength == 1+2+2+2+2)
+            {
+                // Single line selection
+                var endStartLinePos = readShort(stream, c);
+                c+=2;
+                selStr += stringPools[index][selStartLinePoolId].substring(selStartLinePos,endStartLinePos);
+                //console.log("Text single selection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + selStartLinePoolId + "-" + endStartLinePos);
+                console.log("SELECT: s " + selStr)
+            }
+            else
+            {
+                // Multi line selection
+                var endStartLinePoolId = readShort(stream, c);
+                c+=2;
+                var endStartLinePos = readShort(stream, c);
+                c+=2;
+                selStr += stringPools[index][selStartLinePoolId].substring(selStartLinePos);
+                //decodeCVLog("Text selection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + endStartLinePoolId + "-" + endStartLinePos);
+                //console.log("Text multiselection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + endStartLinePoolId + "-" + endStartLinePos);
+                while(c < byteLength)
+                {
+                    var si = readShort(stream, c);
+                    c+=2;
+                    selStr += stringPools[index][si];
+                }
+                selStr += stringPools[index][endStartLinePoolId].substring(0,endStartLinePos);
+                console.log("SELECT: m " + selStr)
             }
             break;
         default:
@@ -892,20 +935,20 @@ function sendMouseUpEventToServer(evt)
 //    range.setEnd(messages, 1);
 //    s.addRange(range);
 
-    var textsel = document.createElementNS(svgNS, 'text');
-    textsel.setAttribute('x', '110');
-    textsel.setAttribute('y', '16');
-    textsel.setAttribute('width', '1000');
-    textsel.setAttribute('height', '1000');
-    textsel.setAttribute('fill', '#000');
-    textsel.textContent = 'acbdefg';
-    hostSVG.appendChild(textsel);
-    var r = document.createRange();
-    var s = window.getSelection();
-    var range = document.createRange();
-    range.setStart(textsel, 0);
-    range.setEnd(textsel, 1);
-    s.addRange(range);
+//    var textsel = document.createElementNS(svgNS, 'text');
+//    textsel.setAttribute('x', '110');
+//    textsel.setAttribute('y', '16');
+//    textsel.setAttribute('width', '1000');
+//    textsel.setAttribute('height', '1000');
+//    textsel.setAttribute('fill', '#000');
+//    textsel.textContent = 'acbdefg';
+//    hostSVG.appendChild(textsel);
+//    var r = document.createRange();
+//    var s = window.getSelection();
+//    var range = document.createRange();
+//    range.setStart(textsel, 0);
+//    range.setEnd(textsel, 1);
+//    s.addRange(range);
 
 
 

@@ -56,7 +56,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private final FGWebContainerWrapper.IDataTransmitter<Map<Object, Object>> lookVecResourceStringPoolMapTransmitter_;
     private final Map<Object, IDataTransmitterWrapper> propertyToTransWrapper_;
     private final Set<IDataTransmitterWrapper> allWrappers_;
-    private final FGWebContainerWrapper.IDataTransmitter<TextSelectionModel> textSelectionModelTransmitter_;
+    private final TextSelectionModelTransmitter textSelectionModelTransmitter_;
 
     private Collection<ByteBuffer> diffsToTransmit_;
 
@@ -209,14 +209,14 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
 
         if (propertyId == MODEL_KW)
         {
-            if (collectTextSelectionModel(newValue))
+            if (collectTextSelectionModel(componentUid, newValue))
             {
                 textSelectionModelChanged_ = true;
             }
         }
     }
 
-    private boolean collectTextSelectionModel(Object newValue)
+    private boolean collectTextSelectionModel(Integer componentUid, Object newValue)
     {
         if (newValue instanceof Map)
         {
@@ -236,10 +236,12 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
                         ((Number) caretLinePos).intValue(),
                         ((Number) selectionMarkLine).intValue(),
                         ((Number) selectionMarkLinePos).intValue());
-                if (textSelectionModel_ == null || !textSelectionModel_.equals(newModel))
+                if (textSelectionModel_ == null ||
+                        (!textSelectionModel_.equals(newModel) && (textSelectionModel_.isNonEmpty() || newModel.isNonEmpty())))
                 {
                     textSelectionModel_ = newModel;
                     selectedTextComponentLines_ = (List<String>) lines;
+                    textSelectionModelTransmitter_.setTextSelectionModel(textSelectionModel_, selectedTextComponentLines_, componentUid);
                     return true;
                 }
             }
@@ -290,7 +292,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
 
         if (textSelectionModelChanged_)
         {
-
+             diffsToTransmit_.add(textSelectionModelTransmitter_.convertToBinary(textSelectionModelTransmitter_.getCommandCode(), textSelectionModel_));
         }
     }
 
@@ -633,6 +635,26 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
             result = 31 * result + getSelectionMarkLinePos();
             return result;
         }
+
+        @Override
+        public String toString()
+        {
+            return caretLine_ +
+                    "-" + caretLinePos_ +
+                    "-" + selectionMarkLine_ +
+                    "-" + selectionMarkLinePos_;
+        }
+
+        boolean isMultiLine()
+        {
+            return getCaretLine() != getSelectionMarkLine();
+        }
+
+        boolean isNonEmpty()
+        {
+            return isMultiLine()
+                    || getCaretLinePos() != getSelectionMarkLinePos();
+        }
     }
 
     /*
@@ -654,17 +676,19 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         @Override
         public int writeBinary(ByteArrayOutputStream stream, int n, TextSelectionModel data)
         {
-            boolean multiLine = textSelectionModel_.getCaretLine() != textSelectionModel_.getSelectionMarkLine();
-            // Otherwise it's empty selection
-            if (multiLine ||
-                    textSelectionModel_.getCaretLinePos() != textSelectionModel_.getSelectionMarkLinePos())
+            if (textSelectionModel_.isNonEmpty())
             {
-                String selStartLine = selectedTextComponentLines_.get(textSelectionModel_.getCaretLine());
+                boolean caretLineFirst = textSelectionModel_.getCaretLine() <= textSelectionModel_.getSelectionMarkLine();
+                int firstLine = caretLineFirst ? textSelectionModel_.getCaretLine() : textSelectionModel_.getSelectionMarkLine();
+                int lastLine = caretLineFirst ? textSelectionModel_.getSelectionMarkLine() : textSelectionModel_.getCaretLine();
+                //System.out.println("-DLTEMP- TextSelectionModelTransmitter.writeBinary " + (caretLineFirst ? "CAR FIRST" : "CAR LAST"));
+
+                String selStartLine = selectedTextComponentLines_.get(firstLine);
                 int selStartLinePoolId = stringPoolIdSupplier_.getStringPoolId(selStartLine, textSelectionComponentUid_);
                 int selEndLinePoolUid;
-                if (multiLine)
+                if (textSelectionModel_.isMultiLine())
                 {
-                    String selEndLine = selectedTextComponentLines_.get(textSelectionModel_.getSelectionMarkLine());
+                    String selEndLine = selectedTextComponentLines_.get(lastLine);
                     selEndLinePoolUid = stringPoolIdSupplier_.getStringPoolId(selEndLine, textSelectionComponentUid_);
                 }
                 else
@@ -674,15 +698,25 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
 
                 // This would have needed to be keyCache_.getUniqueId before key cache was deprecated
                 n += FGWebContainerWrapper.wtireShort(stream, textSelectionComponentUid_.intValue());
-                n += FGWebContainerWrapper.wtireShort(stream, selStartLinePoolId);
-                n += FGWebContainerWrapper.wtireShort(stream, textSelectionModel_.getCaretLinePos());
-                n += FGWebContainerWrapper.wtireShort(stream, selEndLinePoolUid);
-                n += FGWebContainerWrapper.wtireShort(stream, textSelectionModel_.getSelectionMarkLinePos());
-                for (int l=textSelectionModel_.getCaretLine(); l<textSelectionModel_.getSelectionMarkLine(); l++)
+                if (textSelectionModel_.isMultiLine())
                 {
-                    String line = selectedTextComponentLines_.get(l);
-                    int linePoolId = stringPoolIdSupplier_.getStringPoolId(line, textSelectionComponentUid_);
-                    n += FGWebContainerWrapper.wtireShort(stream, linePoolId);
+                    n += FGWebContainerWrapper.wtireShort(stream, selStartLinePoolId);
+                    n += FGWebContainerWrapper.wtireShort(stream, caretLineFirst ? textSelectionModel_.getCaretLinePos() : textSelectionModel_.getSelectionMarkLinePos());
+                    n += FGWebContainerWrapper.wtireShort(stream, selEndLinePoolUid);
+                    n += FGWebContainerWrapper.wtireShort(stream, caretLineFirst ? textSelectionModel_.getSelectionMarkLinePos() : textSelectionModel_.getCaretLinePos());
+                    for (int l=firstLine+1; l<lastLine; l++)
+                    {
+                        String line = selectedTextComponentLines_.get(l);
+                        int linePoolId = stringPoolIdSupplier_.getStringPoolId(line, textSelectionComponentUid_);
+                        n += FGWebContainerWrapper.wtireShort(stream, linePoolId);
+                    }
+                }
+                else
+                {
+                    boolean caretFirst = textSelectionModel_.getCaretLinePos() < textSelectionModel_.getSelectionMarkLinePos();
+                    n += FGWebContainerWrapper.wtireShort(stream, selStartLinePoolId);
+                    n += FGWebContainerWrapper.wtireShort(stream, caretFirst ? textSelectionModel_.getCaretLinePos() : textSelectionModel_.getSelectionMarkLinePos());
+                    n += FGWebContainerWrapper.wtireShort(stream, caretFirst ? textSelectionModel_.getSelectionMarkLinePos() : textSelectionModel_.getCaretLinePos());
                 }
             }
             return n;

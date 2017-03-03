@@ -562,14 +562,14 @@ function decodeCommandVector(stream, byteLength)
                 c+=2;
                 var endStartLinePos = readShort(stream, c);
                 c+=2;
-                selStr += stringPools[index][selStartLinePoolId].substring(selStartLinePos);
+                selStr += stringPools[index][selStartLinePoolId].substring(selStartLinePos) + "\n";
                 //decodeCVLog("Text selection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + endStartLinePoolId + "-" + endStartLinePos);
                 //console.log("Text multiselection model for " + index + ": " + selStartLinePoolId + "-" + selStartLinePos + "-" + endStartLinePoolId + "-" + endStartLinePos);
                 while(c < byteLength)
                 {
                     var si = readShort(stream, c);
                     c+=2;
-                    selStr += stringPools[index][si];
+                    selStr += stringPools[index][si] + "\n";
                 }
                 selStr += stringPools[index][endStartLinePoolId].substring(0,endStartLinePos);
                 console.log("SELECT: m " + selStr)

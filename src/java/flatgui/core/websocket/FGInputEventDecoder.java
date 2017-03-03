@@ -12,6 +12,8 @@ package flatgui.core.websocket;
 
 import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
+import flatgui.core.engine.ui.FGKeyEventParser;
+import flatgui.core.engine.ui.FGTransferable;
 
 import java.awt.*;
 import java.awt.event.InputEvent;
@@ -260,7 +262,15 @@ public class FGInputEventDecoder
                         modifierKey ? 0 : modifiers,
                         id == KeyEvent.KEY_TYPED ? KeyEvent.VK_UNDEFINED : keyCode,
                         charCode);
-                return e;
+                if (!FGKeyEventParser.isClipboardEvent(e))
+                {
+                    return e;
+                }
+                else
+                {
+                    // Client sends explicit clipboard event
+                    return null;
+                }
             }
             else
             {
@@ -299,15 +309,21 @@ public class FGInputEventDecoder
                     {
                         charArray[i] = (char) array[ofs + 3 + i];
                     }
-                    Object data = String.valueOf(charArray);
+                    String data = String.valueOf(charArray);
 
                     System.out.println("-DLTEMP- ClipboardBinaryParser.parseImpl received data = " + data  +
                         " lenLo = " + lenLo + " lenHi = " + lenHi + " len = " + len);
 
-                    return FGClipboardEvent.createPasteEvent(data);
+                    return FGClipboardEvent.createPasteEvent(new FGTransferable(data));
                 }
                 else if (id == FGClipboardEvent.CLIPBOARD_COPY)
                 {
+                    // TODO
+                    // do we need this notification on server? Client natively copies the data
+                    // into its clipboard. Then when user does paste, client generates paste
+                    // event which carries the data to server. Same data, processed, actually
+                    // returns to client packaged to look vector commands (like drawString).
+
                     System.out.println("-DLTEMP- ClipboardBinaryParser.parseImpl COPY EVENT");
                     return FGClipboardEvent.createCopyEvent();
                 }

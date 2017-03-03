@@ -5,6 +5,7 @@ package flatgui.core.engine.ui;
 
 import clojure.lang.Associative;
 import clojure.lang.Keyword;
+import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
 import flatgui.core.IFGInteropUtil;
 import flatgui.core.engine.AppContainer;
@@ -47,6 +48,7 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
             m.put(inputEvent, Integer.valueOf(0)); // Root is always 0
             return m;
         });
+        getInputEventParser().registerReasonClassParser(FGClipboardEvent.class, new FGClipboardEventEventParser());
     }
 
     public final Interop getInteropUtil()

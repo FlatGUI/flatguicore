@@ -10,18 +10,24 @@ import flatgui.core.awt.FGDefaultPrimitivePainter;
 import flatgui.core.engine.Container;
 import flatgui.core.engine.IResultCollector;
 
-import java.awt.event.ActionListener;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.Transferable;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.util.*;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
  * @author Denis Lebedev
  */
-public class FGClojureResultCollector implements IResultCollector
+public class FGClojureResultCollector implements IResultCollector, ClipboardOwner
 {
     private static final Keyword VISIBLE_POPUP_KW = Keyword.intern("_visible-popup");
+    private static final Keyword TO_CLIPBOARD_KW = Keyword.intern("->clipboard");
+
 
     //private static final String FG_NS = "flatgui.core";
     private static final Var rebuildLook_ = clojure.lang.RT.var("flatgui.paint", "rebuild-look");
@@ -97,6 +103,11 @@ public class FGClojureResultCollector implements IResultCollector
             {
                 visiblePopupChildIndices.remove(componentUid);
             }
+        }
+        else if (newValue != null && property.equals(TO_CLIPBOARD_KW) && !GraphicsEnvironment.isHeadless())
+        {
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents((Transferable) newValue, this);
         }
     }
 
@@ -288,9 +299,8 @@ public class FGClojureResultCollector implements IResultCollector
         }
     }
 
-    //
-    //
-    //
-    //
-
+    @Override
+    public void lostOwnership(Clipboard clipboard, Transferable contents)
+    {
+    }
 }

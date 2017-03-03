@@ -10,6 +10,8 @@
 
 package flatgui.core;
 
+import java.awt.datatransfer.Transferable;
+
 /**
  * @author Denis Lebedev
  */
@@ -23,15 +25,15 @@ public class FGClipboardEvent
 
     private final int type_;
 
-    private Object data_;
+    private Transferable data_;
 
-    private FGClipboardEvent(int type, Object data)
+    private FGClipboardEvent(int type, Transferable data)
     {
         type_ = type;
         data_ = data;
     }
 
-    public static FGClipboardEvent createPasteEvent(Object data)
+    public static FGClipboardEvent createPasteEvent(Transferable data)
     {
         return new FGClipboardEvent(CLIPBOARD_PASTE, data);
     }
@@ -46,7 +48,7 @@ public class FGClipboardEvent
         return type_;
     }
 
-    public Object getData()
+    public Transferable getData()
     {
         return data_;
     }

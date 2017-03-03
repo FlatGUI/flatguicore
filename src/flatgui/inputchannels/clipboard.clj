@@ -10,7 +10,8 @@
       :author "Denys Lebediev"}
 flatgui.inputchannels.clipboard
   (:require [flatgui.inputchannels.channelbase :as channelbase])
-  (:import (flatgui.core FGClipboardEvent)))
+  (:import (flatgui.core FGClipboardEvent)
+           (java.awt.datatransfer DataFlavor)))
 
 
 (channelbase/definputparser clipboard-paste? FGClipboardEvent (= (.getType repaint-reason) FGClipboardEvent/CLIPBOARD_PASTE))
@@ -20,4 +21,7 @@ flatgui.inputchannels.clipboard
 (channelbase/definputparser get-event-type FGClipboardEvent (.getType repaint-reason))
 
 (channelbase/definputparser get-plain-text FGClipboardEvent
-  (str (.getData repaint-reason)))
+  (let [transferable (.getData repaint-reason)]
+    (if (.isDataFlavorSupported transferable DataFlavor/stringFlavor)
+      (.getTransferData transferable DataFlavor/stringFlavor)
+      "")))

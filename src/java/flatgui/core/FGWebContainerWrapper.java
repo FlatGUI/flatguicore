@@ -47,6 +47,7 @@ public class FGWebContainerWrapper
     public static final byte SET_CURSOR_COMMAND_CODE = 66;
     public static final byte PUSH_TEXT_TO_CLIPBOARD = 67;
     public static final byte TEXT_SELECTION_MODEL_COMMAND_CODE = 68;
+    public static final byte REMOVE_ADD_COMPONENTS_COMMAND_CODE = 69;
 
     public static final byte FINISH_PREDICTION_TRANSMISSION = 100;
     public static final byte MOUSE_LEFT_DOWN_PREDICTION = 101;

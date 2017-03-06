@@ -9,6 +9,7 @@ import flatgui.core.FGWebContainerWrapper;
 import flatgui.core.IFGModule;
 import flatgui.core.engine.Container;
 import flatgui.core.engine.remote.FGLegacyCoreGlue;
+import flatgui.core.util.Tuple;
 import flatgui.core.websocket.FGPaintVectorBinaryCoder;
 
 import java.io.ByteArrayOutputStream;
@@ -48,6 +49,10 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private TextSelectionModel textSelectionModel_;
     private List<String> selectedTextComponentLines_;
     private boolean textSelectionModelChanged_;
+    private Set<Integer> removedComponentUids_;
+    private List<Integer> addedComponentUids_;
+    private List<Integer> addedComponentParentUids_;
+    private Tuple removedAddedUidsTriple_;
 
     private final FGWebContainerWrapper.IDataTransmitter<List<Object>> paintAllTransmitter_;
     private final Map<Integer, List<String>> componentIdToStringPool_;
@@ -56,7 +61,9 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private final FGWebContainerWrapper.IDataTransmitter<Map<Object, Object>> lookVecResourceStringPoolMapTransmitter_;
     private final Map<Object, IDataTransmitterWrapper> propertyToTransWrapper_;
     private final Set<IDataTransmitterWrapper> allWrappers_;
+    private final BooleanFlagsMapTransmitterWrapper booleanFlagsMapTransmitterWrapper_;
     private final TextSelectionModelTransmitter textSelectionModelTransmitter_;
+    private final AddRemoveComponentsTransmitter addRemoveComponentsTransmitter_;
 
     private Collection<ByteBuffer> diffsToTransmit_;
 
@@ -83,7 +90,8 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
                 glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
-        addTransmitterWrapper(new BooleanFlagsMapTransmitterWrapper(keyCache_));
+        booleanFlagsMapTransmitterWrapper_ = new BooleanFlagsMapTransmitterWrapper(keyCache_);
+        addTransmitterWrapper(booleanFlagsMapTransmitterWrapper_);
         //addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new ClipSizeMapTransmitterWrapper(keyCache_));
 //        addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
@@ -94,6 +102,11 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         allWrappers_ = new LinkedHashSet<>(propertyToTransWrapper_.values());
 
         textSelectionModelTransmitter_ = new TextSelectionModelTransmitter(glueModule_::getStringPoolId);
+        addRemoveComponentsTransmitter_ = new AddRemoveComponentsTransmitter();
+        removedComponentUids_ = new HashSet<>();
+        addedComponentUids_ = new ArrayList<>();
+        addedComponentParentUids_ = new ArrayList<>();
+        removedAddedUidsTriple_ = Tuple.triple(removedComponentUids_, addedComponentParentUids_, addedComponentUids_);
     }
 
     void initialize(Supplier<List<Object>> paintAllSequenceSupplier)
@@ -164,6 +177,22 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     {
         super.lookVectorGenerated(componentUid, lookVec);
         collectResultForTransmitting(componentUid, LOOK_VEC_KW, lookVec);
+    }
+
+    @Override
+    public void componentAdded(Integer parentComponentUid, Integer componentUid)
+    {
+        super.componentAdded(parentComponentUid, componentUid);
+        addedComponentUids_.add(componentUid);
+        addedComponentParentUids_.add(parentComponentUid);
+    }
+
+    @Override
+    public void componentRemoved(Integer componentUid)
+    {
+        super.componentRemoved(componentUid);
+        removedComponentUids_.add(componentUid);
+        booleanFlagsMapTransmitterWrapper_.removeComponent(componentUid);
     }
 
     private void collectInitialDataForNode(Container container, Integer nodeIndex)
@@ -259,6 +288,9 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         {
             w.reset(full);
         }
+        removedComponentUids_.clear();
+        addedComponentUids_.clear();
+        addedComponentParentUids_.clear();
     }
 
     private void prepareAccumulatedDataForTrasmitting()
@@ -293,6 +325,16 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         if (textSelectionModelChanged_)
         {
              diffsToTransmit_.add(textSelectionModelTransmitter_.convertToBinary(textSelectionModelTransmitter_.getCommandCode(), textSelectionModel_));
+        }
+
+        if (!removedComponentUids_.isEmpty() || !addedComponentUids_.isEmpty())
+        {
+            System.out.println("-DLTEMP- FGRemoteClojureResultCollector.prepareAccumulatedDataForTrasmitting-----ADD/REMOVE");
+            diffsToTransmit_.add(
+                    addRemoveComponentsTransmitter_.convertToBinary(addRemoveComponentsTransmitter_.getCommandCode(), removedAddedUidsTriple_));
+            removedComponentUids_.clear();
+            addedComponentUids_.clear();
+            addedComponentParentUids_.clear();
         }
     }
 
@@ -563,6 +605,11 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
             }
         }
 
+        void removeComponent(Integer componentUid)
+        {
+            componentUidToData_.remove(componentUid);
+        }
+
         private Byte changeFlag(Byte oldFlags, byte flagMask, boolean add)
         {
             hasDataToTransmit_ = true;
@@ -753,6 +800,53 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
             textSelectionModel_ = textSelectionModel;
             selectedTextComponentLines_ = selectedTextComponentLines;
             textSelectionComponentUid_ = textSelectionComponentUid;
+        }
+    }
+
+    public static class AddRemoveComponentsTransmitter extends FGWebContainerWrapper.AbstractTransmitter<Tuple>
+    {
+        @Override
+        public int writeBinary(ByteArrayOutputStream stream, int n, Tuple data)
+        {
+            Collection<Integer> removedUids = data.getFirst();
+            List<Integer> addedParentUids = data.getSecond();
+            List<Integer> addedUids = data.getThird();
+
+            n += FGWebContainerWrapper.wtireShort(stream, removedUids.size());
+            for (Integer i : removedUids)
+            {
+                n += FGWebContainerWrapper.wtireShort(stream, i);
+            }
+            for (int i=0; i<addedUids.size(); i++)
+            {
+                n += FGWebContainerWrapper.wtireShort(stream, addedParentUids.get(i));
+                n += FGWebContainerWrapper.wtireShort(stream, addedUids.get(i));
+            }
+            return n;
+        }
+
+        @Override
+        public byte getCommandCode()
+        {
+            return FGWebContainerWrapper.REMOVE_ADD_COMPONENTS_COMMAND_CODE;
+        }
+
+        @Override
+        public Supplier<Tuple> getEmptyDataSupplier()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Supplier<Tuple> getSourceDataSupplier()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Tuple getDiffToTransmit(Tuple previousData, Tuple newData)
+        {
+            return newData;
         }
     }
 

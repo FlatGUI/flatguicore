@@ -11,7 +11,6 @@
 /*
  * Per-component data
  */
-// TODO track removed components
 var positions = [];
 var viewports = [];
 var clipSizes = [];
@@ -224,6 +223,7 @@ var SET_CURSOR_COMMAND_CODE = 66;
 var PUSH_TEXT_TO_CLIPBOARD = 67;
 var PUSH_TEXT_TO_CLIPBOARD = 67;
 var TEXT_SELECTION_MODEL_COMMAND_CODE = 68;
+var REMOVE_ADD_COMPONENTS_COMMAND_CODE = 69;
 
 var TRANSMISSION_MODE_FIRST = 100;
 var TRANSMISSION_MODE_LAST = 107;
@@ -495,7 +495,7 @@ function decodeCommandVector(stream, byteLength)
                 cc+=2;
                 pas += cci+',';
             }
-            decodeCVLog(pas);
+            console.log("["+(cc-1)/2+"] " + pas);
 
             c = processPaintAllList(paintAllSequence);
 //            while (c < byteLength)
@@ -576,6 +576,28 @@ function decodeCommandVector(stream, byteLength)
             }
             applyTextSelection(index, selStr);
             break;
+        case REMOVE_ADD_COMPONENTS_COMMAND_CODE:
+            console.log("--------- add/remove ----------------------")
+            var removeCnt = readShort(stream, c);
+            c+=2;
+            for (var i=0; i<removeCnt; i++)
+            {
+                var uid = readShort(stream, c);
+                c+=2;
+                removeComponent(uid);
+            }
+            if (addComponentImpl)
+            {
+                while (c < byteLength)
+                {
+                    var parentIndex = readShort(stream, c);
+                    c+=2;
+                    var addedChildIndex = readShort(stream, c);
+                    c+=2;
+                    addComponentImpl(parentIndex, addedChildIndex);
+                }
+            }
+            break;
         default:
            throw new Error("Unknown command code: " + stream[0]);
     }
@@ -620,6 +642,29 @@ function applyTextSelection(index, selStr)
     range.setEnd(t, selStr.length);
     s.removeAllRanges();
     s.addRange(range);
+}
+
+function removeComponent(index)
+{
+    positions[index] = null;
+    viewports[index] = null;
+    clipSizes[index] = null;
+    lookVectors[index] = null;
+    childCounts[index] = null;
+    booleanStateFlags[index] = null;
+    stringPools[index] = null;
+    resourceStringPools[index] = null;
+    clientEvolvers[index] = null;
+    indicesWithClientEvolvers[index] = null;
+    absPositions[index] = null;
+    if (componentRemoveImpl)
+    {
+        componentRemoveImpl(index);
+    }
+}
+
+function addComponentImpl(parentIndex, addedChildIndex)
+{
 }
 
 var messages = document.getElementById("messages");

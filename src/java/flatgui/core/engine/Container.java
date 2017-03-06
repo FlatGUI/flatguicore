@@ -9,6 +9,7 @@
  */
 package flatgui.core.engine;
 
+import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.util.Tuple;
@@ -79,9 +80,9 @@ public class Container
         initializeContainer();
     }
 
-    public Integer addComponent(List<Object> componentPath, ComponentAccessor component)
+    public Integer addComponent(Integer parentComponentUid, List<Object> componentPath, ComponentAccessor component)
     {
-        return addComponentImpl(componentPath, component);
+        return addComponentImpl(parentComponentUid, componentPath, component);
     }
 
     public Integer indexOfPath(List<Object> path)
@@ -141,8 +142,9 @@ public class Container
             Node node = reusableNodeBuffer_[currentCycleBufIndex_];
             if (node == null)
             {
-                // Component (with all its nodes) has been removed during this cycle, and its node have been
+                // Component (with all its nodes) has been removed during this cycle, and its nodes have been
                 // removed from reusable buffer to prevent inconsistent calculations
+                currentCycleBufIndex_++;
                 continue;
             }
             Object triggeringReason = reusableReasonBuffer_[currentCycleBufIndex_];
@@ -267,7 +269,6 @@ public class Container
                     containerMutator_.setValue(nodeIndex, newValue);
 
                     List<Object> componentPath = component.getComponentPath();
-                    resultCollector_.appendResult(node.getParentComponentUid(), componentPath, node, newValue);
 
                     addNodeDependentsToEvolvebuffer(node);
 
@@ -282,6 +283,10 @@ public class Container
                         idsToAdd.addAll(changedChildIds);
 
                         log(" Removing " + removedChildIds.size() + " removed and " + changedChildIds.size() + " changed children...");
+                        System.out.println(" Removing " + removedChildIds.size() +
+                                " ("+removedChildIds+")"
+                                + " removed and " + changedChildIds.size() + " changed children...");
+                        Set<Integer> removedChildIndices = new HashSet<>(idsToRemove.size());
                         for (Object id : idsToRemove)
                         {
                             List<Object> childPath = new ArrayList<>(componentPath.size()+1);
@@ -289,9 +294,11 @@ public class Container
                             childPath.add(id);
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
+                            removedChildIndices.add(removedChildIndex);
                         }
 
                         log(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
+                        System.out.println(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
                         Set<Integer> newChildIndices = new HashSet<>(idsToAdd.size());
                         Map<Object, Integer> newChildIdToIndex = new HashMap<>();
 
@@ -304,6 +311,7 @@ public class Container
                                     newChildIdToIndex.put(childId, index);
                                 });
 
+                        component.removeChildIndices(removedChildIndices, removedChildIds);
                         component.addChildIndices(newChildIndices, newChildIdToIndex);
                     }
                     if (node.isChildOrderProperty() && newValue != null)
@@ -320,6 +328,8 @@ public class Container
                         }
                         component.changeChildIndicesOrder(newChildIndices);
                     }
+
+                    resultCollector_.appendResult(node.getParentComponentUid(), componentPath, node, newValue);
                 }
                 else
                 {
@@ -422,7 +432,7 @@ public class Container
 
     // Private
 
-    private Integer addComponentImpl(List<Object> componentPath, ComponentAccessor component)
+    private Integer addComponentImpl(Integer parentComponentUid, List<Object> componentPath, ComponentAccessor component)
     {
         Integer index;
         if (vacantComponentIndices_.isEmpty())
@@ -438,7 +448,7 @@ public class Container
         }
         componentPathToIndex_.put(componentPath, index);
 
-        resultCollector_.componentAdded(index);
+        resultCollector_.componentAdded(parentComponentUid, index);
 
         return index;
     }
@@ -507,7 +517,8 @@ public class Container
 
         ComponentAccessor component = new ComponentAccessor(
                 componentPath, values_, path -> getPropertyValue(indexOfPathStrict(path)));
-        Integer componentUid = addComponent(componentPath, component);
+        Integer componentUid = addComponent(parentComponentUid, componentPath, component);
+        component.setComponentUid(componentUid);
         log("Added and indexed component " + componentPath + ": " + componentUid);
         Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(
                 componentPath, container, propertyValueAccessor_);
@@ -968,6 +979,8 @@ public class Container
         private List<Integer> childIndices_;
         private Map<Object, Integer> childIdToIndex_;
 
+        private Integer componentUid_;
+
         private final Function<List<Object>, Object> globalIndexToValueProvider_;
 
         private Object currentEvolveReason_;
@@ -1108,6 +1121,16 @@ public class Container
             return propertyIdToIndex_;
         }
 
+        public Integer getComponentUid()
+        {
+            return componentUid_;
+        }
+
+        void setComponentUid(Integer componentUid)
+        {
+            componentUid_ = componentUid;
+        }
+
         void putPropertyIndex(Object key, Integer index)
         {
             propertyIdToIndex_.put(key, index);
@@ -1147,6 +1170,15 @@ public class Container
         {
             childIndices_.addAll(childIndices);
             childIdToIndex_.putAll(childIdToIndex);
+        }
+
+        void removeChildIndices(Collection<Integer> childIndices, Collection<Object> childIds)
+        {
+            childIndices_.removeAll(childIndices);
+            for (Object id : childIds)
+            {
+                childIdToIndex_.remove(id);
+            }
         }
 
         void setEvolveReason(Object reason)

@@ -10,7 +10,7 @@ import java.util.List;
  */
 public interface IResultCollector
 {
-    void componentAdded(Integer componentUid);
+    void componentAdded(Integer parentComponentUid, Integer componentUid);
 
     void componentRemoved(Integer componentUid);
 

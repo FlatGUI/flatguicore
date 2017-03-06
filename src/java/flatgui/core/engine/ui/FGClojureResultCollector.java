@@ -49,7 +49,7 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
     }
 
     @Override
-    public void componentAdded(Integer componentUid)
+    public void componentAdded(Integer parentComponentUid, Integer componentUid)
     {
         if (componentUid.intValue() >= lookVectors_.size())
         {

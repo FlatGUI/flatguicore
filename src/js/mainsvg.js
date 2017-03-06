@@ -544,15 +544,16 @@ function processClipSizeUpdate(index)
 function processBooleanFlagMap(index)
 {
     var gElem = gElems[index];
+    if (gElem != null)
+    {
     var visible = checkFlagForComponent(index, STATE_FLAGS_VISIBILITY_MASK);
     gElem.setAttribute('visibility', visible ? 'visible' : 'hidden');
-
-    if (index == 8)
-    {
-        console.log("Element " + index + " receives " + checkFlagForComponent(index, STATE_FLAGS_PRECISE_TEXT_MEASUREMENT))
-    }
-
     processLookVectorUpdate(index);
+    }
+    else
+    {
+        console.log("Accessing null index " + index)
+    }
 }
 
 function processLookVectorUpdate(index)
@@ -584,10 +585,6 @@ function processPaintAllList()
         }
         constructDOMIfPossible();
     }
-    else
-    {
-        console.log("Error: paint all seq has been received already");
-    }
 }
 
 function processChildCountMap()
@@ -596,10 +593,6 @@ function processChildCountMap()
     {
         childCountMapReceived = true;
         constructDOMIfPossible();
-    }
-    else
-    {
-        throw new Error("Child count map has been received already");
     }
 }
 
@@ -639,6 +632,31 @@ function createGElem(parent, index)
     var componentUid = paintAllArray[index];
     var childCount = childCounts[componentUid];
 
+    var g = createGElemImpl(componentUid);
+
+    if (childCount > 0)
+    {
+        var gChildren = createChildHolder(g, componentUid);
+    }
+
+    if (parent)
+    {
+        parent.appendChild(g);
+    }
+    index++;
+
+    var i = 0;
+    while (i < childCount)
+    {
+        index = createGElem(gChildren, index)
+        i++;
+    }
+
+    return index;
+}
+
+function createGElemImpl(componentUid)
+{
     var g = document.createElementNS(svgNS, "g");
     g.setAttribute('id', componentUid);
     gElems[componentUid] = g;
@@ -659,27 +677,35 @@ function createGElem(parent, index)
     gShapes.setAttribute('id', genShapesSubElemId(componentUid));
     g.appendChild(gShapes);
 
-    if (childCount > 0)
-    {
-        var gChildren = document.createElementNS(svgNS, "g");
-        gChildren.setAttribute('id', genChildrenSubElemId(componentUid));
-        g.appendChild(gChildren);
-    }
+    return g;
+}
 
-    if (parent)
-    {
-        parent.appendChild(g);
-    }
-    index++;
+function createChildHolder(g, componentUid)
+{
+    var gChildren = document.createElementNS(svgNS, "g");
+    gChildren.setAttribute('id', genChildrenSubElemId(componentUid));
+    g.appendChild(gChildren);
+    return gChildren;
+}
 
-    var i = 0;
-    while (i < childCount)
-    {
-        index = createGElem(gChildren, index)
-        i++;
-    }
+function componentRemoveImpl(index)
+{
+    console.log("Removing SVG node for " + index)
+    gElems[index].parentNode.removeChild(gElems[index]);
+    gElems[index] = null;
+}
 
-    return index;
+function addComponentImpl(parentIndex, addedChildIndex)
+{
+    console.log("Adding SVG node for " + addedChildIndex)
+    var gAdded = createGElemImpl(addedChildIndex);
+
+    var gChildren = document.getElementById(genChildrenSubElemId(parentIndex));
+    if (gChildren == null)
+    {
+        gChildren = createChildHolder(gElems[parentIndex], parentIndex);
+    }
+    gChildren.appendChild(gAdded);
 }
 
 function getHostBoundingClientRect()

@@ -287,7 +287,7 @@ function decodeLog(msg)
 
 function decodeCVLog(msg)
 {
-    console.log(msg);
+    //console.log(msg);
 }
 
 function decodeLookVector(componentIndex, stream, byteLength)
@@ -414,7 +414,6 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                         codeObj = decodeString(stream, c);
                         decodeLog( "drawString " + JSON.stringify(codeObj));
-                        console.log( "drawString " + JSON.stringify(codeObj));
                         if (stringPools[componentIndex] && stringPools[componentIndex][codeObj.i])
                         {
                             fillText(stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);

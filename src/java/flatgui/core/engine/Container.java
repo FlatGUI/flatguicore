@@ -9,9 +9,9 @@
  */
 package flatgui.core.engine;
 
-import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
+import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
 
 import java.lang.reflect.Array;
@@ -48,6 +48,7 @@ public class Container
     private Object[] reusableReasonBuffer_;
     private int indexBufferSize_;
     private int currentCycleBufIndex_;
+    private Map<Integer, Map<Object, Object>> nodeIndexToComponentCopyForConsumers_;
 
     private Set<Integer> initializedNodes_;
 
@@ -65,6 +66,7 @@ public class Container
         nodesWithAmbiguousDependencies_ = new ArrayList<>();
         values_ = new ArrayList<>();
         pathToIndex_ = new HashMap<>();
+        nodeIndexToComponentCopyForConsumers_ = new LinkedHashMap<>();
 
         reusableNodeBuffer_ = new Node[1048576];
         reusableReasonBuffer_ = new Object[1048576];
@@ -137,6 +139,7 @@ public class Container
 
         Set<Integer> addedComponentIds = new HashSet<>();
         currentCycleBufIndex_ = 0;
+        nodeIndexToComponentCopyForConsumers_.clear();
         while (currentCycleBufIndex_ < indexBufferSize_)
         {
             Node node = reusableNodeBuffer_[currentCycleBufIndex_];
@@ -267,6 +270,17 @@ public class Container
                 {
                     log(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": " + valueToString(oldValue) + " -> " + valueToString(newValue));
                     containerMutator_.setValue(nodeIndex, newValue);
+                    Collection<IFGEvolveConsumer> nodeEvolverConsumers = node.getEvolveConsumers();
+                    if (nodeEvolverConsumers != null)
+                    {
+                        Map<Object, Object> componentCopy = nodeIndexToComponentCopyForConsumers_.get(node.getNodeIndex());
+                        if (componentCopy == null)
+                        {
+                            componentCopy = new HashMap<>();
+                            nodeIndexToComponentCopyForConsumers_.put(node.getNodeIndex(), componentCopy);
+                        }
+                        componentCopy.put(node.getPropertyId(), newValue);
+                    }
 
                     List<Object> componentPath = component.getComponentPath();
 
@@ -346,6 +360,8 @@ public class Container
         }
 
         resultCollector_.postProcessAfterEvolveCycle(containerAccessor_, containerMutator_);
+
+        notifyEvolverConsumers();
 
         log("---Ended evolve cycle");
 
@@ -428,6 +444,34 @@ public class Container
     public Collection<List<Object>> getAllIdPaths()
     {
         return Collections.unmodifiableSet(pathToIndex_.keySet());
+    }
+
+    /**
+     * Adds evolve result consumer to the container. Note: consumer is added to the node,
+     * and if node is removed then consumer is removed as well and is not re-applied in case
+     * new node is added for given path/property
+     */
+    public void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
+    {
+        List<Object> path = evolveConsumer.getTargetPath();
+        Collection<Object> targetProperties = evolveConsumer.getTargetProperties();
+
+        for (Object property : targetProperties)
+        {
+            List fullPath = new ArrayList<>(path.size() + 1);
+            fullPath.addAll(path);
+            fullPath.add(property);
+
+            Integer nodeIndex = pathToIndex_.get(fullPath);
+            if (nodeIndex != null)
+            {
+                nodes_.get(nodeIndex.intValue()).addEvolveConsumer(evolveConsumer);
+            }
+            else
+            {
+                System.out.println("Error: node for " + path + "/" + property + " is not found.");
+            }
+        }
     }
 
     // Private
@@ -794,6 +838,23 @@ public class Container
         }
     }
 
+    private void notifyEvolverConsumers()
+    {
+        for (Integer nodeIndex : nodeIndexToComponentCopyForConsumers_.keySet())
+        {
+            Node node = nodes_.get(nodeIndex.intValue());
+            for (IFGEvolveConsumer evolveConsumer : node.getEvolveConsumers())
+            {
+                // TODO container id -> session id
+                Map<Object, Object> componentCopy = nodeIndexToComponentCopyForConsumers_.get(nodeIndex);
+                Thread t = new Thread(() ->
+                        evolveConsumer.acceptEvolveResult(null, componentCopy),
+                        "FlatGUI Evolver Consumer Notifier");
+                t.start();
+            }
+        }
+        nodeIndexToComponentCopyForConsumers_.clear();
+    }
 
     // // //
 
@@ -1222,6 +1283,7 @@ public class Container
         private Map<Integer, Tuple> dependencyIndices_;
         private Object evolverCode_;
         private Function<Map<Object, Object>, Object> evolver_;
+        private Set<IFGEvolveConsumer> evolveConsumers_;
 
         // TODO Optimize:
         // remove dependents covered by longer chains. Maybe not remove but just hide since longer chains may be provided
@@ -1423,6 +1485,20 @@ public class Container
         {
             dependencyIndices_.remove(nodeIndex);
             ((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
+        }
+
+        void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
+        {
+            if (evolveConsumers_ == null)
+            {
+                evolveConsumers_ = new HashSet<>();
+            }
+            evolveConsumers_.add(evolveConsumer);
+        }
+
+        Collection<IFGEvolveConsumer> getEvolveConsumers()
+        {
+            return evolveConsumers_;
         }
     }
 }

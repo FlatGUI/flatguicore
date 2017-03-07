@@ -10,8 +10,6 @@
 
 package flatgui.core;
 
-import clojure.lang.Keyword;
-
 import java.util.Collection;
 import java.util.List;
 
@@ -21,26 +19,26 @@ import java.util.List;
 public interface IFGEvolveConsumer
 {
     /**
-     * @return Id Paths of all components in which this consumer is interested.
+     * @return Id Path of a component in which this consumer is interested.
      */
-    public Collection<List<Keyword>> getTargetPaths();
+    List<Object> getTargetPath();
 
     /**
-     * @param path Id Path, one of those returned by {@link #getTargetPaths}
-     * @return properties for given path in which this consumer is interested
+     * @return properties in which this consumer is interested
      *         or null if it is interested in all properties
      */
-    public Collection<Keyword> getTargetProperties(List<Keyword> path);
+    Collection<Object> getTargetProperties();
 
     /**
      * This method is called by FlatGUI Core when Container is evolved for
-     * Evolve Reason object targeted to any (or all) components identified by
-     * {@link IFGEvolveConsumer#getTargetPaths()} method
+     * Evolve Reason object targeted to a component identified by
+     * {@link IFGEvolveConsumer#getTargetPath()} method. The call is made
+     * after evolve cycle is fully finished.
      *
      * @param sessionId Session Id of the session in which Evolve Reason has been
      *                  processed by Container, or null for local desktop
      *                  applications
      * @param containerObject reference to freshly evolved Container
      */
-    public void acceptEvolveResult(Object sessionId, Object containerObject);
+    void acceptEvolveResult(Object sessionId, Object containerObject);
 }

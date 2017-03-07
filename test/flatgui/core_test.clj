@@ -18,7 +18,9 @@
            (flatgui.core.awt FGAWTInteropUtil)
            (java.util ArrayList)
            (java.util.function Consumer)
-           (java.awt.geom AffineTransform)))
+           (java.awt.geom AffineTransform)
+           (flatgui.core IFGEvolveConsumer)
+           (java.util.concurrent.locks ReentrantLock)))
 
 (test/deftest get-property-call?-test
   (test/is (true? (core/get-property-call? (list 'get-property [:a :b] :c))))
@@ -59,7 +61,7 @@
                                                 (assoc r [path (.getPropertyId node)] newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -96,7 +98,7 @@
                                                 (assoc r [path (.getPropertyId node)] newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         _container-engine (Container.
                             (ClojureContainerParser.)
@@ -127,7 +129,7 @@
                                                 (assoc r (.getPropertyId node) newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -172,7 +174,7 @@
                                                 (assoc r [path (.getPropertyId node)] newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -222,7 +224,7 @@
                                                 (assoc r (.getPropertyId node) newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -248,7 +250,7 @@
                                                 (assoc r [path (.getPropertyId node)] newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                             (ClojureContainerParser.)
@@ -279,7 +281,7 @@
                                                 (assoc r [path (.getPropertyId node)] newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -387,7 +389,7 @@
                                                 (assoc r (.getPropertyId node) newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -429,7 +431,7 @@
                                                 (assoc r (.getPropertyId node) newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -475,7 +477,7 @@
                                                 (assoc r (.getPropertyId node) newValue)
                                                 r)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
                            (ClojureContainerParser.)
@@ -520,7 +522,7 @@
                            (appendResult [_parentComponentUid, _path, node, newValue]
                              (swap! results (fn [r] (assoc r (.getPropertyId node) newValue)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (conj r componentUid))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
@@ -569,7 +571,7 @@
                            (appendResult [_parentComponentUid, _path, node, newValue]
                              (swap! results (fn [r] (assoc r (.getPropertyId node) newValue)))
                              )
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (conj r componentUid))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
@@ -603,7 +605,7 @@
         removed-res (atom {0 0 1 0 2 0 3 0})
         result-collector (proxy [IResultCollector] []
                            (appendResult [_parentComponentUid, _path, _node, _newValue])
-                           (componentAdded [componentUid] (swap! added-res (fn [r] (assoc r componentUid (inc (get r componentUid))))))
+                           (componentAdded [_parentComponentUid componentUid] (swap! added-res (fn [r] (assoc r componentUid (inc (get r componentUid))))))
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (assoc r componentUid (inc (get r componentUid))))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
@@ -644,7 +646,7 @@
                                               (if (= :a (.getPropertyId node))
                                                 (conj r newValue)
                                                 r))))
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (componentRemoved [_componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
@@ -694,7 +696,7 @@
                                (swap! results (fn [r] (conj r newValue)))
                                (= :res1 (.getPropertyId node))
                                (swap! results1 (fn [r] (conj r newValue)))))
-                           (componentAdded [_componentUid])
+                           (componentAdded [_parentComponentUid _componentUid])
                            (componentRemoved [_componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
@@ -709,3 +711,44 @@
         ]
     (test/is (= #{0 nil 1} @results))
     (test/is (= #{0 nil 1 2} @results1))))
+
+(test/deftest evolve-consumer-test
+  (let [_ (core/defevolverfn :a (if (not (nil? (get-reason)))
+                                  (+ (:x (get-reason)) 5)
+                                  old-a))
+        container (core/defroot
+                    {:id :main
+                     :a 0
+                     :evolvers {:a a-evolver}})
+        results (atom 1)
+        consumed-results (atom 2)
+        result-collector (proxy [IResultCollector] []
+                           (appendResult [_parentComponentUid, _path, node, newValue]
+                             (swap! results (fn [r] (if (= :a (.getPropertyId node))
+                                                      [newValue (.getName (Thread/currentThread))]
+                                                      r))))
+                           (componentAdded [_parentComponentUid _componentUid])
+                           (postProcessAfterEvolveCycle [_a _m]))
+        lock (ReentrantLock.)
+        condition (.newCondition lock)
+        evolve-consumer (proxy [IFGEvolveConsumer] []
+                          (getTargetPath [] [:main])
+                          (getTargetProperties [] [:a])
+                          (acceptEvolveResult [_session-id component]
+                            (do
+                              (.lock lock)
+                              (swap! consumed-results (fn [_] [(:a component) (.getName (Thread/currentThread))]))
+                              (.signal condition)
+                              (.unlock lock))))
+        container-engine (Container.
+                           (ClojureContainerParser.)
+                           result-collector
+                           container)
+        _ (.addEvolveConsumer container-engine evolve-consumer)
+        _ (.lock lock)
+        _ (.evolve container-engine [:main] {:x 2})
+        _ (.await condition)
+        _ (.unlock lock)]
+    (test/is (= 7 (first @results)))
+    (test/is (= 7 (first @consumed-results)))
+    (test/is (not= (second @results) (second @consumed-results)))))

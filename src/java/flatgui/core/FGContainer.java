@@ -332,6 +332,7 @@ public class FGContainer implements IFGContainer
 
     private static boolean shouldInvokeEvolveConsumer(IFGModule module, IFGEvolveConsumer consumer)
     {
+/*
         Map<Object, Object> container = (Map<Object, Object>) module.getContainer();
 
         for (List<Keyword> path : consumer.getTargetPaths())
@@ -354,6 +355,7 @@ public class FGContainer implements IFGContainer
                 return changedProperties != null;
             }
         }
+*/
         return false;
     }
 }

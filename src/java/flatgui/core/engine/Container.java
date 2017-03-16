@@ -176,7 +176,7 @@ public class Container
                         }
                         catch (Exception ex)
                         {
-                            log(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " while initializing ");
+                            logError(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " while initializing ");
                             ex.printStackTrace();
                             throw ex;
                         }
@@ -192,7 +192,7 @@ public class Container
                     }
                     catch (Exception ex)
                     {
-                        log(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " for reason: " + triggeringReason);
+                        logError(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " for reason: " + triggeringReason);
                         ex.printStackTrace();
                         throw ex;
                     }
@@ -796,6 +796,11 @@ public class Container
         {
             System.out.println("[FG Eng]: " + message);
         }
+    }
+
+    static void logError(String message)
+    {
+        System.out.println("[FG Eng Error]: " + message);
     }
 
     static String valueToString(Object v)

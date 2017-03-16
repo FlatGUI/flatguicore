@@ -30,9 +30,7 @@
 
 (defn defmxcol [& values]
   "Defines 1-column matrix"
-  ;(vec (for [v values] [v]))
-  (mapv (fn [v] [v]) values)
-  )
+  (mapv (fn [v] [v]) values))
 
 (defn mx-get [m r c]
   "Returns element specified by row r and column c from matrix m"

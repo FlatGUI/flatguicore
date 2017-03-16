@@ -6,14 +6,31 @@
 ; the terms of this license.
 ; You must not remove this notice, or any other, from this software.
 
-(ns flatgui.testsuite
+(ns flatgui.test
   (:require [flatgui.comlogic :as fgc]
             [flatgui.util.matrix :as m]
-            [flatgui.awt :as awt])
-  (:import (java.awt.event MouseEvent KeyEvent)
-           (java.awt Container)
-           (flatgui.core FGEvolveInputData)))
+            [flatgui.awt :as awt]
+            [flatgui.base :as fg])
+  (:import (flatgui.core.engine ClojureContainerParser Container IResultCollector)))
 
+(defn evolve
+  ([container property reason target]
+   (let [results (atom {})
+         result-collector (proxy [IResultCollector] []
+                            (appendResult [_parentComponentUid, _path, node, newValue]
+                              (swap! results (fn [r] (if (= property (.getPropertyId node))
+                                                       newValue
+                                                       r))))
+                            (componentAdded [_parentComponentUid _componentUid])
+                            (componentRemoved [_componentUid])
+                            (postProcessAfterEvolveCycle [_a _m]))
+         container-engine (Container.
+                            (ClojureContainerParser.)
+                            result-collector
+                            container)
+         _ (.evolve container-engine target reason)]
+     @results))
+  ([container property reason] (evolve container property reason [:main])))
 
 ; TODO #44
 ;(def dummy-source (Container.))

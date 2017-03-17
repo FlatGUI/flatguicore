@@ -144,4 +144,19 @@
         res {:x 2 :y 0 :w 5 :h 5}]
     (test/is (= res (r/get-largest-adjacent [r1 r2 r3 r4 r5])))))
 
-
+(test/deftest intersect?-test
+  (let [ra1 {:x 2 :y 0 :w 5 :h 2}
+        ra2 {:x 0 :y 1 :w 7 :h 2}
+        rb1 {:x 2 :y 0 :w 5 :h 2}
+        rb2 {:x 0 :y 2 :w 7 :h 2}
+        rc1 {:x 2 :y 0 :w 5 :h 2}
+        rc2 {:x 8 :y 0 :w 7 :h 2}
+        rd1 {:x 2 :y 0 :w 5 :h 2}
+        rd2 {:x 0 :y 0 :w 1 :h 2}
+        ]
+    (test/is (true? (r/intersect? ra1 ra2)))
+    (test/is (false? (r/intersect? rb1 rb2)))
+    (test/is (false? (r/intersect? rc1 rc2)))
+    (test/is (false? (r/intersect? rd1 rd2)))
+    (test/is (false? (r/intersect? 1 1 4 2 5 3 7 4)))
+    (test/is (true? (r/intersect? 3 5 5 7 1 4 4 9)))))

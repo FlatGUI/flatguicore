@@ -26,20 +26,23 @@
 (defn valid-rect? [r]
   (and (> (:w r) 0) (> (:h r) 0)))
 
-(defn intersect? [a b]
+(defn intersect?
   "Returns true if intersection of 2-dimentional rectangles
-   (each defined by :x, :y, :w, :h) exists, false otherwise"
-  (let [ x1a (:x a)
-        y1a (:y a)
-        x2a (+ x1a (:w a))
-        y2a (+ y1a (:h a))
-        x1b (:x b)
-        y1b (:y b)
-        x2b (+ x1b (:w b))
-        y2b (+ y1b (:h b))
-        x-inter (line& x1a x2a x1b x2b)
-        y-inter (line& y1a y2a y1b y2b)]
-    (and (not (nil? x-inter)) (not (nil? y-inter)))))
+    (each defined by :x, :y, :w, :h) exists, false otherwise"
+  ([x1a y1a x2a y2a x1b y1b x2b y2b]
+   (let [x-inter (line& x1a x2a x1b x2b)
+         y-inter (line& y1a y2a y1b y2b)]
+     (and (not (nil? x-inter)) (not (nil? y-inter)))))
+  ([a b]
+   (let [x1a (:x a)
+         y1a (:y a)
+         x2a (+ x1a (:w a))
+         y2a (+ y1a (:h a))
+         x1b (:x b)
+         y1b (:y b)
+         x2b (+ x1b (:w b))
+         y2b (+ y1b (:h b))]
+     (intersect? x1a y1a x2a y2a x1b y1b x2b y2b))))
 
 (defn rect& [a b]
   "Returns intersection of 2-dimentional rectangles

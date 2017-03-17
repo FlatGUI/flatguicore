@@ -120,6 +120,10 @@ public class ClojureContainerParser implements Container.IContainerParser
             if (hasEvolver)
             {
                 IFn evolverFn = (IFn) evolverCode;
+                if (evolverFn instanceof Var.Unbound)
+                {
+                    throw new IllegalStateException("unbound evolver fn: " + componentPath + " " + propertyId);
+                }
                 Map<Object, Object> evolverFnMeta = (Map<Object, Object>) ((IMeta)evolverFn).meta();
                 //Symbol symbol = (Symbol) evolverFnMeta.get(SYMBOL_META_KEY);
                 if (evolverFnMeta == null)

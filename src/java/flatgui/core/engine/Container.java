@@ -735,6 +735,8 @@ public class Container
 
     private void addNodeDependentsToEvolvebuffer(Node node)
     {
+        // TODO do not add if it already there for the same reason?
+
         Map<Integer, List<Object>> dependents = node.getDependentIndices();
         int dependentCollSize = dependents.size();
         ensureIndexBufferSize(indexBufferSize_ + dependentCollSize);

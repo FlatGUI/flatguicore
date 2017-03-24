@@ -39,7 +39,8 @@
 (defn- gp-replacer [% property]
   (cond
     (and (seq? %) (get-property-call? %))
-    (let [% (if (symbol? (second %)) (conj (drop 2 %) (first %)) %) ;backward compatibility
+    (let [m (meta %)
+          % (if (symbol? (second %)) (conj (drop 2 %) (first %)) %) ;backward compatibility
           % (replace-gp % property)
           path-&-prop (next %)
           path (first path-&-prop)
@@ -51,19 +52,27 @@
                             dyn-path (GetPropertyDynPathClojureFn.)
                             dyn-property (GetDynPropertyClojureFn.)
                             :else (GetPropertyStaticClojureFn.))]
-      (conj path-&-prop get-property-fn))
+      (with-meta (conj path-&-prop get-property-fn) m))
     (and (seq? %) (get-reason-call? %))
-    (list '.getEvolveReason 'component)
+    (with-meta (list '.getEvolveReason 'component) (meta %))
     (old-value-ref? % property)
-    (list (keyword (.substring (name %) (.length old-val-prefix))) 'component)
+    (with-meta (list (keyword (.substring (name %) (.length old-val-prefix))) 'component) (meta %))
     (seq? %) (replace-gp % property)
     (vector? %) (replace-gpv % property)
     (map? %) (replace-gpmap % property)
     :else %))
 
-(defn replace-gp [form property] (map #(gp-replacer % property) form))
-(defn replace-gpv [v property] (mapv #(gp-replacer % property) v))
-(defn replace-gpmap [form property] (functor/fmap #(gp-replacer % property) form))
+(defn replace-gp [form property]
+  (let [m (meta form)]
+    (with-meta (map #(gp-replacer % property) form) m)))
+
+(defn replace-gpv [v property]
+  (let [m (meta v)]
+    (with-meta (mapv #(gp-replacer % property) v) m)))
+
+(defn replace-gpmap [form property]
+  (let [m (meta form)]
+    (with-meta (functor/fmap #(gp-replacer % property) form) m)))
 
 ;(defn- gen-evolver [body property] (flatgui.core/replace-gp (gp-replacer body property) property))
 (defn- gen-evolver [body property] (gp-replacer body property))

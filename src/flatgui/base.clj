@@ -30,7 +30,12 @@
 (def old-val-prefix "old-")
 
 (defn old-value-ref? [e property]
-  (and (not (nil? property)) (symbol? e) (.startsWith (name e) old-val-prefix) (.endsWith (name e) (name property))))
+  (and
+    (not (nil? property))
+    (symbol? e)
+    (.startsWith (name e) old-val-prefix)
+    (.endsWith (name e) (name property))
+    (= (.length (str e)) (+ (.length old-val-prefix) (dec (.length (str property)))))))
 
 (declare replace-gp)
 (declare replace-gpv)

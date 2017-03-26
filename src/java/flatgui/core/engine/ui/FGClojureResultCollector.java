@@ -252,7 +252,16 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
             // Note that getChildIndices() returns indices properly ordered by z positions
             for (Integer childIndex : componentAccessor.getChildIndices())
             {
-                paintComponentWithChildren(primitivePainter, containerAccessor, propertyValueAccessor, childIndex);
+                try
+                {
+                    paintComponentWithChildren(primitivePainter, containerAccessor, propertyValueAccessor, childIndex);
+                }
+                catch (Throwable ex)
+                {
+                    System.out.println("ERROR painting component " + childIndex + " " +
+                            containerAccessor.getComponent(childIndex).get(FGClojureContainerParser.ID_KW));
+                    throw ex;
+                }
             }
         }
         primitivePainter.accept(transform(viewportMatrixInv));

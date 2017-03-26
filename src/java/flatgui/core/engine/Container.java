@@ -309,6 +309,7 @@ public class Container
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
                             removedChildIndices.add(removedChildIndex);
+                            addedComponentIds.remove(removedChildIndex);
                         }
 
                         log(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
@@ -610,9 +611,14 @@ public class Container
 
     private void initializeAddedComponent(Integer componentUid)
     {
-        evolve(componentUid, null);
-        //getResultCollector().componentInitialized(this, componentUid); TODO is looks like we are good without this
         ComponentAccessor component = components_.get(componentUid);
+        if (component == null)
+        {
+            // Added component may have been removed soon after it had been added
+            return;
+        }
+
+        evolve(componentUid, null);
         Iterable<Integer> childIndices = component.getChildIndices();
         if (childIndices != null)
         {
@@ -783,7 +789,10 @@ public class Container
     {
         initializedNodes_ = new HashSet<>();
         log("========================Started initialization cycle================================");
-        for (int i=0; i<components_.size(); i++)
+        // New components may be added to, or some may be removed from components_ during initialization.
+        // So iterate over the snapshot.
+        List<Container.ComponentAccessor> components = new ArrayList<>(components_);
+        for (int i=0; i<components.size(); i++)
         {
             evolve(Integer.valueOf(i), null);
         }

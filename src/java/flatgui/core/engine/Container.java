@@ -76,7 +76,7 @@ public class Container
         propertyValueAccessor_ = this::getPropertyValue;
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
-        addContainer(null, new ArrayList<>(), container);
+        addContainer(null, new ArrayList<>(), container, null);
         finishContainerIndexing();
 
         initializeContainer();
@@ -309,6 +309,7 @@ public class Container
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
                             removedChildIndices.add(removedChildIndex);
+                            // TODO deep remove
                             addedComponentIds.remove(removedChildIndex);
                         }
 
@@ -320,8 +321,9 @@ public class Container
                         idsToAdd
                                 .forEach(childId -> {
                                     Map<Object, Object> child = newChildren.get(childId);
-                                    Integer index = addContainer(node.getComponentUid(), component.getComponentPath(), child);
-                                    addedComponentIds.add(index);
+                                    Collection<Integer> deepIndices = new HashSet<>();
+                                    Integer index = addContainer(node.getComponentUid(), component.getComponentPath(), child, deepIndices);
+                                    deepIndices.forEach(addedComponentIds::add);
                                     newChildIndices.add(index);
                                     newChildIdToIndex.put(childId, index);
                                 });
@@ -552,7 +554,8 @@ public class Container
         }
     }
 
-    private Integer addContainer(Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container)
+    private Integer addContainer(
+            Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container, Collection<Integer> addedIndicesCollector)
     {
         // Add and thus index all components/properties
 
@@ -564,6 +567,10 @@ public class Container
                 componentPath, values_, path -> getPropertyValue(indexOfPathStrict(path)));
         Integer componentUid = addComponent(parentComponentUid, componentPath, component);
         component.setComponentUid(componentUid);
+        if (addedIndicesCollector != null)
+        {
+            addedIndicesCollector.add(componentUid);
+        }
         log("Added and indexed component " + componentPath + ": " + componentUid);
         Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(
                 componentPath, container, propertyValueAccessor_);
@@ -584,7 +591,7 @@ public class Container
             for (Map<Object, Object> child : children.values())
             {
                 Object childId = containerParser_.getComponentId(child);
-                Integer childIndex = addContainer(componentUid, componentPath, child);
+                Integer childIndex = addContainer(componentUid, componentPath, child, addedIndicesCollector);
                 childIndices.add(childIndex);
                 childIdToIndex.put(childId, childIndex);
             }

@@ -34,6 +34,12 @@
         (fn [[_ c]] (get-property component [:this (:id c)] :accepts-focus?))
         (get-property component [:this] :children)))))
 
+;; For cases when it is known in advance that children may accept focus
+(fg/defevolverfn simple-accepts-focus-evolver :accepts-focus?
+  (and
+    (get-property component [:this] :visible)
+    (get-property component [:this] :enabled)))
+
 (fg/defaccessorfn get-accepting-children [component]
   (let [child-map (get-property component [:this] :children)]
     (filter

@@ -626,14 +626,6 @@ public class Container
         }
 
         evolve(componentUid, null);
-        Iterable<Integer> childIndices = component.getChildIndices();
-        if (childIndices != null)
-        {
-            for (Integer childIndex : childIndices)
-            {
-                initializeAddedComponent(childIndex);
-            }
-        }
     }
 
     private static List<Object> dropLast(List<Object> path)

@@ -12,7 +12,13 @@
             [flatgui.dependency]
             [flatgui.paint :as fgp]
             [flatgui.awt :as awt]
-            [flatgui.util.matrix :as m])
+            [flatgui.util.matrix :as m]
+            [flatgui.inputchannels.mouse :as mouse]
+            [flatgui.inputchannels.mousewheel :as mousewheel]
+            [flatgui.inputchannels.keyboard :as keyboard]
+            [flatgui.inputchannels.host :as host]
+            [flatgui.inputchannels.clipboard :as clipboard]
+            [flatgui.inputchannels.timer :as timer])
   (:import (flatgui.core.engine IResultCollector Container ClojureContainerParser)
            (flatgui.core.engine.ui FGAppContainer FGAWTAppContainer)
            (flatgui.core.awt FGAWTInteropUtil)
@@ -803,3 +809,13 @@
     (test/is (= 7 (first @results)))
     (test/is (= 7 (first @consumed-results)))
     (test/is (not= (second @results) (second @consumed-results)))))
+
+(test/deftest input-dep-test
+  (let [_ (core/defevolverfn :a (cond
+                                  (mouse/mouse-event? component) (mouse/get-mouse-rel-x component)
+                                  (mousewheel/mouse-wheel? component) (mousewheel/get-wheel-rotation component)
+                                  (keyboard/key-event? component) (keyboard/get-key-char component)
+                                  (host/host-event? component) "host"
+                                  (clipboard/clipboard-paste? component) "paste"
+                                  (timer/timer-event? component) "timer"))]
+    (test/is (= #{:mouse :mousewheel :keyboard :host :clipboard :timer} (set (:input-channel-dependencies (meta a-evolver)))))))

@@ -126,7 +126,7 @@ public class Container
             Integer nodeIndex = propertyIdToNodeIndex.get(propertyId);
             Node node = nodes_.get(nodeIndex);
             if (evolveReason == null ||
-                    (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason)))
+                    (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason.getClass())))
             {
                 addNodeToReusableBuffer(node, evolveReason);
             }
@@ -396,6 +396,26 @@ public class Container
 
         long spentEvolving = System.currentTimeMillis() - evolveStartTime;
         //System.out.println("-DLTEMP- Container.evolve spent evolving " + spentEvolving);
+    }
+
+    public boolean isInterestedIn(Integer componentUid, Object evolveReason)
+    {
+        if (evolveReason == null)
+        {
+            throw new IllegalArgumentException();
+        }
+        ComponentAccessor initialComponentAccessor = components_.get(componentUid);
+        Map<Object, Integer> propertyIdToNodeIndex = initialComponentAccessor.getPropertyIdToIndex();
+        for (Object propertyId : propertyIdToNodeIndex.keySet())
+        {
+            Integer nodeIndex = propertyIdToNodeIndex.get(propertyId);
+            Node node = nodes_.get(nodeIndex);
+            if (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason.getClass()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public IContainerAccessor getContainerAccessor()
@@ -1007,12 +1027,12 @@ public class Container
 
         /**
          * @param inputDependencies
-         * @param evolveReason
-         * @return true if given inputDependencies list explicitly declares dependency on given evolveReason,
+         * @param evolveReasonClass
+         * @return true if given inputDependencies list explicitly declares dependency on given class of evolveReason,
          *         or if it is not known; false only if it is known that given inputDependencies does NOT
-         *         depend on given evolveReason
+         *         depend on given class of evolveReason
          */
-        boolean isInterestedIn(Collection<Object> inputDependencies, Object evolveReason);
+        boolean isInterestedIn(Collection<Object> inputDependencies, Class<?> evolveReasonClass);
 
         boolean isWildcardPathElement(Object e);
     }

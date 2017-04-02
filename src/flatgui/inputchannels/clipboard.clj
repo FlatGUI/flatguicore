@@ -25,3 +25,6 @@ flatgui.inputchannels.clipboard
     (if (.isDataFlavorSupported transferable DataFlavor/stringFlavor)
       (.getTransferData transferable DataFlavor/stringFlavor)
       "")))
+
+(defn find-clipboard-dependency [s-expr]
+  (channelbase/find-channel-dependency s-expr 'flatgui.inputchannels.clipboard :clipboard))

@@ -39,3 +39,6 @@
     (get-key-char comp-property-map)
     (if (key-pressed? comp-property-map)
       (get-key-code comp-property-map))))
+
+(defn find-keyboard-dependency [s-expr]
+  (channelbase/find-channel-dependency s-expr 'flatgui.inputchannels.keyboard :keyboard))

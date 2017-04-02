@@ -71,10 +71,6 @@
     (nth (.getYRelativeVec repaint-reason) (:target-id-path-index comp-property-map))
     (.getYRel repaint-reason)))
 
-(channelbase/definputparser mouse-wheel? MouseWheelEvent true)
-
-(channelbase/definputparser get-wheel-rotation MouseWheelEvent (.getWheelRotation repaint-reason))
-
 ;;; Dependency check
 
 (defn find-mouse-dependency [s-expr]

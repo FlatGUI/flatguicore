@@ -92,6 +92,16 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, FGMouse
         }
     }
 
+    private static double mxX(List<List<Number>> m)
+    {
+        return m.get(0).get(3).doubleValue();
+    }
+
+    private static double mxY(List<List<Number>> m)
+    {
+        return m.get(1).get(3).doubleValue();
+    }
+
     private Integer getTargetComponentUid(Integer componentUid, Container rootContainer, double mouseX, double mouseY)
     {
         Container.IComponent component = rootContainer.getComponent(componentUid);
@@ -113,21 +123,26 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, FGMouse
                 if (childVisibleBool)
                 {
                     Integer pmIndex = childComponentDataCache.getPositionMatrixIndex();
+                    Integer vpmIndex = childComponentDataCache.getViewportMatrixIndex();
                     Integer csIndex = childComponentDataCache.getClipSizeIndex();
 
                     List<List<Number>> positionMatrix = rootContainer.getPropertyValue(pmIndex);
+                    List<List<Number>> viewportMatrix = rootContainer.getPropertyValue(vpmIndex);
                     List<List<Number>> clipSize = rootContainer.getPropertyValue(csIndex);
 
-                    double x = positionMatrix.get(0).get(3).doubleValue();
-                    double y = positionMatrix.get(1).get(3).doubleValue();
+                    double x = mxX(positionMatrix);
+                    double y = mxY(positionMatrix);
                     double w = clipSize.get(0).get(0).doubleValue();
                     double h = clipSize.get(1).get(0).doubleValue();
+
+                    double mouseLocX = mouseX - mxX(viewportMatrix);
+                    double mouseLocY = mouseY - mxY(viewportMatrix);
 
                     boolean forceEnter = ((FGClojureResultCollector) rootContainer.getResultCollector()).hasVisiblePopupChildren(childIndex);
                     boolean mouseActuallyIn = in(mouseX, x, x + w) && in(mouseY, y, y + h);
                     if (forceEnter || mouseActuallyIn)
                     {
-                        Integer found = getTargetComponentUid(childIndex, rootContainer, mouseX - x, mouseY - y);
+                        Integer found = getTargetComponentUid(childIndex, rootContainer, mouseLocX - x, mouseLocY - y);
                         if (forceEnter && !mouseActuallyIn)
                         {
                             if (!found.equals(childIndex))

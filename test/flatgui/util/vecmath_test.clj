@@ -33,4 +33,7 @@
         p (m/defpoint 4 3)]
     (test/is (= [6 6] (v/-mxtransf+point->vec m p 2)))))
 
-
+(test/deftest subranges-test
+  ;;        0 1 2 3 4 5 6 7 8 9 A B C D E F
+  (let [tv [1 2 3 3 3 4 4 5 5 5 5 6 7 7 8 8 9 10 10]]
+    (test/is (= [[0 1] [1 1] [2 3] [5 2] [7 4] [11 1] [12 2] [14 2] [16 1] [17 2]] (v/find-subranges tv)))))

@@ -12,7 +12,13 @@
             [flatgui.dependency]
             [flatgui.paint :as fgp]
             [flatgui.awt :as awt]
-            [flatgui.util.matrix :as m])
+            [flatgui.util.matrix :as m]
+            [flatgui.inputchannels.mouse :as mouse]
+            [flatgui.inputchannels.mousewheel :as mousewheel]
+            [flatgui.inputchannels.keyboard :as keyboard]
+            [flatgui.inputchannels.host :as host]
+            [flatgui.inputchannels.clipboard :as clipboard]
+            [flatgui.inputchannels.timer :as timer])
   (:import (flatgui.core.engine IResultCollector Container ClojureContainerParser)
            (flatgui.core.engine.ui FGAppContainer FGAWTAppContainer)
            (flatgui.core.awt FGAWTInteropUtil)
@@ -399,7 +405,7 @@
         _ (.evolve container-engine [:main] {:do :res})]
     (test/is (= (+ 5 6 7) (get @results :res)))))
 
-(test/deftest add-children-test
+(test/deftest add-children-test1
   (let [_ (core/defevolverfn evolver-res :res (if (= (get-reason) {:do :res})
                                                 (let [child-list (list :c1 :c2 :c3)]
                                                   (apply + (map
@@ -487,7 +493,7 @@
         _ (.evolve container-engine [:main :c3] {:do :a})]
     (test/is (= (+ 5 6 7 1) (get @results :res)))))
 
-(test/deftest chanhge-remove-children-test
+(test/deftest change-remove-children-test
   (let [_ (core/defevolverfn evolver-res :res (if (and (vector? (get-reason)) (= (count (get-reason)) 2))
                                                 (let [c-id (second (get-reason))]
                                                   (assoc old-res c-id (get-property [:this c-id] :a)))
@@ -536,7 +542,7 @@
     (test/is (= 2 (count (get @results :children))))
     (test/is (= 2 (count @removed-res)))))
 
-(test/deftest chanhge-remove-children-test
+(test/deftest change-remove-children-test1
   (let [_ (core/defevolverfn evolver-res :res (if (and (vector? (get-reason)) (= (count (get-reason)) 2))
                                                 (let [c-id (second (get-reason))]
                                                   (assoc old-res c-id (get-property [:this c-id] :a)))
@@ -616,6 +622,57 @@
         _ (.evolve container-engine [:main] {:do :children :cmd :add})]
     (test/is (= {0 0 1 1 2 1 3 1} @removed-res))
     (test/is (= {0 1 1 2 2 2 3 2} @added-res))))
+
+(test/deftest add-remove-with-children-dep-test
+  (let [_ (core/defevolverfn :a (if (= [:_] (get-reason)) (inc (get-property [:_] :x)) old-a))
+        _ (core/defevolverfn :b (if (= [] (get-reason)) (inc (get-property [] :x)) old-b))
+        _ (core/defevolverfn :x (if-let [x (:x (get-reason))] x old-x))
+        _ (core/defevolverfn :y (if (and (vector? (get-reason)) (= 3 (count (get-reason))))
+                                  (inc (get-property [:this :c1 (nth (get-reason) 2)] :a)) old-y))
+        _ (core/defevolverfn :z (if (and (vector? (get-reason)) (= 2 (count (get-reason))))
+                                  (inc (get-property [:this (nth (get-reason) 1)] :b)) old-z))
+        c1-prototype {:id :c1
+                      :b 0
+                      :evolvers {:b b-evolver}
+                      :children {:c1_1 {:id :c1_1
+                                        :a 0
+                                        :evolvers {:a a-evolver}}}}
+        _ (core/defevolverfn :children (if (and (map? (get-reason)) (= :children (:do (get-reason))))
+                                         (let [cmd (:cmd (get-reason))]
+                                           (cond
+                                             (= :add cmd)
+                                             (assoc old-children :c1 c1-prototype)
+                                             :else
+                                             (dissoc old-children :c1)))
+                                         old-children))
+        container (core/defroot
+                    {:id :main
+                     :x 0
+                     :y 0
+                     :z 0
+                     :evolvers {:children children-evolver
+                                :x x-evolver
+                                :y y-evolver
+                                :z z-evolver}
+                     :children {}})
+        res (atom {})
+        result-collector (proxy [IResultCollector] []
+                           (appendResult [_parentComponentUid, path, node, newValue]
+                             (swap! res (fn [a] (assoc-in a [(last path) (.getPropertyId node)] newValue))))
+                           (componentAdded [_parentComponentUid _componentUid])
+                           (componentRemoved [_componentUid])
+                           (postProcessAfterEvolveCycle [_a _m]))
+        container-engine (Container.
+                           (ClojureContainerParser.)
+                           result-collector
+                           container)
+        _ (reset! res {})
+        _ (.evolve container-engine [:main] {:do :children :cmd :add})
+        _ (.evolve container-engine [:main] {:x 4})]
+    (test/is (= 5 (get-in @res [:c1_1 :a])))
+    (test/is (= 5 (get-in @res [:c1 :b])))
+    (test/is (= 6 (get-in @res [:main :y])))
+    (test/is (= 6 (get-in @res [:main :z])))))
 
 (test/deftest remove-add-dependent-test
   (let [_ (core/defevolverfn :a (if (= (get-reason) []) (get-property [] :res) old-a))
@@ -752,3 +809,13 @@
     (test/is (= 7 (first @results)))
     (test/is (= 7 (first @consumed-results)))
     (test/is (not= (second @results) (second @consumed-results)))))
+
+(test/deftest input-dep-test
+  (let [_ (core/defevolverfn :a (cond
+                                  (mouse/mouse-event? component) (mouse/get-mouse-rel-x component)
+                                  (mousewheel/mouse-wheel? component) (mousewheel/get-wheel-rotation component)
+                                  (keyboard/key-event? component) (keyboard/get-key-char component)
+                                  (host/host-event? component) "host"
+                                  (clipboard/clipboard-paste? component) "paste"
+                                  (timer/timer-event? component) "timer"))]
+    (test/is (= #{:mouse :mousewheel :keyboard :host :clipboard :timer} (set (:input-channel-dependencies (meta a-evolver)))))))

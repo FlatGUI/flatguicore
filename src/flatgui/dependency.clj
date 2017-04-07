@@ -11,6 +11,10 @@
   flatgui.dependency
   (:require [flatgui.comlogic :as fgc]
             [flatgui.inputchannels.mouse :as mouse]
+            [flatgui.inputchannels.mousewheel :as mousewheel]
+            [flatgui.inputchannels.keyboard :as keyboard]
+            [flatgui.inputchannels.host :as host]
+            [flatgui.inputchannels.clipboard :as clipboard]
             [flatgui.inputchannels.timer :as timer]))
 
 
@@ -62,15 +66,15 @@
 ;;;
 
 (defn get-expr-dependencies [s]
-  (let [dep-list (concat
-                   (filter
-                     (complement nil?)
-                     (list
-                       (mouse/find-mouse-dependency s)))
-                   (filter
-                     (complement nil?)
-                     (list
-                       (timer/find-timer-dependency s))))]
+  (let [nonnil? (complement nil?)
+        tolist (fn [d] (filter nonnil? (list d)))
+        dep-list (concat
+                   (tolist (mouse/find-mouse-dependency s))
+                   (tolist (mousewheel/find-mousewheel-dependency s))
+                   (tolist (keyboard/find-keyboard-dependency s))
+                   (tolist (timer/find-timer-dependency s))
+                   (tolist (clipboard/find-clipboard-dependency s))
+                   (tolist (host/find-host-dependency s)))]
     (if (empty? dep-list)
       nil
       dep-list)))

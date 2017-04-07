@@ -12,6 +12,7 @@ import flatgui.core.engine.AppContainer;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,7 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
         mouseEventParser_ = new FGMouseEventParser(unitSizePx);
         getInputEventParser().registerReasonClassParser(MouseEvent.class, mouseEventParser_);
+        getInputEventParser().registerReasonClassParser(MouseWheelEvent.class, new FGMouseEventParser(unitSizePx));
         getInputEventParser().registerReasonClassParser(KeyEvent.class, new FGKeyEventParser());
         getInputEventParser().registerReasonClassParser(FGHostStateEvent.class, (c, inputEvent) ->
         {

@@ -76,7 +76,7 @@ public class Container
         propertyValueAccessor_ = this::getPropertyValue;
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
-        addContainer(null, new ArrayList<>(), container);
+        addContainer(null, new ArrayList<>(), container, null);
         finishContainerIndexing();
 
         initializeContainer();
@@ -126,7 +126,7 @@ public class Container
             Integer nodeIndex = propertyIdToNodeIndex.get(propertyId);
             Node node = nodes_.get(nodeIndex);
             if (evolveReason == null ||
-                    (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason)))
+                    (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason.getClass())))
             {
                 addNodeToReusableBuffer(node, evolveReason);
             }
@@ -309,6 +309,8 @@ public class Container
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
                             removedChildIndices.add(removedChildIndex);
+                            // TODO deep remove
+                            addedComponentIds.remove(removedChildIndex);
                         }
 
                         log(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
@@ -319,8 +321,9 @@ public class Container
                         idsToAdd
                                 .forEach(childId -> {
                                     Map<Object, Object> child = newChildren.get(childId);
-                                    Integer index = addContainer(node.getComponentUid(), component.getComponentPath(), child);
-                                    addedComponentIds.add(index);
+                                    Collection<Integer> deepIndices = new HashSet<>();
+                                    Integer index = addContainer(node.getComponentUid(), component.getComponentPath(), child, deepIndices);
+                                    deepIndices.forEach(addedComponentIds::add);
                                     newChildIndices.add(index);
                                     newChildIdToIndex.put(childId, index);
                                 });
@@ -393,6 +396,26 @@ public class Container
 
         long spentEvolving = System.currentTimeMillis() - evolveStartTime;
         //System.out.println("-DLTEMP- Container.evolve spent evolving " + spentEvolving);
+    }
+
+    public boolean isInterestedIn(Integer componentUid, Object evolveReason)
+    {
+        if (evolveReason == null)
+        {
+            throw new IllegalArgumentException();
+        }
+        ComponentAccessor initialComponentAccessor = components_.get(componentUid);
+        Map<Object, Integer> propertyIdToNodeIndex = initialComponentAccessor.getPropertyIdToIndex();
+        for (Object propertyId : propertyIdToNodeIndex.keySet())
+        {
+            Integer nodeIndex = propertyIdToNodeIndex.get(propertyId);
+            Node node = nodes_.get(nodeIndex);
+            if (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason.getClass()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public IContainerAccessor getContainerAccessor()
@@ -551,7 +574,8 @@ public class Container
         }
     }
 
-    private Integer addContainer(Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container)
+    private Integer addContainer(
+            Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container, Collection<Integer> addedIndicesCollector)
     {
         // Add and thus index all components/properties
 
@@ -563,6 +587,10 @@ public class Container
                 componentPath, values_, path -> getPropertyValue(indexOfPathStrict(path)));
         Integer componentUid = addComponent(parentComponentUid, componentPath, component);
         component.setComponentUid(componentUid);
+        if (addedIndicesCollector != null)
+        {
+            addedIndicesCollector.add(componentUid);
+        }
         log("Added and indexed component " + componentPath + ": " + componentUid);
         Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(
                 componentPath, container, propertyValueAccessor_);
@@ -583,7 +611,7 @@ public class Container
             for (Map<Object, Object> child : children.values())
             {
                 Object childId = containerParser_.getComponentId(child);
-                Integer childIndex = addContainer(componentUid, componentPath, child);
+                Integer childIndex = addContainer(componentUid, componentPath, child, addedIndicesCollector);
                 childIndices.add(childIndex);
                 childIdToIndex.put(childId, childIndex);
             }
@@ -610,17 +638,14 @@ public class Container
 
     private void initializeAddedComponent(Integer componentUid)
     {
-        evolve(componentUid, null);
-        //getResultCollector().componentInitialized(this, componentUid); TODO is looks like we are good without this
         ComponentAccessor component = components_.get(componentUid);
-        Iterable<Integer> childIndices = component.getChildIndices();
-        if (childIndices != null)
+        if (component == null)
         {
-            for (Integer childIndex : childIndices)
-            {
-                initializeAddedComponent(childIndex);
-            }
+            // Added component may have been removed soon after it had been added
+            return;
         }
+
+        evolve(componentUid, null);
     }
 
     private static List<Object> dropLast(List<Object> path)
@@ -783,7 +808,10 @@ public class Container
     {
         initializedNodes_ = new HashSet<>();
         log("========================Started initialization cycle================================");
-        for (int i=0; i<components_.size(); i++)
+        // New components may be added to, or some may be removed from components_ during initialization.
+        // So iterate over the snapshot.
+        List<Container.ComponentAccessor> components = new ArrayList<>(components_);
+        for (int i=0; i<components.size(); i++)
         {
             evolve(Integer.valueOf(i), null);
         }
@@ -999,12 +1027,12 @@ public class Container
 
         /**
          * @param inputDependencies
-         * @param evolveReason
-         * @return true if given inputDependencies list explicitly declares dependency on given evolveReason,
+         * @param evolveReasonClass
+         * @return true if given inputDependencies list explicitly declares dependency on given class of evolveReason,
          *         or if it is not known; false only if it is known that given inputDependencies does NOT
-         *         depend on given evolveReason
+         *         depend on given class of evolveReason
          */
-        boolean isInterestedIn(Collection<Object> inputDependencies, Object evolveReason);
+        boolean isInterestedIn(Collection<Object> inputDependencies, Class<?> evolveReasonClass);
 
         boolean isWildcardPathElement(Object e);
     }

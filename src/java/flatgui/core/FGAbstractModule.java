@@ -141,7 +141,8 @@ public abstract class FGAbstractModule implements IFGModule
     @Override
     public Map<List<Keyword>, Collection<Keyword>> getInputChannelSubscribers(Keyword channel)
     {
-        return (Map<List<Keyword>, Collection<Keyword>>) getInputChannelSubscribers_.invoke(getContainer(), channel);
+        throw new UnsupportedOperationException();
+        //return (Map<List<Keyword>, Collection<Keyword>>) getInputChannelSubscribers_.invoke(getContainer(), channel);
     }
 
     //

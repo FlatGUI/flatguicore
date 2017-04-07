@@ -15,6 +15,7 @@ import java.util.Map;
  */
 public class FGClojureContainerParser extends ClojureContainerParser
 {
+    static final Keyword ID_KW = Keyword.intern("id");
     private static final Keyword LOOK_VEC_KW = Keyword.intern("look-vec");
     private static final Keyword POSITION_MATRIX_KW = Keyword.intern("position-matrix");
     private static final Keyword CLIP_SIZE_KW = Keyword.intern("clip-size");
@@ -88,7 +89,7 @@ public class FGClojureContainerParser extends ClojureContainerParser
         if (index == null)
         {
             throw new IllegalArgumentException(FGClojureContainerParser.class.getSimpleName() +
-                    ": requires container to have " + property + " property");
+                    ": requires container " + component.get(ID_KW) + " to have " + property + " property");
         }
         return index;
     }

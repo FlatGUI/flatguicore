@@ -30,7 +30,12 @@
 (def old-val-prefix "old-")
 
 (defn old-value-ref? [e property]
-  (and (not (nil? property)) (symbol? e) (.startsWith (name e) old-val-prefix) (.endsWith (name e) (name property))))
+  (and
+    (not (nil? property))
+    (symbol? e)
+    (.startsWith (name e) old-val-prefix)
+    (.endsWith (name e) (name property))
+    (= (.length (str e)) (+ (.length old-val-prefix) (dec (.length (str property)))))))
 
 (declare replace-gp)
 (declare replace-gpv)
@@ -120,7 +125,9 @@
 (defn properties-merger [a b]
   (if (and (map? a) (map? b))
     (merge-with properties-merger a b)
-    (if (not (nil? b)) b a)))
+    ;; If the latter has no value associated with a key then a value from the former is taken.
+    ;; However, the latter has chance to suppress values from former by having explicit nils
+    b))
 
 (defmacro defwidget [widget-type dflt-properties & base-widget-types]
   "Creates widget property map and associates it with a symbol."

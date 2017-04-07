@@ -25,3 +25,6 @@ flatgui.inputchannels.host
   (let [host-size (.getHostSize repaint-reason)]
     {:w (/ (.getWidth host-size) (get-unit-size-px))
      :h (/ (.getHeight host-size) (get-unit-size-px))}))
+
+(defn find-host-dependency [s-expr]
+  (channelbase/find-channel-dependency s-expr 'flatgui.inputchannels.host :host))

@@ -30,3 +30,17 @@ flatgui.util.vecmath
   ([mx p dim]
    (mapv #(+ (* -1 (m/mx-get mx % (dec (count mx)))) (m/mx-get p % 0)) (range dim)))
   ([mx p] (-mxtransf+point->vec mx p (dec (count mx)))))
+
+(defn find-subranges [v]
+  (let [v-size (count v)]
+    (loop [begin 0
+           v-rest v
+           result []]
+      (if (= begin v-size)
+        result
+        (let [sub-range (take-while (fn [e] (= e (first v-rest))) v-rest)
+              sub-range-size (count sub-range)]
+          (recur
+            (+ begin sub-range-size)
+            (take-last (- (count v-rest) (count sub-range)) v-rest)
+            (conj result [begin sub-range-size])))))))

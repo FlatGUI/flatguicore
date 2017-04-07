@@ -10,10 +10,16 @@
 package flatgui.core.engine;
 
 import clojure.lang.*;
+import flatgui.core.FGClipboardEvent;
+import flatgui.core.FGHostStateEvent;
 import flatgui.core.FGTimerEvent;
 import flatgui.core.awt.FGMouseEvent;
+import flatgui.core.awt.FGMouseWheelEvent;
 import flatgui.core.util.Tuple;
 
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,7 +54,13 @@ public class ClojureContainerParser implements Container.IContainerParser
     static
     {
         Map<Class<?>, Keyword> m = new HashMap<>();
+        m.put(MouseEvent.class, Keyword.intern("mouse"));
         m.put(FGMouseEvent.class, Keyword.intern("mouse"));
+        m.put(MouseWheelEvent.class, Keyword.intern("mousewheel"));
+        m.put(FGMouseWheelEvent.class, Keyword.intern("mousewheel"));
+        m.put(KeyEvent.class, Keyword.intern("keyboard"));
+        m.put(FGHostStateEvent.class, Keyword.intern("host"));
+        m.put(FGClipboardEvent.class, Keyword.intern("clipboard"));
         m.put(FGTimerEvent.class, Keyword.intern("timer"));
         INPUT_EVENT_KEYS = Collections.unmodifiableMap(m);
     }
@@ -223,9 +235,10 @@ public class ClojureContainerParser implements Container.IContainerParser
     }
 
     @Override
-    public boolean isInterestedIn(Collection<Object> inputDependencies, Object evolveReason)
+    public boolean isInterestedIn(Collection<Object> inputDependencies, Class<?> evolveReasonClass)
     {
-        Keyword kw = INPUT_EVENT_KEYS.get(evolveReason.getClass());
+        // For all input channel events (kw != null), check if depends on; otherwise just accept
+        Keyword kw = INPUT_EVENT_KEYS.get(evolveReasonClass);
         return kw != null ? inputDependencies.contains(kw) : true;
     }
 

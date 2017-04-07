@@ -176,7 +176,7 @@ public class ClojureContainerParser implements Container.IContainerParser
 
     @Override
     public Function<Map<Object, Object>, Object> compileEvolverCode(
-            Object propertyId, Object evolverCode, List<Object> path, Container.IEvolverAccess evolverAccess)
+            Object propertyId, Object evolverCode, List<Object> path, int nodeIndex, Container.IEvolverAccess evolverAccess)
     {
         if (evolverCode != null)
         {
@@ -196,7 +196,7 @@ public class ClojureContainerParser implements Container.IContainerParser
 //                        throw new RuntimeException("Failed evolver for " + path + " " + propertyId + ": ", ex);
 //                    }
 //                };
-                return new EvolverWrapper(evolverFn, path, evolverAccess);
+                return new EvolverWrapper(evolverFn, path, nodeIndex, evolverAccess);
             }
             catch (Exception e)
             {
@@ -291,7 +291,8 @@ public class ClojureContainerParser implements Container.IContainerParser
      * Keeps the index of referred property which GetPropertyClojureFn cannot keep because it's different depending
      * on where evolver is used.
      */
-    static class GetPropertyDelegate
+    // TODO should not be public and should not be referenced from Container directly
+    public static class GetPropertyDelegate
     {
         private boolean linked_;
         private Integer accessedPropertyIndex_;
@@ -342,26 +343,28 @@ public class ClojureContainerParser implements Container.IContainerParser
      */
     static class EvolverWrapper implements Function<Map<Object, Object>, Object>
     {
-        private HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
-        private HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
-        private HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
-        private HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
+//        private HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
+//        private HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
+//        private HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
+//        private HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
 
         private final Set<GetPropertyDelegate> allDelegates_;
 
         private final IFn evolverFn_;
         private final List<Object> evolvedComponentPath_;
+        private final int nodeIndex_;
         private final Container.IEvolverAccess evolverAccess_;
 
-        public EvolverWrapper(IFn evolverFn, List<Object> evolvedComponentPath, Container.IEvolverAccess evolverAccess)
+        public EvolverWrapper(IFn evolverFn, List<Object> evolvedComponentPath, int nodeIndex, Container.IEvolverAccess evolverAccess)
         {
             evolverFn_ = evolverFn;
             evolvedComponentPath_ = evolvedComponentPath;
             evolverAccess_ = evolverAccess;
-            delegateByIdMap_ = new HashMap<>();
-            delegateByIdAndPathMap_ = new HashMap<>();
-            delegateByIdAndPropertyMap_ = new HashMap<>();
-            delegateByIdPathAndPropertyMap_ = new HashMap<>();
+            nodeIndex_ = nodeIndex;
+//            delegateByIdMap_ = new HashMap<>();
+//            delegateByIdAndPathMap_ = new HashMap<>();
+//            delegateByIdAndPropertyMap_ = new HashMap<>();
+//            delegateByIdPathAndPropertyMap_ = new HashMap<>();
 
             allDelegates_ = new HashSet<>();
         }
@@ -375,22 +378,22 @@ public class ClojureContainerParser implements Container.IContainerParser
 
         GetPropertyDelegate getDelegateById(Integer getterId)
         {
-            GetPropertyDelegate delegate = delegateByIdMap_.get(getterId);
+            GetPropertyDelegate delegate = evolverAccess_.getDelegateByIdMap().get(getDelegateKey(getterId));
             if (delegate == null)
             {
                 delegate = createDelegate();
-                delegateByIdMap_.put(getterId, delegate);
+                evolverAccess_.getDelegateByIdMap().put(getDelegateKey(getterId), delegate);
             }
             return delegate;
         }
 
         GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
         {
-            Map<List<Object>, GetPropertyDelegate> pathToDelegate = delegateByIdAndPathMap_.get(getterId);
+            Map<List<Object>, GetPropertyDelegate> pathToDelegate = evolverAccess_.getDelegateByIdAndPathMap().get(getDelegateKey(getterId));
             if (pathToDelegate == null)
             {
                 pathToDelegate = new HashMap<>();
-                delegateByIdAndPathMap_.put(getterId, pathToDelegate);
+                evolverAccess_.getDelegateByIdAndPathMap().put(getDelegateKey(getterId), pathToDelegate);
             }
             GetPropertyDelegate delegate = pathToDelegate.get(path);
             if (delegate == null)
@@ -403,11 +406,11 @@ public class ClojureContainerParser implements Container.IContainerParser
 
         GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
         {
-            Map<Keyword, GetPropertyDelegate> propertyToDelegate = delegateByIdAndPropertyMap_.get(getterId);
+            Map<Keyword, GetPropertyDelegate> propertyToDelegate = evolverAccess_.getDelegateByIdAndPropertyMap().get(getDelegateKey(getterId));
             if (propertyToDelegate == null)
             {
                 propertyToDelegate = new HashMap<>();
-                delegateByIdAndPropertyMap_.put(getterId, propertyToDelegate);
+                evolverAccess_.getDelegateByIdAndPropertyMap().put(getDelegateKey(getterId), propertyToDelegate);
             }
             GetPropertyDelegate delegate = propertyToDelegate.get(property);
             if (delegate == null)
@@ -420,11 +423,11 @@ public class ClojureContainerParser implements Container.IContainerParser
 
         GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
         {
-            Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = delegateByIdPathAndPropertyMap_.get(getterId);
+            Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = evolverAccess_.getDelegateByIdPathAndPropertyMap().get(getDelegateKey(getterId));
             if (mapByPath == null)
             {
                 mapByPath = new HashMap<>();
-                delegateByIdPathAndPropertyMap_.put(getterId, mapByPath);
+                evolverAccess_.getDelegateByIdPathAndPropertyMap().put(getDelegateKey(getterId), mapByPath);
             }
             Map<Keyword, GetPropertyDelegate> propertyToDelegate = mapByPath.get(path);
             if (propertyToDelegate == null)
@@ -451,6 +454,11 @@ public class ClojureContainerParser implements Container.IContainerParser
             GetPropertyDelegate delegate = new GetPropertyDelegate(evolvedComponentPath_, evolverAccess_);
             allDelegates_.add(delegate);
             return delegate;
+        }
+
+        private Integer getDelegateKey(Integer getterId)
+        {
+            return Integer.valueOf((nodeIndex_ << 14) + getterId.intValue());
         }
     }
 }

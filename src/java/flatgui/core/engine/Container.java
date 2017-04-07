@@ -9,6 +9,7 @@
  */
 package flatgui.core.engine;
 
+import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
@@ -53,6 +54,12 @@ public class Container
 
     private Set<Integer> initializedNodes_;
 
+    // Evolver access TODO should not refer Clojure or ClojureContainerParser directly
+    private final HashMap<Integer, ClojureContainerParser.GetPropertyDelegate> delegateByIdMap_;
+    private final HashMap<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> delegateByIdAndPathMap_;
+    private final HashMap<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> delegateByIdAndPropertyMap_;
+    private final HashMap<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
+
     public static boolean debug_ = false;
 
     public Container(IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
@@ -68,6 +75,11 @@ public class Container
         values_ = new ArrayList<>();
         pathToIndex_ = new HashMap<>();
         nodeIndexToComponentCopyForConsumers_ = new LinkedHashMap<>();
+
+        delegateByIdMap_ = new HashMap<>();
+        delegateByIdAndPathMap_ = new HashMap<>();
+        delegateByIdAndPropertyMap_ = new HashMap<>();
+        delegateByIdPathAndPropertyMap_ = new HashMap<>();
 
         reusableNodeBuffer_ = new Node[1048576];
         reusableReasonBuffer_ = new Object[1048576];
@@ -87,6 +99,30 @@ public class Container
             public Object getPropertyValue(Integer index)
             {
                 return Container.this.getPropertyValue(index);
+            }
+
+            @Override
+            public Map<Integer, ClojureContainerParser.GetPropertyDelegate> getDelegateByIdMap()
+            {
+                return Container.this.delegateByIdMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPathMap()
+            {
+                return Container.this.delegateByIdAndPathMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
+            {
+                return Container.this.delegateByIdAndPropertyMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
+            {
+                return Container.this.delegateByIdPathAndPropertyMap_;
             }
         };
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
@@ -673,7 +709,7 @@ public class Container
     private void setupEvolversForNode(Container.Node n)
     {
         n.setEvolver(n.getEvolverCode() != null ? containerParser_.compileEvolverCode(
-                n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), evolverAccess_) : null);
+                n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_) : null);
     }
 
     private void resolveDependencyIndicesForNode(Container.Node n)
@@ -1036,7 +1072,7 @@ public class Container
         void processComponentAfterIndexing(IComponent component);
 
         Function<Map<Object, Object>, Object> compileEvolverCode(
-                Object propertyId, Object evolverCode, List<Object> path, Container.IEvolverAccess evolverAccess);
+                Object propertyId, Object evolverCode, List<Object> path, int nodeIndex, Container.IEvolverAccess evolverAccess);
 
         /**
          * @param inputDependencies
@@ -1078,6 +1114,14 @@ public class Container
     public interface IEvolverAccess extends IPropertyValueAccessor
     {
         Integer indexOfPath(List<Object> path);
+
+        Map<Integer, ClojureContainerParser.GetPropertyDelegate> getDelegateByIdMap();
+
+        Map<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPathMap();
+
+        Map<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPropertyMap();
+
+        Map<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap();
     }
 
     public interface IContainerMutator

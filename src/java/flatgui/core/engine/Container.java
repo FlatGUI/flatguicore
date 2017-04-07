@@ -41,6 +41,7 @@ public class Container
     private final IContainerAccessor containerAccessor_;
     private final IPropertyValueAccessor propertyValueAccessor_;
     private final IContainerMutator containerMutator_;
+    private final IEvolverAccess evolverAccess_;
 
     private final IContainerParser containerParser_;
 
@@ -74,6 +75,20 @@ public class Container
 
         containerAccessor_ = components_::get;
         propertyValueAccessor_ = this::getPropertyValue;
+        evolverAccess_ = new IEvolverAccess()
+        {
+            @Override
+            public Integer indexOfPath(List<Object> path)
+            {
+                return Container.this.indexOfPath(path);
+            }
+
+            @Override
+            public Object getPropertyValue(Integer index)
+            {
+                return Container.this.getPropertyValue(index);
+            }
+        };
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
         addContainer(null, new ArrayList<>(), container, null);
@@ -658,7 +673,7 @@ public class Container
     private void setupEvolversForNode(Container.Node n)
     {
         n.setEvolver(n.getEvolverCode() != null ? containerParser_.compileEvolverCode(
-                n.getPropertyId(), n.getEvolverCode(), this::indexOfPath, dropLast(n.getNodePath()), propertyValueAccessor_) : null);
+                n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), evolverAccess_) : null);
     }
 
     private void resolveDependencyIndicesForNode(Container.Node n)
@@ -1020,10 +1035,8 @@ public class Container
 
         void processComponentAfterIndexing(IComponent component);
 
-        Function<Map<Object, Object>, Object> compileEvolverCode(Object propertyId, Object evolverCode,
-                                                                 Function<List<Object>, Integer> indexProvider,
-                                                                 List<Object> componentPath,
-                                                                 IPropertyValueAccessor propertyValueAccessor);
+        Function<Map<Object, Object>, Object> compileEvolverCode(
+                Object propertyId, Object evolverCode, List<Object> path, Container.IEvolverAccess evolverAccess);
 
         /**
          * @param inputDependencies
@@ -1060,6 +1073,11 @@ public class Container
     public interface IPropertyValueAccessor
     {
         Object getPropertyValue(Integer index);
+    }
+
+    public interface IEvolverAccess extends IPropertyValueAccessor
+    {
+        Integer indexOfPath(List<Object> path);
     }
 
     public interface IContainerMutator

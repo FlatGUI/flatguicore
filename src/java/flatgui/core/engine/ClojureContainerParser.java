@@ -176,7 +176,7 @@ public class ClojureContainerParser implements Container.IContainerParser
 
     @Override
     public Function<Map<Object, Object>, Object> compileEvolverCode(
-            Object propertyId, Object evolverCode, Function<List<Object>, Integer> indexProvider, List<Object> path, Container.IPropertyValueAccessor propertyValueAccessor)
+            Object propertyId, Object evolverCode, List<Object> path, Container.IEvolverAccess evolverAccess)
     {
         if (evolverCode != null)
         {
@@ -196,7 +196,7 @@ public class ClojureContainerParser implements Container.IContainerParser
 //                        throw new RuntimeException("Failed evolver for " + path + " " + propertyId + ": ", ex);
 //                    }
 //                };
-                return new EvolverWrapper(evolverFn, path, indexProvider, propertyValueAccessor);
+                return new EvolverWrapper(evolverFn, path, evolverAccess);
             }
             catch (Exception e)
             {
@@ -297,19 +297,17 @@ public class ClojureContainerParser implements Container.IContainerParser
         private Integer accessedPropertyIndex_;
 
         private final List<Object> evolvedComponentPath_;
-        private final Function<List<Object>, Integer> indexProvider_;
-        private final Container.IPropertyValueAccessor propertyValueAccessor_;
+        private final Container.IEvolverAccess evolverAccess_;
 
-        public GetPropertyDelegate(List<Object> evolvedComponentPath, Function<List<Object>, Integer> indexProvider, Container.IPropertyValueAccessor propertyValueAccessor)
+        public GetPropertyDelegate(List<Object> evolvedComponentPath, Container.IEvolverAccess evolverAccess)
         {
             evolvedComponentPath_ = evolvedComponentPath;
-            indexProvider_ = indexProvider;
-            propertyValueAccessor_ = propertyValueAccessor;
+            evolverAccess_ = evolverAccess;
         }
 
         Object getProperty()
         {
-            return propertyValueAccessor_.getPropertyValue(accessedPropertyIndex_);
+            return evolverAccess_.getPropertyValue(accessedPropertyIndex_);
         }
 
         boolean isLinked()
@@ -321,7 +319,7 @@ public class ClojureContainerParser implements Container.IContainerParser
         {
             List<Object> accessedPropertyAbsPath = buildAbsPath(evolvedComponentPath_, accessedPropertyRelPath);
             accessedPropertyAbsPath.add(accessedProperty);
-            accessedPropertyIndex_ = indexProvider_.apply(accessedPropertyAbsPath);
+            accessedPropertyIndex_ = evolverAccess_.indexOfPath(accessedPropertyAbsPath);
             Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
             if (accessedPropertyIndex_ != null)
             {
@@ -353,15 +351,13 @@ public class ClojureContainerParser implements Container.IContainerParser
 
         private final IFn evolverFn_;
         private final List<Object> evolvedComponentPath_;
-        private final Function<List<Object>, Integer> indexProvider_;
-        private final Container.IPropertyValueAccessor propertyValueAccessor_;
+        private final Container.IEvolverAccess evolverAccess_;
 
-        public EvolverWrapper(IFn evolverFn, List<Object> evolvedComponentPath, Function<List<Object>, Integer> indexProvider, Container.IPropertyValueAccessor propertyValueAccessor)
+        public EvolverWrapper(IFn evolverFn, List<Object> evolvedComponentPath, Container.IEvolverAccess evolverAccess)
         {
             evolverFn_ = evolverFn;
             evolvedComponentPath_ = evolvedComponentPath;
-            indexProvider_ = indexProvider;
-            propertyValueAccessor_ = propertyValueAccessor;
+            evolverAccess_ = evolverAccess;
             delegateByIdMap_ = new HashMap<>();
             delegateByIdAndPathMap_ = new HashMap<>();
             delegateByIdAndPropertyMap_ = new HashMap<>();
@@ -452,7 +448,7 @@ public class ClojureContainerParser implements Container.IContainerParser
 
         private GetPropertyDelegate createDelegate()
         {
-            GetPropertyDelegate delegate = new GetPropertyDelegate(evolvedComponentPath_, indexProvider_, propertyValueAccessor_);
+            GetPropertyDelegate delegate = new GetPropertyDelegate(evolvedComponentPath_, evolverAccess_);
             allDelegates_.add(delegate);
             return delegate;
         }

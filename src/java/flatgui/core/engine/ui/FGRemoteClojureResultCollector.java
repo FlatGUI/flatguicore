@@ -8,6 +8,7 @@ import clojure.lang.Var;
 import flatgui.core.FGWebContainerWrapper;
 import flatgui.core.IFGModule;
 import flatgui.core.engine.Container;
+import flatgui.core.engine.Node;
 import flatgui.core.engine.remote.FGLegacyCoreGlue;
 import flatgui.core.util.Tuple;
 import flatgui.core.websocket.FGPaintVectorBinaryCoder;
@@ -128,7 +129,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     }
 
     @Override
-    public void appendResult(Integer parentComponentUid, List<Object> path, Container.Node node, Object newValue)
+    public void appendResult(Integer parentComponentUid, List<Object> path, Node node, Object newValue)
     {
         super.appendResult(parentComponentUid, path, node, newValue);
 
@@ -197,7 +198,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
 
     private void collectInitialDataForNode(Container container, Integer nodeIndex)
     {
-        Container.Node node = container.getNode(nodeIndex);
+        Node node = container.getNode(nodeIndex);
         collectResultForTransmitting(node.getComponentUid(), node.getPropertyId(), container.getPropertyValue(nodeIndex));
     }
 

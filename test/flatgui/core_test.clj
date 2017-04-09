@@ -26,7 +26,8 @@
            (java.util.function Consumer)
            (java.awt.geom AffineTransform)
            (flatgui.core IFGEvolveConsumer)
-           (java.util.concurrent.locks ReentrantLock)))
+           (java.util.concurrent.locks ReentrantLock)
+           (java.util.concurrent TimeUnit)))
 
 (test/deftest get-property-call?-test
   (test/is (true? (core/get-property-call? (list 'get-property [:a :b] :c))))
@@ -804,7 +805,7 @@
         _ (.addEvolveConsumer container-engine evolve-consumer)
         _ (.lock lock)
         _ (.evolve container-engine [:main] {:x 2})
-        _ (.await condition)
+        _ (.await condition 5 TimeUnit/SECONDS)
         _ (.unlock lock)]
     (test/is (= 7 (first @results)))
     (test/is (= 7 (first @consumed-results)))

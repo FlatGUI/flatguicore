@@ -9,6 +9,7 @@ import clojure.lang.Var;
 import flatgui.core.awt.FGDefaultPrimitivePainter;
 import flatgui.core.engine.Container;
 import flatgui.core.engine.IResultCollector;
+import flatgui.core.engine.Node;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -76,7 +77,7 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
     }
 
     @Override
-    public void appendResult(Integer parentComponentUid, List<Object> path, Container.Node node, Object newValue)
+    public void appendResult(Integer parentComponentUid, List<Object> path, Node node, Object newValue)
     {
         Integer componentUid = node.getComponentUid();
         Object property = node.getPropertyId();

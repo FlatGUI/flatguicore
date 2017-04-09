@@ -19,7 +19,6 @@ import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * @author Denis Lebedev
@@ -706,29 +705,32 @@ public class Container
         return list;
     }
 
-    private void setupEvolversForNode(Container.Node n)
+    private void setupEvolversForNode(Node n)
     {
-        n.setEvolver(n.getEvolverCode() != null ? containerParser_.compileEvolverCode(
-                n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_) : null);
+        if (n.getEvolverCode() != null)
+        {
+            n.setEvolver(containerParser_.compileEvolverCode(
+                    n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_));
+        }
     }
 
-    private void resolveDependencyIndicesForNode(Container.Node n)
+    private void resolveDependencyIndicesForNode(Node n)
     {
         n.resolveDependencyIndices(components_, containerParser_::isWildcardPathElement);
     }
 
-    private void markNodeAsDependent(Container.Node n)
+    private void markNodeAsDependent(Node n)
     {
         markNodeAsDependent(n, n.getDependencyIndices());
     }
 
-    private void markNodeAsDependent(Container.Node n, Collection<Tuple> dependencies)
+    private void markNodeAsDependent(Node n, Collection<Tuple> dependencies)
     {
         dependencies
             .forEach(dependencyTuple -> nodes_.get(dependencyTuple.getFirst()).addDependent(n.getNodeIndex(), n.getNodePath(), dependencyTuple.getSecond()));
     }
 
-    private void unMarkNodeAsDependent(Container.Node n, Collection<Tuple> dependencies)
+    private void unMarkNodeAsDependent(Node n, Collection<Tuple> dependencies)
     {
         dependencies
                 .forEach(dependencyTuple -> {
@@ -770,17 +772,45 @@ public class Container
             index = vacantNodeIndices_.stream().findAny().get();
             vacantNodeIndices_.remove(index);
         }
-        Node node = new Node(
-                componentUid,
-                sourceNode.getPropertyId(),
-                parentComponentUid,
-                sourceNode.isChildrenProperty(),
-                sourceNode.isChildOrderProperty(),
-                sourceNode.getNodePath(),
-                index,
-                sourceNode.getRelAndAbsDependencyPaths(),
-                sourceNode.getInputDependencies(),
-                sourceNode.getEvolverCode());
+        Node node;
+        if (sourceNode.getEvolverCode() != null)
+        {
+            node = new EvolvingNode(
+                    componentUid,
+                    sourceNode.getPropertyId(),
+                    parentComponentUid,
+
+                    //this,
+                    sourceNode,
+
+                    //sourceNode.isChildrenProperty(),
+                    //sourceNode.isChildOrderProperty(),
+
+                    sourceNode.getNodePath(),
+                    index,
+                    sourceNode.getRelAndAbsDependencyPaths(),
+                    sourceNode.getInputDependencies(),
+                    sourceNode.getEvolverCode());
+        }
+        else
+        {
+            node = new Node(
+                    componentUid,
+                    sourceNode.getPropertyId(),
+                    parentComponentUid,
+
+                    //this,
+                    sourceNode,
+
+                    //sourceNode.isChildrenProperty(),
+                    //sourceNode.isChildOrderProperty(),
+
+                    sourceNode.getNodePath(),
+                    index,
+                    sourceNode.getRelAndAbsDependencyPaths(),
+                    sourceNode.getInputDependencies(),
+                    sourceNode.getEvolverCode());
+        }
         int indexInt = index.intValue();
         if (index < nodes_.size())
         {
@@ -996,6 +1026,8 @@ public class Container
 
         private final Collection<DependencyInfo> relAndAbsDependencyPaths_;
 
+        private final boolean hasAmbiguousDependencies_;
+
         private final Object evolverCode_;
 
         private final List<Object> inputDependencies_;
@@ -1014,6 +1046,16 @@ public class Container
             childOrderProperty_ = childOrderProperty;
             nodePath_ = nodePath;
             relAndAbsDependencyPaths_ = relAndAbsDependencyPaths;
+            boolean hasAmbiguousDependencies = false;
+            for (DependencyInfo dependencyInfo : relAndAbsDependencyPaths_)
+            {
+                if (dependencyInfo.isAmbiguous())
+                {
+                    hasAmbiguousDependencies = true;
+                    break;
+                }
+            }
+            hasAmbiguousDependencies_ = hasAmbiguousDependencies;
             evolverCode_ = evolverCode;
             inputDependencies_ = inputDependencies;
         }
@@ -1041,6 +1083,11 @@ public class Container
         public Collection<DependencyInfo> getRelAndAbsDependencyPaths()
         {
             return relAndAbsDependencyPaths_;
+        }
+
+        public boolean isHasAmbiguousDependencies()
+        {
+            return hasAmbiguousDependencies_;
         }
 
         public Object getEvolverCode()
@@ -1362,240 +1409,4 @@ public class Container
         }
     }
 
-    /**
-     * Represents a property of a component (internal indexed)
-     */
-    public static class Node
-    {
-        private final Integer componentUid_;
-        private final Object propertyId_;
-        private final Integer parentComponentUid_;
-        private final boolean childrenProperty_;
-        private final boolean childOrderProperty_;
-        private final List<Object> nodePath_;
-        private final Integer nodeUid_;
-        private final Collection<DependencyInfo> relAndAbsDependencyPaths_;
-        private final boolean hasAmbiguousDependencies_;
-        private final Collection<Object> inputDependencies_;
-        private Map<Integer, Tuple> dependencyIndices_;
-        private Object evolverCode_;
-        private Function<Map<Object, Object>, Object> evolver_;
-        private Set<IFGEvolveConsumer> evolveConsumers_;
-
-        // TODO Optimize:
-        // remove dependents covered by longer chains. Maybe not remove but just hide since longer chains may be provided
-        // by components that may be removed
-        private final Map<Integer, List<Object>> dependentIndexToRelPath_;
-
-        public Node(
-                Integer componentUid,
-                Object propertyId,
-                Integer parentComponentUid,
-                boolean childrenProperty,
-                boolean childOrderProperty,
-                List<Object> nodePath,
-                Integer nodeUid,
-                Collection<DependencyInfo> relAndAbsDependencyPaths,
-                Collection<Object> inputDependencies,
-                Object evolverCode)
-        {
-            componentUid_ = componentUid;
-            propertyId_ = propertyId;
-            parentComponentUid_ = parentComponentUid;
-            childrenProperty_ = childrenProperty;
-            childOrderProperty_ = childOrderProperty;
-            nodePath_ = nodePath;
-            nodeUid_ = nodeUid;
-            relAndAbsDependencyPaths_ = relAndAbsDependencyPaths;
-            boolean hasAmbiguousDependencies = false;
-            for (DependencyInfo dependencyInfo : relAndAbsDependencyPaths_)
-            {
-                if (dependencyInfo.isAmbiguous())
-                {
-                    hasAmbiguousDependencies = true;
-                    break;
-                }
-            }
-            hasAmbiguousDependencies_ = hasAmbiguousDependencies;
-            inputDependencies_ = inputDependencies;
-            dependentIndexToRelPath_ = new HashMap<>();
-            evolverCode_ = evolverCode;
-        }
-
-        public Integer getComponentUid()
-        {
-            return componentUid_;
-        }
-
-        public Object getPropertyId()
-        {
-            return propertyId_;
-        }
-
-        public Integer getParentComponentUid()
-        {
-            return parentComponentUid_;
-        }
-
-        public boolean isChildrenProperty()
-        {
-            return childrenProperty_;
-        }
-
-        public boolean isChildOrderProperty()
-        {
-            return childOrderProperty_;
-        }
-
-        public Integer getNodeIndex()
-        {
-            return nodeUid_;
-        }
-
-        public List<Object> getNodePath()
-        {
-            return nodePath_;
-        }
-
-        public Collection<Object> getInputDependencies()
-        {
-            return inputDependencies_;
-        }
-
-        public boolean isHasAmbiguousDependencies()
-        {
-            return hasAmbiguousDependencies_;
-        }
-
-        private void findNodeIndices(ComponentAccessor c, int pathIndex, DependencyInfo d,
-                                     List<ComponentAccessor> components, Predicate<Object> isWildcard,
-                                     Consumer<Tuple> dependencyPostprocessor)
-        {
-            List<Object> absPath = d.getAbsPath();
-            int absPathSize = absPath.size();
-            if (absPathSize == 1)
-            {
-                return;
-            }
-            Object e = absPath.get(pathIndex);
-            if (pathIndex < absPathSize-1)
-            {
-                if (isWildcard.test(e))
-                {
-                    List<Integer> allChildIndices = c.getChildIndices();
-                    for (Integer childIndex : allChildIndices)
-                    {
-                        findNodeIndices(components.get(childIndex), pathIndex+1, d, components, isWildcard, dependencyPostprocessor);
-                    }
-                }
-                else
-                {
-                    Integer childIndex = c.getChildIndex(e);
-                    if (childIndex != null)
-                    {
-                        findNodeIndices(components.get(childIndex), pathIndex+1, d, components, isWildcard, dependencyPostprocessor);
-                    }
-                }
-            }
-            else
-            {
-                Integer propertyIndex = c.getPropertyIndex(e);
-                if (propertyIndex != null)
-                {
-                    Tuple dependency = Tuple.triple(propertyIndex, d.getRelPath(), d.isAmbiguous());
-                    dependencyIndices_.put(propertyIndex, dependency);
-                    if (dependencyPostprocessor != null)
-                    {
-                        dependencyPostprocessor.accept(dependency);
-                    }
-                }
-            }
-        }
-
-        public void resolveDependencyIndices(List<ComponentAccessor> components, Predicate<Object> isWildCard)
-        {
-            dependencyIndices_ = new HashMap<>();
-
-            for (DependencyInfo d : relAndAbsDependencyPaths_)
-            {
-                findNodeIndices(components.get(0), 1, d, components, isWildCard, null);
-            }
-        }
-
-        public Collection<Tuple> reevaluateAmbiguousDependencies(List<ComponentAccessor> components, Predicate<Object> isWildCard)
-        {
-            Collection<Tuple> newlyAddedDependencies = new ArrayList<>();
-            for (DependencyInfo d : relAndAbsDependencyPaths_)
-            {
-                findNodeIndices(components.get(0), 1, d, components, isWildCard, newlyAddedDependencies::add);
-            }
-            return newlyAddedDependencies;
-        }
-
-        public Collection<Tuple> getDependencyIndices()
-        {
-            return dependencyIndices_.values();
-        }
-
-        public Map<Integer, List<Object>> getDependentIndices()
-        {
-            return dependentIndexToRelPath_;
-        }
-
-        public void addDependent(Integer nodeIndex, List<Object> nodeAbsPath, List<Object> relPath)
-        {
-            List<Object> actualRef = new ArrayList<>(relPath);
-            if (nodeAbsPath.size() < nodePath_.size())
-            {
-                // Replace wildcards (:*) with actual child ids. Start from 1 not to replace *this
-                for (int i=1; i<relPath.size(); i++)
-                {
-                    actualRef.set(i, nodePath_.get(nodePath_.size() - relPath.size() + i));
-                }
-            }
-
-            log(nodeUid_ + " " + nodePath_ + " added dependent: " + nodeIndex + " " + nodeAbsPath + " referenced as " + relPath + " actual ref " + actualRef);
-            dependentIndexToRelPath_.put(nodeIndex, actualRef);
-        }
-
-        public void removeDependent(Integer nodeIndex)
-        {
-            dependentIndexToRelPath_.remove(nodeIndex);
-        }
-
-        public Object getEvolverCode()
-        {
-            return evolverCode_;
-        }
-
-        public Function<Map<Object, Object>, Object> getEvolver()
-        {
-            return evolver_;
-        }
-
-        public void setEvolver(Function<Map<Object, Object>, Object> evolver)
-        {
-            evolver_ = evolver;
-        }
-
-        void forgetDependency(Integer nodeIndex)
-        {
-            dependencyIndices_.remove(nodeIndex);
-            ((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
-        }
-
-        void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
-        {
-            if (evolveConsumers_ == null)
-            {
-                evolveConsumers_ = new HashSet<>();
-            }
-            evolveConsumers_.add(evolveConsumer);
-        }
-
-        Collection<IFGEvolveConsumer> getEvolveConsumers()
-        {
-            return evolveConsumers_;
-        }
-    }
 }

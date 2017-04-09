@@ -35,6 +35,9 @@ public class Node
 //        private Object evolverCode_;
     //
     protected final Container.SourceNode sourceNode_;
+    //
+    // TODO 1 It should be enough to have 1 instance of SourceNode per app (not for container) and per cell prototype, not for each cell
+    // TODO 2 node paths are heavily duplicated. Have some tree structure instead of duplicating arraylists, and probably list view on it
 
     // TODO 1 Looks like 3rd (isAmbiguous element is not needed in this Tuple)
     // TODO 2 Some (many - all that do not have evolvers) nodes may not have evolver_

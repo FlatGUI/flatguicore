@@ -15,7 +15,6 @@ import flatgui.core.FGHostStateEvent;
 import flatgui.core.FGTimerEvent;
 import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseWheelEvent;
-import flatgui.core.util.Tuple;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -98,7 +97,7 @@ public class ClojureContainerParser implements Container.IContainerParser
     }
 
     @Override
-    public Collection<Container.SourceNode> processComponent(List<Object> componentPath, Map<Object, Object> component, Container.IPropertyValueAccessor propertyValueAccessor)
+    public Collection<Container.SourceNode> processComponent(List<Object> componentPath, Map<Object, Object> component)
     {
         Map<Object, Object> evolvers = (Map<Object, Object>) component.get(EVOLVERS_KEY);
 
@@ -285,63 +284,12 @@ public class ClojureContainerParser implements Container.IContainerParser
         return absPath;
     }
 
-    /**
-     * One instance per evolver use case (unlike GetPropertyClojureFn that has one instance per evolver function)
-     * and per application/thread.
-     * Keeps the index of referred property which GetPropertyClojureFn cannot keep because it's different depending
-     * on where evolver is used.
-     */
-    // TODO should not be public and should not be referenced from Container directly
-    public static class GetPropertyDelegate
-    {
-        private boolean linked_;
-        private Integer accessedPropertyIndex_;
-
-        private final List<Object> evolvedComponentPath_;
-        private final Container.IEvolverAccess evolverAccess_;
-
-        public GetPropertyDelegate(List<Object> evolvedComponentPath, Container.IEvolverAccess evolverAccess)
-        {
-            evolvedComponentPath_ = evolvedComponentPath;
-            evolverAccess_ = evolverAccess;
-        }
-
-        Object getProperty()
-        {
-            return evolverAccess_.getPropertyValue(accessedPropertyIndex_);
-        }
-
-        boolean isLinked()
-        {
-            return linked_;
-        }
-
-        void link(List<Object> accessedPropertyRelPath, Object accessedProperty)
-        {
-            List<Object> accessedPropertyAbsPath = buildAbsPath(evolvedComponentPath_, accessedPropertyRelPath);
-            accessedPropertyAbsPath.add(accessedProperty);
-            accessedPropertyIndex_ = evolverAccess_.indexOfPath(accessedPropertyAbsPath);
-            Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
-            if (accessedPropertyIndex_ != null)
-            {
-                // accessedPropertyIndex_ may not be resolved if referenced component does not exist. Referenced component
-                // may be added later so keeping linked_ == false allows giving it another try
-                linked_ = true;
-            }
-        }
-
-        void unlink()
-        {
-            linked_ = false;
-        }
-    }
-
 
     /**
      * One instance per evolver use case and per application/thread (unlike actual Clojure evolver
      * that has one instance per process)
      */
-    static class EvolverWrapper implements Function<Map<Object, Object>, Object>
+    static class EvolverWrapper implements Function<Map<Object, Object>, Object>, IEvolverWrapper
     {
 //        private HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
 //        private HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
@@ -376,7 +324,8 @@ public class ClojureContainerParser implements Container.IContainerParser
             return evolverFn_.invoke(component);
         }
 
-        GetPropertyDelegate getDelegateById(Integer getterId)
+        @Override
+        public GetPropertyDelegate getDelegateById(Integer getterId)
         {
             GetPropertyDelegate delegate = evolverAccess_.getDelegateByIdMap().get(getDelegateKey(getterId));
             if (delegate == null)
@@ -387,7 +336,8 @@ public class ClojureContainerParser implements Container.IContainerParser
             return delegate;
         }
 
-        GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
+        @Override
+        public GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
         {
             Map<List<Object>, GetPropertyDelegate> pathToDelegate = evolverAccess_.getDelegateByIdAndPathMap().get(getDelegateKey(getterId));
             if (pathToDelegate == null)
@@ -404,7 +354,8 @@ public class ClojureContainerParser implements Container.IContainerParser
             return delegate;
         }
 
-        GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
+        @Override
+        public GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
         {
             Map<Keyword, GetPropertyDelegate> propertyToDelegate = evolverAccess_.getDelegateByIdAndPropertyMap().get(getDelegateKey(getterId));
             if (propertyToDelegate == null)
@@ -421,7 +372,8 @@ public class ClojureContainerParser implements Container.IContainerParser
             return delegate;
         }
 
-        GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
+        @Override
+        public GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
         {
             Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = evolverAccess_.getDelegateByIdPathAndPropertyMap().get(getDelegateKey(getterId));
             if (mapByPath == null)

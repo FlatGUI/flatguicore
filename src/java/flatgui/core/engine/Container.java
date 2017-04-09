@@ -54,10 +54,10 @@ public class Container
     private Set<Integer> initializedNodes_;
 
     // Evolver access TODO should not refer Clojure or ClojureContainerParser directly
-    private final HashMap<Integer, ClojureContainerParser.GetPropertyDelegate> delegateByIdMap_;
-    private final HashMap<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> delegateByIdAndPathMap_;
-    private final HashMap<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> delegateByIdAndPropertyMap_;
-    private final HashMap<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
+    private final HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
+    private final HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
+    private final HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
+    private final HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
 
     public static boolean debug_ = false;
 
@@ -101,25 +101,25 @@ public class Container
             }
 
             @Override
-            public Map<Integer, ClojureContainerParser.GetPropertyDelegate> getDelegateByIdMap()
+            public Map<Integer, GetPropertyDelegate> getDelegateByIdMap()
             {
                 return Container.this.delegateByIdMap_;
             }
 
             @Override
-            public Map<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPathMap()
+            public Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap()
             {
                 return Container.this.delegateByIdAndPathMap_;
             }
 
             @Override
-            public Map<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
+            public Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
             {
                 return Container.this.delegateByIdAndPropertyMap_;
             }
 
             @Override
-            public Map<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
+            public Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
             {
                 return Container.this.delegateByIdPathAndPropertyMap_;
             }
@@ -642,8 +642,7 @@ public class Container
             addedIndicesCollector.add(componentUid);
         }
         log("Added and indexed component " + componentPath + ": " + componentUid);
-        Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(
-                componentPath, container, propertyValueAccessor_);
+        Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(componentPath, container);
         for (SourceNode node : componentPropertyNodes)
         {
             Integer nodeIndex = addNode(parentComponentUid, componentUid, node, container.get(node.getPropertyId()));
@@ -707,11 +706,11 @@ public class Container
 
     private void setupEvolversForNode(Node n)
     {
-        if (n.getEvolverCode() != null)
-        {
-            n.setEvolver(containerParser_.compileEvolverCode(
-                    n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_));
-        }
+//        if (n.getEvolverCode() != null)
+//        {
+//            n.setEvolver(containerParser_.compileEvolverCode(
+//                    n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_));
+//        }
     }
 
     private void resolveDependencyIndicesForNode(Node n)
@@ -790,7 +789,8 @@ public class Container
                     index,
                     sourceNode.getRelAndAbsDependencyPaths(),
                     sourceNode.getInputDependencies(),
-                    sourceNode.getEvolverCode());
+                    sourceNode.getEvolverCode(),
+                    evolverAccess_);
         }
         else
         {
@@ -1113,8 +1113,7 @@ public class Container
 
         Collection<SourceNode> processComponent(
                 List<Object> componentPath,
-                Map<Object, Object> component,
-                Container.IPropertyValueAccessor propertyValueAccessor);
+                Map<Object, Object> component);
 
         void processComponentAfterIndexing(IComponent component);
 
@@ -1162,13 +1161,13 @@ public class Container
     {
         Integer indexOfPath(List<Object> path);
 
-        Map<Integer, ClojureContainerParser.GetPropertyDelegate> getDelegateByIdMap();
+        Map<Integer, GetPropertyDelegate> getDelegateByIdMap();
 
-        Map<Integer, Map<List<Object>, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPathMap();
+        Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap();
 
-        Map<Integer, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>> getDelegateByIdAndPropertyMap();
+        Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap();
 
-        Map<Integer, Map<List<Object>, Map<Keyword, ClojureContainerParser.GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap();
+        Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap();
     }
 
     public interface IContainerMutator

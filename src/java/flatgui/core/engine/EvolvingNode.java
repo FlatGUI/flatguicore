@@ -3,6 +3,8 @@
  */
 package flatgui.core.engine;
 
+import clojure.lang.IFn;
+import clojure.lang.Keyword;
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
 
@@ -14,17 +16,20 @@ import java.util.function.Predicate;
 /**
  * @author Denis Lebedev
  */
-public class EvolvingNode extends Node
+public class EvolvingNode extends Node implements Function<Map<Object, Object>, Object>, IEvolverWrapper
 {
     private Map<Integer, Tuple> dependencyIndices_;
 
-    private Function<Map<Object, Object>, Object> evolver_;
+    //private Function<Map<Object, Object>, Object> evolver_;
 
     private Set<IFGEvolveConsumer> evolveConsumers_;
 
-    public EvolvingNode(Integer componentUid, Object propertyId, Integer parentComponentUid, Container.SourceNode sourceNode, List<Object> nodePath, Integer nodeUid, Collection<Container.DependencyInfo> relAndAbsDependencyPaths, Collection<Object> inputDependencies, Object evolverCode)
+    public EvolvingNode(Integer componentUid, Object propertyId, Integer parentComponentUid, Container.SourceNode sourceNode, List<Object> nodePath, Integer nodeUid, Collection<Container.DependencyInfo> relAndAbsDependencyPaths, Collection<Object> inputDependencies, Object evolverCode, Container.IEvolverAccess evolverAccess)
     {
         super(componentUid, propertyId, parentComponentUid, sourceNode, nodePath, nodeUid, relAndAbsDependencyPaths, inputDependencies, evolverCode);
+
+        allDelegates_ = new HashSet<>();
+        evolverAccess_ = evolverAccess;
     }
 
     public Collection<Object> getInputDependencies()
@@ -114,18 +119,20 @@ public class EvolvingNode extends Node
 
     public Function<Map<Object, Object>, Object> getEvolver()
     {
-        return evolver_;
+        return this;
     }
 
     public void setEvolver(Function<Map<Object, Object>, Object> evolver)
     {
-        evolver_ = evolver;
+        //evolver_ = evolver;
+        throw new UnsupportedOperationException();
     }
 
     void forgetDependency(Integer nodeIndex)
     {
         dependencyIndices_.remove(nodeIndex);
-        ((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
+        //((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
+        unlinkAllDelegates();
     }
 
     void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
@@ -140,5 +147,118 @@ public class EvolvingNode extends Node
     Collection<IFGEvolveConsumer> getEvolveConsumers()
     {
         return evolveConsumers_;
+    }
+
+    // Below came from EvolverWrapper
+
+    private final Set<GetPropertyDelegate> allDelegates_;
+
+    //private final IFn evolverFn_;
+    //private final List<Object> evolvedComponentPath_;
+    //private final int nodeIndex_;
+    private final Container.IEvolverAccess evolverAccess_;
+
+
+    @Override
+    public Object apply(Map<Object, Object> component)
+    {
+        GetPropertyStaticClojureFn.visit(this);
+        return ((IFn)getEvolverCode()).invoke(component);
+    }
+
+    @Override
+    public GetPropertyDelegate getDelegateById(Integer getterId)
+    {
+        GetPropertyDelegate delegate = evolverAccess_.getDelegateByIdMap().get(getDelegateKey(getterId));
+        if (delegate == null)
+        {
+            delegate = createDelegate();
+            evolverAccess_.getDelegateByIdMap().put(getDelegateKey(getterId), delegate);
+        }
+        return delegate;
+    }
+
+    @Override
+    public GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
+    {
+        Map<List<Object>, GetPropertyDelegate> pathToDelegate = evolverAccess_.getDelegateByIdAndPathMap().get(getDelegateKey(getterId));
+        if (pathToDelegate == null)
+        {
+            pathToDelegate = new HashMap<>();
+            evolverAccess_.getDelegateByIdAndPathMap().put(getDelegateKey(getterId), pathToDelegate);
+        }
+        GetPropertyDelegate delegate = pathToDelegate.get(path);
+        if (delegate == null)
+        {
+            delegate = createDelegate();
+            pathToDelegate.put(path, delegate);
+        }
+        return delegate;
+    }
+
+    @Override
+    public GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
+    {
+        Map<Keyword, GetPropertyDelegate> propertyToDelegate = evolverAccess_.getDelegateByIdAndPropertyMap().get(getDelegateKey(getterId));
+        if (propertyToDelegate == null)
+        {
+            propertyToDelegate = new HashMap<>();
+            evolverAccess_.getDelegateByIdAndPropertyMap().put(getDelegateKey(getterId), propertyToDelegate);
+        }
+        GetPropertyDelegate delegate = propertyToDelegate.get(property);
+        if (delegate == null)
+        {
+            delegate = createDelegate();
+            propertyToDelegate.put(property, delegate);
+        }
+        return delegate;
+    }
+
+    @Override
+    public GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
+    {
+        Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = evolverAccess_.getDelegateByIdPathAndPropertyMap().get(getDelegateKey(getterId));
+        if (mapByPath == null)
+        {
+            mapByPath = new HashMap<>();
+            evolverAccess_.getDelegateByIdPathAndPropertyMap().put(getDelegateKey(getterId), mapByPath);
+        }
+        Map<Keyword, GetPropertyDelegate> propertyToDelegate = mapByPath.get(path);
+        if (propertyToDelegate == null)
+        {
+            propertyToDelegate = new HashMap<>();
+            mapByPath.put(path, propertyToDelegate);
+        }
+        GetPropertyDelegate delegate = propertyToDelegate.get(property);
+        if (delegate == null)
+        {
+            delegate = createDelegate();
+            propertyToDelegate.put(property, delegate);
+        }
+        return delegate;
+    }
+
+    void unlinkAllDelegates()
+    {
+        allDelegates_.forEach(d -> d.unlink());
+    }
+
+    private GetPropertyDelegate createDelegate()
+    {
+        GetPropertyDelegate delegate = new GetPropertyDelegate(/*evolvedComponentPath_*/dropLast(getNodePath()), evolverAccess_);
+        allDelegates_.add(delegate);
+        return delegate;
+    }
+
+    private Integer getDelegateKey(Integer getterId)
+    {
+        return Integer.valueOf((getNodeIndex() << 14) + getterId.intValue());
+    }
+
+    private static List<Object> dropLast(List<Object> path)
+    {
+        List<Object> list = new ArrayList<>(path);
+        list.remove(list.size()-1);
+        return list;
     }
 }

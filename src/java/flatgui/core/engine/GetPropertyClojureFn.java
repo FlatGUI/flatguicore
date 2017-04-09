@@ -16,7 +16,7 @@ public abstract class GetPropertyClojureFn extends AFunction
 
     protected final Integer getterId_;
 
-    protected static ThreadLocal<ClojureContainerParser.EvolverWrapper> currentEvolverWrapper_ = new ThreadLocal<>();
+    protected static ThreadLocal<IEvolverWrapper> currentEvolverWrapper_ = new ThreadLocal<>();
 
     public GetPropertyClojureFn()
     {
@@ -26,7 +26,7 @@ public abstract class GetPropertyClojureFn extends AFunction
     @Override
     public Object invoke(Object path, Object property)
     {
-        ClojureContainerParser.GetPropertyDelegate delegate = getDelegate(path, property);
+        GetPropertyDelegate delegate = getDelegate(path, property);
         if (!delegate.isLinked())
         {
             delegate.link((List<Object>) path, property);
@@ -40,7 +40,7 @@ public abstract class GetPropertyClojureFn extends AFunction
         return invoke(path, property);
     }
 
-    static void visit(ClojureContainerParser.EvolverWrapper evolverWrapper)
+    static void visit(IEvolverWrapper evolverWrapper)
     {
         currentEvolverWrapper_.set(evolverWrapper);
     }
@@ -52,5 +52,5 @@ public abstract class GetPropertyClojureFn extends AFunction
         return id;
     }
 
-    protected abstract ClojureContainerParser.GetPropertyDelegate getDelegate(Object path, Object property);
+    protected abstract GetPropertyDelegate getDelegate(Object path, Object property);
 }

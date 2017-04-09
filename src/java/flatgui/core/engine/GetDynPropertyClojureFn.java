@@ -13,7 +13,7 @@ import clojure.lang.Keyword;
 public class GetDynPropertyClojureFn extends GetPropertyClojureFn
 {
     @Override
-    protected ClojureContainerParser.GetPropertyDelegate getDelegate(Object path, Object property)
+    protected GetPropertyDelegate getDelegate(Object path, Object property)
     {
         return currentEvolverWrapper_.get().getDelegateByIdAndProperty(getterId_, (Keyword) property);
     }

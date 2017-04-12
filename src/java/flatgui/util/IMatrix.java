@@ -7,20 +7,13 @@
  * the terms of this license.
  * You must not remove this notice, or any other, from this software.
  */
-package flatgui.util;
 
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
+package flatgui.util;
 
 /**
  * @author Denis Lebedev
  */
-public class TestUtil
+public interface IMatrix<T>
 {
-    public static Result runClass(JUnitCore junit, Class<?> clazz)
-    {
-//        Class<?>[] ca = new Class[1];
-//        ca[0] = clazz;
-        return junit.run(clazz);
-    }
+    T get(int row, int col);
 }

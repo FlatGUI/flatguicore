@@ -7,20 +7,20 @@
  * the terms of this license.
  * You must not remove this notice, or any other, from this software.
  */
+
 package flatgui.util;
 
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
+import java.util.List;
 
 /**
  * @author Denis Lebedev
  */
-public class TestUtil
+public interface IObjectListCoder<T>
 {
-    public static Result runClass(JUnitCore junit, Class<?> clazz)
-    {
-//        Class<?>[] ca = new Class[1];
-//        ca[0] = clazz;
-        return junit.run(clazz);
-    }
+    /**
+     * Encodes incoming list so that each element receives its index
+     * @param path
+     * @return array of path element indices
+     */
+    int[] addPath(List<T> path);
 }

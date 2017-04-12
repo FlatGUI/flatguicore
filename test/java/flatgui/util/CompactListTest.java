@@ -84,4 +84,39 @@ public class CompactListTest
         l.forEach(sb::append);
         assertEquals("xy", sb.toString());
     }
+
+    @Test
+    public void testListCopy()
+    {
+        ObjectMatrix<String> m = new ObjectMatrix<>();
+        int[] indices = m.addPath(Arrays.asList("x", "y", "z"));
+        List<String> l = new CompactList<>(m, indices);
+
+        List<String> l2 = new CompactList<>(m, l);
+
+        assertEquals(l, l2);
+
+        assertEquals(3, l2.size());
+        assertEquals("x", l2.get(0));
+        assertEquals("y", l2.get(1));
+        assertEquals("z", l2.get(2));
+        StringBuilder sb = new StringBuilder();
+        l2.forEach(sb::append);
+        assertEquals("xyz", sb.toString());
+
+        List<String> al = Arrays.asList("x", "y", "w");
+
+        List<String> l3 = new CompactList<>(m, al);
+
+        assertEquals(3, l3.size());
+        assertEquals("x", l3.get(0));
+        assertEquals("y", l3.get(1));
+        assertEquals("w", l3.get(2));
+        sb = new StringBuilder();
+        l3.forEach(sb::append);
+        assertEquals("xyw", sb.toString());
+
+        assertEquals("z", m.get(2, 0));
+        assertEquals("w", m.get(2, 1));
+    }
 }

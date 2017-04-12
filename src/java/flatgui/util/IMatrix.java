@@ -16,4 +16,6 @@ package flatgui.util;
 public interface IMatrix<T>
 {
     T get(int row, int col);
+
+    int add(int row, T elem);
 }

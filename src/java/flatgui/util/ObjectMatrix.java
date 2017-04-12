@@ -53,6 +53,14 @@ public class ObjectMatrix<T> implements RandomAccess, IObjectListCoder<T>, IMatr
         return data_[row][col];
     }
 
+    public int add(int row, T elem)
+    {
+        int rowSize = rowSizes_[row];
+        data_[row][rowSize] = elem;
+        rowSizes_[row] = rowSize+1;
+        return rowSize;
+    }
+
     // Private
 
     int indexOfInRow(T elem, int row)

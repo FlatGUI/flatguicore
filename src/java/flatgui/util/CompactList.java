@@ -58,11 +58,27 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
     {
         objectData_ = data;
         numData_ = new long[LONG_CAPACITY];
-        for (int i=0; i<indices.length; i++)
+        addNumData(indices);
+    }
+
+    public CompactList(Data data, List<T> list)
+    {
+        if (list instanceof CompactList)
         {
-            setSlot(i, indices[i]);
+            objectData_ = data;
+            numData_ = new long[LONG_CAPACITY];
+            for (int i=0; i<numData_.length; i++)
+            {
+                numData_[i] = ((CompactList) list).numData_[i];
+            }
         }
-        setSlot(SIZE_PLACE, indices.length);
+        else
+        {
+            objectData_ = data;
+            numData_ = new long[LONG_CAPACITY];
+            int[] indices = data.addPath(list);
+            addNumData(indices);
+        }
     }
 
     @Override
@@ -86,6 +102,16 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
         {
             action.accept(get(i));
         }
+    }
+
+    @Override
+    public boolean add(T t)
+    {
+        int size = size();
+        int mxindex = objectData_.add(size, t);
+        setSlot(size, mxindex);
+        setSlot(SIZE_PLACE, size+1);
+        return true;
     }
 
     @Override
@@ -154,5 +180,14 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
         int ind = INDICES[index];
         numData_[ind] &= ~((long)(MASKS[index]) << shift);
         numData_[ind] |= ((long)(value & MASKS[index]) << shift);
+    }
+
+    private final void addNumData(int[] indices)
+    {
+        for (int i=0; i<indices.length; i++)
+        {
+            setSlot(i, indices[i]);
+        }
+        setSlot(SIZE_PLACE, indices.length);
     }
 }

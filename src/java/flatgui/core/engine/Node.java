@@ -17,7 +17,9 @@ public class Node
 {
     private static final String NO_EVOLVER_MSG = "Should not be called since this node declares no evolver/dependencies";
 
-    private final Integer componentUid_;
+    // TODO most places that call getComponentUid will be good with primitive, revisit
+    private final int componentUid_;
+
     private final int parentComponentUid_;
 
     private final int nodeUid_;

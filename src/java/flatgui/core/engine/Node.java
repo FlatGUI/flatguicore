@@ -35,21 +35,8 @@ public class Node
     //
     protected final Container.SourceNode sourceNode_;
     //
-    // TODO 1 It should be enough to have 1 instance of SourceNode per app (not for container) and per cell prototype, not for each cell
-    // TODO 2 node paths are heavily duplicated. Have some tree structure instead of duplicating arraylists, and probably list view on it
-
-    // TODO 1 Looks like 3rd (isAmbiguous element is not needed in this Tuple)
-    // TODO 2 Some (many - all that do not have evolvers) nodes may not have evolver_
-    // TODO maybe Node instance is not needed for these nodes and there should be direct link to SourceNode
-    //private Map<Integer, Tuple> dependencyIndices_;
-
-
-    // TODO 1 Need to combine classes Node and EvolverWrapper otherwise they duplicate data (almost all EvolverWrapper state)
-    // TODO 2 Some (many) nodes may not have evolver_
-    //private Function<Map<Object, Object>, Object> evolver_;
-
-    // TODO Some (many) nodes may not have evolveConsumers_
-    //private Set<IFGEvolveConsumer> evolveConsumers_;
+    // TODO It should be enough to have 1 instance of SourceNode per app (not for container) and per cell prototype, not for each cell
+    // TODO Looks like 3rd (isAmbiguous element is not needed in this Tuple)
 
     // TODO Optimize:
     // remove dependents covered by longer chains. Maybe not remove but just hide since longer chains may be provided

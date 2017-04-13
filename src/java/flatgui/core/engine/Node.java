@@ -18,9 +18,9 @@ public class Node
     private static final String NO_EVOLVER_MSG = "Should not be called since this node declares no evolver/dependencies";
 
     private final Integer componentUid_;
-    private final Integer parentComponentUid_;
+    private final int parentComponentUid_;
 
-    private final Integer nodeUid_;
+    private final int nodeUid_;
 
     // Source
 //        private final boolean childrenProperty_;
@@ -50,7 +50,7 @@ public class Node
     public Node(
             Integer componentUid,
             Object propertyId,
-            Integer parentComponentUid,
+            int parentComponentUid,
 
             //Container container,
             Container.SourceNode sourceNode,
@@ -59,7 +59,7 @@ public class Node
             //boolean childOrderProperty,
 
             List<Object> nodePath,
-            Integer nodeUid,
+            int nodeUid,
             Collection<Container.DependencyInfo> relAndAbsDependencyPaths,
             Collection<Object> inputDependencies,
             Object evolverCode)
@@ -106,7 +106,7 @@ public class Node
         return sourceNode_.getPropertyId();
     }
 
-    public Integer getParentComponentUid()
+    public int getParentComponentUid()
     {
         return parentComponentUid_;
     }
@@ -123,7 +123,7 @@ public class Node
         return sourceNode_.isChildOrderProperty();
     }
 
-    public Integer getNodeIndex()
+    public int getNodeIndex()
     {
         return nodeUid_;
     }

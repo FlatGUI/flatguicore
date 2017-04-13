@@ -24,7 +24,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     private Set<IFGEvolveConsumer> evolveConsumers_;
 
-    public EvolvingNode(Integer componentUid, Object propertyId, Integer parentComponentUid, Container.SourceNode sourceNode, List<Object> nodePath, Integer nodeUid, Collection<Container.DependencyInfo> relAndAbsDependencyPaths, Collection<Object> inputDependencies, Object evolverCode, Container.IEvolverAccess evolverAccess)
+    public EvolvingNode(Integer componentUid, Object propertyId, int parentComponentUid, Container.SourceNode sourceNode, List<Object> nodePath, int nodeUid, Collection<Container.DependencyInfo> relAndAbsDependencyPaths, Collection<Object> inputDependencies, Object evolverCode, Container.IEvolverAccess evolverAccess)
     {
         super(componentUid, propertyId, parentComponentUid, sourceNode, nodePath, nodeUid, relAndAbsDependencyPaths, inputDependencies, evolverCode);
 

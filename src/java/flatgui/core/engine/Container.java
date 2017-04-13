@@ -213,10 +213,10 @@ public class Container
                 continue;
             }
             Object triggeringReason = reusableReasonBuffer_[currentCycleBufIndex_];
-            int nodeIndex = node.getNodeIndex().intValue();
+            int nodeIndex = node.getNodeIndex();
             Function<Map<Object, Object>, Object> evolver = node.getEvolver();
 
-            if (triggeringReason != null || initializedNodes_ != null && !initializedNodes_.contains(nodeIndex))
+            if (triggeringReason != null || initializedNodes_ != null && !initializedNodes_.contains(Integer.valueOf(nodeIndex)))
             {
                 Object oldValue;
                 Object newValue;
@@ -730,7 +730,7 @@ public class Container
     private void markNodeAsDependent(Node n, Collection<Tuple> dependencies)
     {
         dependencies
-            .forEach(dependencyTuple -> nodes_.get(dependencyTuple.getFirst()).addDependent(n.getNodeIndex(), n.getNodePath(), dependencyTuple.getSecond()));
+            .forEach(dependencyTuple -> nodes_.get(dependencyTuple.getFirst()).addDependent(Integer.valueOf(n.getNodeIndex()), n.getNodePath(), dependencyTuple.getSecond()));
     }
 
     private void unMarkNodeAsDependent(Node n, Collection<Tuple> dependencies)
@@ -741,7 +741,7 @@ public class Container
                     Node dn = nodes_.get(dependencyTuple.getFirst());
                     if (dn != null)
                     {
-                        dn.removeDependent(n.getNodeIndex());
+                        dn.removeDependent(Integer.valueOf(n.getNodeIndex()));
                     }
                 });
     }
@@ -781,7 +781,7 @@ public class Container
             node = new EvolvingNode(
                     componentUid,
                     sourceNode.getPropertyId(),
-                    parentComponentUid,
+                    parentComponentUid != null ? parentComponentUid.intValue() : -1,
 
                     //this,
                     sourceNode,
@@ -801,7 +801,7 @@ public class Container
             node = new Node(
                     componentUid,
                     sourceNode.getPropertyId(),
-                    parentComponentUid,
+                    parentComponentUid != null ? parentComponentUid.intValue() : -1,
 
                     //this,
                     sourceNode,

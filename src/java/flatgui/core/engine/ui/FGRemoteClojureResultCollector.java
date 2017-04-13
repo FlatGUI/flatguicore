@@ -129,7 +129,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     }
 
     @Override
-    public void appendResult(Integer parentComponentUid, List<Object> path, Node node, Object newValue)
+    public void appendResult(int parentComponentUid, List<Object> path, Node node, Object newValue)
     {
         super.appendResult(parentComponentUid, path, node, newValue);
 

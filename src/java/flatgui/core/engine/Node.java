@@ -45,9 +45,7 @@ public class Node
     // by components that may be removed
     private final Map<Integer, List<Object>> dependentIndexToRelPath_;
 
-    // TODO 8 joindesks resulted in 66 threads - why so many?
     // TODO closed sessions do not seem to be removed from memory
-    // TODO 1 extra initialization of app happens when system starts?
 
     public Node(
             Integer componentUid,

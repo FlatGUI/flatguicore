@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Denis Lebedev
@@ -43,7 +44,8 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
     {
         evolverExecutorService_ = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>());
+                new LinkedBlockingQueue<>(),
+                new AppThreadFactory(containerId_));
         Future<Container> containerFuture =
                 evolverExecutorService_.submit(() -> new Container(containerParser_, resultCollector_, containerMap_));
         try
@@ -140,5 +142,31 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
     protected final ResultCollector getResultCollector()
     {
         return resultCollector_;
+    }
+
+    private static class AppThreadFactory implements ThreadFactory
+    {
+        private static final String NAME_PREFIX = "FlatGUI Evolver ";
+
+        private final ThreadGroup group_;
+        private final AtomicInteger threadNumber_ = new AtomicInteger(1);
+        private final String namePrefix_;
+
+        AppThreadFactory(String containerId)
+        {
+            SecurityManager s = System.getSecurityManager();
+            group_ = s != null ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+            namePrefix_ = NAME_PREFIX + containerId + " ";
+        }
+
+        public Thread newThread(Runnable r)
+        {
+            Thread t = new Thread(group_, r, namePrefix_ + threadNumber_.getAndIncrement());
+            if (t.isDaemon())
+                t.setDaemon(false);
+            if (t.getPriority() != Thread.NORM_PRIORITY)
+                t.setPriority(Thread.NORM_PRIORITY);
+            return t;
+        }
     }
 }

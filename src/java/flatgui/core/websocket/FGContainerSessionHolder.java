@@ -92,7 +92,7 @@ class FGContainerSessionHolder
                         FGRemoteAppContainer fgContainer = new FGRemoteAppContainer(sessionId.toString(), container, resultCollector);
 
                         FGLegacyCoreGlue glueContainer = new FGLegacyCoreGlue(fgContainer, glueModule);
-                        glueContainer.initialize();
+                        //glueContainer.initialize();
                         FGWebInteropUtil interop = fgContainer.getInteropUtil();
                         initialFontMetricsTransmissions.forEach(t -> fontCollector.add(interop.setMetricsTransmission(t)));
                         return sessionHost_.hostContainer(glueContainer, fontsWithMetricsAlreadyReceived);

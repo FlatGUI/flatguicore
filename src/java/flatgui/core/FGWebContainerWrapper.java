@@ -1170,11 +1170,11 @@ public class FGWebContainerWrapper
                 cmdToLastData_ = presetDataCache;
             }
 
-            // It is important to initialize component UIDs exactly in the order returned by getPaintAllSequence2.
-            // This order always starts from root and the contains children (and children of children recursively)
-            // subsequently. So when client iterates components in end-to-beginning direction, if finds the topmost
-            // child - the receiver of mouse event
-            fgModule_.getPaintAllSequence2().forEach(keyCache_::getUniqueId);
+//            // It is important to initialize component UIDs exactly in the order returned by getPaintAllSequence2.
+//            // This order always starts from root and the contains children (and children of children recursively)
+//            // subsequently. So when client iterates components in end-to-beginning direction, if finds the topmost
+//            // child - the receiver of mouse event
+//            fgModule_.getPaintAllSequence2().forEach(keyCache_::getUniqueId);
         }
 
         public final FGContainerStateTransmitter fork(IFGModule module)

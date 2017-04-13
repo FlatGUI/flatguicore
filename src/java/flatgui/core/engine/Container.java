@@ -173,7 +173,7 @@ public class Container
         long evolveStartTime = System.currentTimeMillis();
         indexBufferSize_ = 0;
 
-        log("----------------Started evolve cycle ---- for reason: " + valueToString(evolveReason));
+        if (debug_) logDebug("----------------Started evolve cycle ---- for reason: " + valueToString(evolveReason));
 
         ComponentAccessor initialComponentAccessor = components_.get(componentUid);
         Map<Object, Integer> propertyIdToNodeIndex = initialComponentAccessor.getPropertyIdToIndex();
@@ -190,7 +190,7 @@ public class Container
 
         for (int i=0; i<indexBufferSize_; i++)
         {
-            log(" Initial component: " + reusableNodeBuffer_[i].getNodePath());
+            if (debug_) logDebug(" Initial component: " + reusableNodeBuffer_[i].getNodePath());
         }
 
         Set<Integer> addedComponentIds = new HashSet<>();
@@ -324,7 +324,7 @@ public class Container
 
                 if (changeDetected)
                 {
-                    log(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": " + valueToString(oldValue) + " -> " + valueToString(newValue));
+                    if (debug_) logDebug(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": " + valueToString(oldValue) + " -> " + valueToString(newValue));
                     containerMutator_.setValue(nodeIndex, newValue);
                     Collection<IFGEvolveConsumer> nodeEvolverConsumers = node.getEvolveConsumers();
                     if (nodeEvolverConsumers != null)
@@ -344,7 +344,7 @@ public class Container
 
                     if (triggeringReason != null && node.isChildrenProperty())
                     {
-                        log(" Detected children change");
+                        if (debug_) logDebug(" Detected children change");
                         Map<Object, Map<Object, Object>> newChildren = (Map<Object, Map<Object, Object>>) newValue;
 
                         Set<Object> idsToRemove = new HashSet<>(removedChildIds);
@@ -352,10 +352,7 @@ public class Container
                         Set<Object> idsToAdd = new HashSet<>(addedChildIds);
                         idsToAdd.addAll(changedChildIds);
 
-                        log(" Removing " + removedChildIds.size() + " removed and " + changedChildIds.size() + " changed children...");
-                        System.out.println(" Removing " + removedChildIds.size() +
-                                " ("+removedChildIds+")"
-                                + " removed and " + changedChildIds.size() + " changed children...");
+                        if (debug_) logDebug(" Removing " + removedChildIds.size() + " removed and " + changedChildIds.size() + " changed children...");
                         Set<Integer> removedChildIndices = new HashSet<>(idsToRemove.size());
                         for (Object id : idsToRemove)
                         {
@@ -368,8 +365,7 @@ public class Container
                             addedComponentIds.remove(removedChildIndex);
                         }
 
-                        log(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
-                        System.out.println(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
+                        if (debug_) logDebug(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
                         Set<Integer> newChildIndices = new HashSet<>(idsToAdd.size());
                         Map<Object, Integer> newChildIdToIndex = new HashMap<>();
 
@@ -405,7 +401,7 @@ public class Container
                 }
                 else
                 {
-                    log(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": no change (" + oldValue + ").");
+                    if (debug_) logDebug(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": no change (" + oldValue + ").");
                 }
 
                 if (initializedNodes_ != null)
@@ -421,7 +417,7 @@ public class Container
 
         notifyEvolverConsumers();
 
-        log("---Ended evolve cycle");
+        if (debug_) logDebug("---Ended evolve cycle");
 
         if (!addedComponentIds.isEmpty())
         {
@@ -644,12 +640,12 @@ public class Container
         {
             addedIndicesCollector.add(componentUid);
         }
-        log("Added and indexed component " + componentPath + ": " + componentUid);
+        if (debug_) logDebug("Added and indexed component " + componentPath + ": " + componentUid);
         Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(componentPath, container);
         for (SourceNode node : componentPropertyNodes)
         {
             Integer nodeIndex = addNode(parentComponentUid, componentUid, node, container.get(node.getPropertyId()));
-            log("Indexing " + componentPath + " node " + node.getNodePath() + ": " + nodeIndex);
+            if (debug_) logDebug("Indexing " + componentPath + " node " + node.getNodePath() + ": " + nodeIndex);
             component.putPropertyIndex(node.getPropertyId(), nodeIndex);
         }
 
@@ -862,7 +858,7 @@ public class Container
             reusableNodeBuffer_[indexBufferSize_] = dependent;
             reusableReasonBuffer_[indexBufferSize_] = invokerRefRelPath;
 
-            log("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
+            if (debug_) logDebug("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
 
             indexBufferSize_ ++;
         }
@@ -891,7 +887,7 @@ public class Container
     private void initializeContainer()
     {
         initializedNodes_ = new HashSet<>();
-        log("========================Started initialization cycle================================");
+        if (debug_) logDebug("========================Started initialization cycle================================");
         // New components may be added to, or some may be removed from components_ during initialization.
         // So iterate over the snapshot.
         List<Container.ComponentAccessor> components = new ArrayList<>(components_);
@@ -899,12 +895,12 @@ public class Container
         {
             evolve(Integer.valueOf(i), null);
         }
-        log("=====Ended initialization cycle");
+        if (debug_) logDebug("=====Ended initialization cycle");
         initializedNodes_.clear();
         initializedNodes_ = null;
     }
 
-    static void log(String message)
+    static void logDebug(String message)
     {
         if (debug_)
         {

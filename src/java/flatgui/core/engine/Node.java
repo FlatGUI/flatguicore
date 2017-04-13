@@ -7,7 +7,6 @@ import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -172,7 +171,7 @@ public class Node
             }
         }
 
-        Container.log(nodeUid_ + " " + sourceNode_.getNodePath() + " added dependent: " + nodeIndex + " " + nodeAbsPath + " referenced as " + relPath + " actual ref " + actualRef);
+        if (Container.debug_) Container.logDebug(nodeUid_ + " " + sourceNode_.getNodePath() + " added dependent: " + nodeIndex + " " + nodeAbsPath + " referenced as " + relPath + " actual ref " + actualRef);
         dependentIndexToRelPath_.put(nodeIndex, actualRef);
     }
 

@@ -48,7 +48,7 @@ public class GetPropertyDelegate
         else
         {
             accessedPropertyIndex_ = evolverAccess_.indexOfPath(accessedPropertyAbsPath);
-            Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
+            if (Container.debug_) Container.logDebug(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
             if (accessedPropertyIndex_ != null)
             {
                 // accessedPropertyIndex_ may not be resolved if referenced component does not exist. Referenced component

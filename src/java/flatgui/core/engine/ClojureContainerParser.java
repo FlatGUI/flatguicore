@@ -93,14 +93,6 @@ public class ClojureContainerParser implements Container.IContainerParser
     }
 
     @Override
-    public List<Object> getChildOrder(Map<Object, Object> container)
-    {
-        // No determined order in this impl
-        Map<Object, Object> children = (Map<Object, Object>) container.get(getChildrenPropertyName());
-        return children != null ? new ArrayList<>(children.keySet()) : null;
-    }
-
-    @Override
     public Object getChildrenPropertyName()
     {
         return CHILDREN_KEY;
@@ -157,7 +149,7 @@ public class ClojureContainerParser implements Container.IContainerParser
                         .filter(relDep -> !processingRoot || relDep.size() > 1)
                         .map(relDep -> new Container.DependencyInfo(
                                 relDep,
-                                buildAbsPath(componentPath, relDep),
+                                buildAbsPath(keys_, componentPath, relDep),
                                 relDep.stream().anyMatch(e -> WILDCARD_KEY.equals(e))))
                         .collect(Collectors.toList());
                 //dependencyPaths = GetPropertyClojureFnRegistry.attachToInstance(symbol, componentPath, propertyValueAccessor);
@@ -261,18 +253,24 @@ public class ClojureContainerParser implements Container.IContainerParser
     {
     }
 
-    static List<Object> buildAbsPath(List<Object> componentPath, List<Object> relPath)
+    static List<Object> buildAbsPath(ObjectMatrix<Object> keyMatrix, List<Object> componentPath, List<Object> relPath)
     {
-        List<Object> absPath = new ArrayList<>(componentPath);
+        List<Object> absPath;
         if (relPath.isEmpty())
         {
+            absPath = new CompactList<>(keyMatrix, componentPath);
             absPath.remove(absPath.size()-1);
         }
         else if (relPath.get(0).equals(THIS_KW))
         {
-            List<Object> next = new ArrayList<>(relPath);
-            next.remove(0);
-            absPath.addAll(next);
+//            List<Object> next = new ArrayList<>(relPath);
+//            next.remove(0);
+//            absPath.addAll(next);
+            absPath = new CompactList<>(keyMatrix, componentPath);
+            for (int i=1; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         else if (relPath.get(0).equals(UP_LEVEL_KW))
         {
@@ -282,13 +280,27 @@ public class ClojureContainerParser implements Container.IContainerParser
                 upLevelCount++;
             }
             int componentPathCountToTake = componentPath.size() - upLevelCount - 1;
-            absPath = absPath.subList(0, componentPathCountToTake);
-            absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
+            absPath = new CompactList<>(keyMatrix);
+            //absPath = absPath.subList(0, componentPathCountToTake);
+            for (int i=0; i<componentPathCountToTake; i++)
+            {
+                absPath.add(componentPath.get(i));
+            }
+            //absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
+            for (int i=upLevelCount; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         else
         {
+            absPath = new CompactList<>(keyMatrix, componentPath);
             absPath.remove(absPath.size()-1);
-            absPath.addAll(relPath);
+            //absPath.addAll(relPath);
+            for (int i=0; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         return absPath;
     }

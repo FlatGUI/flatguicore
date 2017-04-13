@@ -37,7 +37,7 @@ public class GetPropertyDelegate
 
     void link(List<Object> accessedPropertyRelPath, Object accessedProperty)
     {
-        List<Object> accessedPropertyAbsPath = ClojureContainerParser.buildAbsPath(evolvedComponentPath_, accessedPropertyRelPath);
+        List<Object> accessedPropertyAbsPath = ClojureContainerParser.buildAbsPath(evolverAccess_.getKeyMatrix(), evolvedComponentPath_, accessedPropertyRelPath);
         accessedPropertyAbsPath.add(accessedProperty);
         if (accessedPropertyAbsPath.isEmpty() || !accessedPropertyAbsPath.get(0).equals(evolvedComponentPath_.get(0)))
         {

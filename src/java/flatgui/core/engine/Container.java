@@ -129,6 +129,12 @@ public class Container
             {
                 return Container.this.delegateByIdPathAndPropertyMap_;
             }
+
+            @Override
+            public ObjectMatrix<Object> getKeyMatrix()
+            {
+                return Container.this.keys_;
+            }
         };
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
@@ -389,8 +395,7 @@ public class Container
                         List<Integer> newChildIndices = new ArrayList<>(newChildIdOrder.size());
                         for (int i=0; i<newChildIdOrder.size(); i++)
                         {
-                            List<Object> childPath = new ArrayList<>(componentPath.size()+1);
-                            childPath.addAll(componentPath);
+                            List<Object> childPath = new CompactList<>(keys_, componentPath);
                             childPath.add(newChildIdOrder.get(i));
                             newChildIndices.add(getComponentUid(childPath));
                         }
@@ -1110,8 +1115,6 @@ public class Container
 
         Object getChildOrderPropertyName();
 
-        List<Object> getChildOrder(Map<Object, Object> container);
-
         Collection<SourceNode> processComponent(
                 List<Object> componentPath,
                 Map<Object, Object> component);
@@ -1169,6 +1172,8 @@ public class Container
         Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap();
 
         Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap();
+
+        ObjectMatrix<Object> getKeyMatrix();
     }
 
     public interface IContainerMutator

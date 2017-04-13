@@ -56,9 +56,6 @@ public class Node
     // by components that may be removed
     private final Map<Integer, List<Object>> dependentIndexToRelPath_;
 
-    // TODO
-    // - child indices in nodes
-
     // TODO why am I able to run 8 joindesks loacally with 384M and not able to run 3 on droplet?
     // TODO why performance degrades with 8 sessions - is that because of hitting heap size?
     // TODO 8 joindesks resulted in 66 threads - why so many?

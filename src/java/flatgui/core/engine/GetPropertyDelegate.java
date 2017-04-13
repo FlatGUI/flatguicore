@@ -39,13 +39,22 @@ public class GetPropertyDelegate
     {
         List<Object> accessedPropertyAbsPath = ClojureContainerParser.buildAbsPath(evolvedComponentPath_, accessedPropertyRelPath);
         accessedPropertyAbsPath.add(accessedProperty);
-        accessedPropertyIndex_ = evolverAccess_.indexOfPath(accessedPropertyAbsPath);
-        Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
-        if (accessedPropertyIndex_ != null)
+        if (accessedPropertyAbsPath.isEmpty() || !accessedPropertyAbsPath.get(0).equals(evolvedComponentPath_.get(0)))
         {
-            // accessedPropertyIndex_ may not be resolved if referenced component does not exist. Referenced component
-            // may be added later so keeping linked_ == false allows giving it another try
+            // Referencing level up above root, no need to keep trying to link
+            accessedPropertyIndex_ = null;
             linked_ = true;
+        }
+        else
+        {
+            accessedPropertyIndex_ = evolverAccess_.indexOfPath(accessedPropertyAbsPath);
+            Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
+            if (accessedPropertyIndex_ != null)
+            {
+                // accessedPropertyIndex_ may not be resolved if referenced component does not exist. Referenced component
+                // may be added later so keeping linked_ == false allows giving it another try
+                linked_ = true;
+            }
         }
     }
 

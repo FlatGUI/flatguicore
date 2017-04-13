@@ -15,6 +15,8 @@ import flatgui.core.FGHostStateEvent;
 import flatgui.core.FGTimerEvent;
 import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseWheelEvent;
+import flatgui.util.CompactList;
+import flatgui.util.ObjectMatrix;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -62,6 +64,14 @@ public class ClojureContainerParser implements Container.IContainerParser
         m.put(FGClipboardEvent.class, Keyword.intern("clipboard"));
         m.put(FGTimerEvent.class, Keyword.intern("timer"));
         INPUT_EVENT_KEYS = Collections.unmodifiableMap(m);
+    }
+
+    private ObjectMatrix<Object> keys_;
+
+    @Override
+    public void setKeyMatrix(ObjectMatrix<Object> keys)
+    {
+        keys_ = keys;
     }
 
     @Override
@@ -115,8 +125,7 @@ public class ClojureContainerParser implements Container.IContainerParser
         }
         for (Object propertyId : allPropertyIds)
         {
-            List<Object> nodePath = new ArrayList<>(componentPath.size()+1);
-            nodePath.addAll(componentPath);
+            List<Object> nodePath = new CompactList<>(keys_, componentPath);
             nodePath.add(propertyId);
 
             boolean hasEvolver = evolvers != null && evolvers.get(propertyId) != null;

@@ -20,11 +20,12 @@ import java.util.stream.Stream;
  * @author Denis Lebedev
  */
 public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> extends AbstractList<T> implements RandomAccess
-{                                                     // 0   1   2   3   4 | 6   7   8   9  10  Size
-    private static final int[] DISTRIBUTION = new int[]{10, 13, 13, 14, 14, 12, 12, 12, 12, 12, 4};
+{                                             // 0   1   2   3   4 | 5   6   7   8   9  Size
+    static final int[] DISTRIBUTION = new int[]{10, 13, 13, 14, 14, 12, 12, 12, 12, 12, 4};
     private static final int[] INDICES;
     private static final int[] SHIFTS;
     private static final int[] MASKS;
+    private static final long[][] MASKS_FOR_SIZE;
     private static final int SIZE_PLACE;
     private static final int LONG_CAPACITY;
     static
@@ -43,6 +44,18 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
         }
         LONG_CAPACITY = totalBits / Long.SIZE;
         SIZE_PLACE = DISTRIBUTION.length-1;
+
+        MASKS_FOR_SIZE = new long[DISTRIBUTION.length][LONG_CAPACITY];
+        long[] masks = new long[LONG_CAPACITY];
+        for (i=0; i<DISTRIBUTION.length; i++)
+        {
+            masks[INDICES[i]] |= ((long)(MASKS[i]) << SHIFTS[i]);
+            MASKS_FOR_SIZE[i][INDICES[i]] |= masks[INDICES[i]];
+            for (int j=0; j<INDICES[i]; j++)
+            {
+                MASKS_FOR_SIZE[i][j] = 0xffffffffffffffffL;
+            }
+        }
     }
 
     private final Data objectData_;
@@ -63,6 +76,11 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
 
     public CompactList(Data data, List<T> list)
     {
+        if (list.size() > DISTRIBUTION.length-1)
+        {
+            throw new UnsupportedOperationException("Can handle up to " + (DISTRIBUTION.length-1) + " elements");
+        }
+
         if (list instanceof CompactList)
         {
             objectData_ = data;
@@ -108,7 +126,7 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
     public boolean add(T t)
     {
         int size = size();
-        int mxindex = objectData_.add(size, t);
+        int mxindex = objectData_.addIfAbsent(size, t);
         setSlot(size, mxindex);
         setSlot(SIZE_PLACE, size+1);
         return true;
@@ -165,6 +183,40 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
     public Stream<T> parallelStream()
     {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (o == this)
+            return true;
+
+        if (o instanceof CompactList)
+        {
+            int thisSize = size();
+            int oSize = ((CompactList) o).size();
+            if (thisSize == oSize)
+            {
+                if (thisSize == 0)
+                {
+                    return true;
+                }
+                for (int i=0; i<=INDICES[thisSize-1]; i++)
+                {
+                    if ((numData_[i] & MASKS_FOR_SIZE[thisSize][i]) != (((CompactList) o).numData_[i] & MASKS_FOR_SIZE[thisSize][i]))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return super.equals(o);
     }
 
     final int getSlot(int index)

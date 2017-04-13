@@ -39,7 +39,9 @@ public class ObjectMatrixTest
         code = m.addPath(Arrays.asList("x", "y", "a", "c"));
         Assert.assertArrayEquals(new int[]{0, 0, 1, 2}, code);
 
-        int dIndex = m.add(3, "d");
+        int dIndex = m.addIfAbsent(3, "d");
+        Assert.assertEquals(3, dIndex);
+        dIndex = m.addIfAbsent(3, "d");
         Assert.assertEquals(3, dIndex);
     }
 }

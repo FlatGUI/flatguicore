@@ -48,17 +48,27 @@ public class ObjectMatrix<T> implements RandomAccess, IObjectListCoder<T>, IMatr
         return indices;
     }
 
+    @Override
     public T get(int row, int col)
     {
         return data_[row][col];
     }
 
-    public int add(int row, T elem)
+    @Override
+    public int addIfAbsent(int row, T elem)
     {
-        int rowSize = rowSizes_[row];
-        data_[row][rowSize] = elem;
-        rowSizes_[row] = rowSize+1;
-        return rowSize;
+        int index = indexOfInRow(elem, row);
+        if (index >= 0)
+        {
+            return index;
+        }
+        else
+        {
+            int rowSize = rowSizes_[row];
+            data_[row][rowSize] = elem;
+            rowSizes_[row] = rowSize + 1;
+            return rowSize;
+        }
     }
 
     // Private

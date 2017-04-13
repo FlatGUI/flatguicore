@@ -17,5 +17,5 @@ public interface IMatrix<T>
 {
     T get(int row, int col);
 
-    int add(int row, T elem);
+    int addIfAbsent(int row, T elem);
 }

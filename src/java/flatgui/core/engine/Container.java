@@ -14,6 +14,8 @@ import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
+import flatgui.util.CompactList;
+import flatgui.util.ObjectMatrix;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -29,6 +31,8 @@ public class Container
 
     private final Set<Integer> vacantComponentIndices_;
     private final Set<Integer> vacantNodeIndices_;
+
+    private final ObjectMatrix<Object> keys_;
 
     private final List<ComponentAccessor> components_;
     private final Map<List<Object>, Integer> componentPathToIndex_;
@@ -63,7 +67,9 @@ public class Container
 
     public Container(IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
     {
+        keys_ = new ObjectMatrix<>();
         containerParser_ = containerParser;
+        containerParser_.setKeyMatrix(keys_);
         resultCollector_ = resultCollector;
         components_ = new ArrayList<>();
         componentPathToIndex_ = new HashMap<>();
@@ -126,7 +132,7 @@ public class Container
         };
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
-        addContainer(null, new ArrayList<>(), container, null);
+        addContainer(null, Collections.emptyList(), container, null);
         finishContainerIndexing();
 
         initializeContainer();
@@ -353,8 +359,7 @@ public class Container
                         Set<Integer> removedChildIndices = new HashSet<>(idsToRemove.size());
                         for (Object id : idsToRemove)
                         {
-                            List<Object> childPath = new ArrayList<>(componentPath.size()+1);
-                            childPath.addAll(componentPath);
+                            List<Object> childPath = new CompactList<>(keys_, componentPath);
                             childPath.add(id);
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
@@ -531,8 +536,7 @@ public class Container
 
         for (Object property : targetProperties)
         {
-            List fullPath = new ArrayList<>(path.size() + 1);
-            fullPath.addAll(path);
+            List fullPath = new CompactList(keys_, path);
             fullPath.add(property);
 
             Integer nodeIndex = pathToIndex_.get(fullPath);
@@ -629,8 +633,7 @@ public class Container
     {
         // Add and thus index all components/properties
 
-        List<Object> componentPath = new ArrayList<>(pathToContainer.size()+1);
-        componentPath.addAll(pathToContainer);
+        List<Object> componentPath = new CompactList<>(keys_, pathToContainer);
         componentPath.add(containerParser_.getComponentId(container));
 
         ComponentAccessor component = new ComponentAccessor(
@@ -697,9 +700,9 @@ public class Container
         evolve(componentUid, null);
     }
 
-    private static List<Object> dropLast(List<Object> path)
+    private List<Object> dropLast(List<Object> path)
     {
-        List<Object> list = new ArrayList<>(path);
+        List<Object> list = new CompactList<>(keys_, path);
         list.remove(list.size()-1);
         return list;
     }
@@ -849,7 +852,7 @@ public class Container
         for (Integer i : dependents.keySet())
         {
             Node dependent = nodes_.get(i.intValue());
-            List<Object> invokerRefRelPath = new ArrayList<>(dependents.get(i));
+            List<Object> invokerRefRelPath = new CompactList<>(keys_, dependents.get(i));
             // By convention, do not include property into what (get-reason) returns
             invokerRefRelPath.remove(invokerRefRelPath.size()-1);
 
@@ -1103,6 +1106,8 @@ public class Container
 
     public interface IContainerParser
     {
+        void setKeyMatrix(ObjectMatrix<Object> keys);
+
         Object getComponentId(Map<Object, Object> container);
 
         Object getChildrenPropertyName();

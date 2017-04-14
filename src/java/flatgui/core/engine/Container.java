@@ -780,40 +780,18 @@ public class Container
         {
             node = new EvolvingNode(
                     componentUid,
-                    sourceNode.getPropertyId(),
                     parentComponentUid != null ? parentComponentUid.intValue() : -1,
-
-                    //this,
                     sourceNode,
-
-                    //sourceNode.isChildrenProperty(),
-                    //sourceNode.isChildOrderProperty(),
-
-                    sourceNode.getNodePath(),
                     index,
-                    sourceNode.getRelAndAbsDependencyPaths(),
-                    sourceNode.getInputDependencies(),
-                    sourceNode.getEvolverCode(),
                     evolverAccess_);
         }
         else
         {
             node = new Node(
                     componentUid,
-                    sourceNode.getPropertyId(),
                     parentComponentUid != null ? parentComponentUid.intValue() : -1,
-
-                    //this,
                     sourceNode,
-
-                    //sourceNode.isChildrenProperty(),
-                    //sourceNode.isChildOrderProperty(),
-
-                    sourceNode.getNodePath(),
-                    index,
-                    sourceNode.getRelAndAbsDependencyPaths(),
-                    sourceNode.getInputDependencies(),
-                    sourceNode.getEvolverCode());
+                    index);
         }
         int indexInt = index.intValue();
         if (index < nodes_.size())

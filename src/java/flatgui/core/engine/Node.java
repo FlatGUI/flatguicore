@@ -4,14 +4,12 @@
 package flatgui.core.engine;
 
 import flatgui.core.IFGEvolveConsumer;
-import flatgui.core.util.Tuple;
 import flatgui.util.CompactList;
 import flatgui.util.ObjectMatrix;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * Represents a property of a component (internal indexed)
@@ -39,51 +37,15 @@ public class Node
 
     public Node(
             Integer componentUid,
-            Object propertyId,
             int parentComponentUid,
-
-            //Container container,
             Container.SourceNode sourceNode,
-
-            //boolean childrenProperty,
-            //boolean childOrderProperty,
-
-            List<Object> nodePath,
-            int nodeUid,
-            Collection<Container.DependencyInfo> relAndAbsDependencyPaths,
-            Collection<Object> inputDependencies,
-            Object evolverCode)
+            int nodeUid)
     {
         componentUid_ = componentUid;
-
-        //propertyId_ = propertyId;
-
         parentComponentUid_ = parentComponentUid;
-
         sourceNode_ = sourceNode;
-        //childrenProperty_ = childrenProperty;
-        //childOrderProperty_ = childOrderProperty;
-        //container_ = container;
-
-        //nodePath_ = nodePath;
-
         nodeUid_ = nodeUid;
-
-        //relAndAbsDependencyPaths_ = relAndAbsDependencyPaths;
-
-//            boolean hasAmbiguousDependencies = false;
-//            for (DependencyInfo dependencyInfo : relAndAbsDependencyPaths_)
-//            {
-//                if (dependencyInfo.isAmbiguous())
-//                {
-//                    hasAmbiguousDependencies = true;
-//                    break;
-//                }
-//            }
-//            hasAmbiguousDependencies_ = hasAmbiguousDependencies;
-//            inputDependencies_ = inputDependencies;
         dependentIndexToRelPath_ = new HashMap<>();
-//            evolverCode_ = evolverCode;
     }
 
     public Integer getComponentUid()
@@ -103,13 +65,11 @@ public class Node
 
     public boolean isChildrenProperty()
     {
-        //return childrenProperty_;
         return sourceNode_.isChildrenProperty();
     }
 
     public boolean isChildOrderProperty()
     {
-        //return childOrderProperty_;
         return sourceNode_.isChildOrderProperty();
     }
 
@@ -184,11 +144,6 @@ public class Node
     public Function<Map<Object, Object>, Object> getEvolver()
     {
         return null;
-    }
-
-    public void setEvolver(Function<Map<Object, Object>, Object> evolver)
-    {
-        throw new IllegalStateException(NO_EVOLVER_MSG);
     }
 
     void forgetDependency(Integer nodeIndex)

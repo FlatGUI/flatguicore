@@ -6,7 +6,6 @@ package flatgui.core.engine;
 import clojure.lang.IFn;
 import clojure.lang.Keyword;
 import flatgui.core.IFGEvolveConsumer;
-import flatgui.core.util.Tuple;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -18,26 +17,27 @@ import java.util.function.Predicate;
  */
 public class EvolvingNode extends Node implements Function<Map<Object, Object>, Object>, IEvolverWrapper
 {
-    //private Map<Integer, Tuple> dependencyIndices_;
     private List<Dependency> dependencyIndices_;
-
-    //private Function<Map<Object, Object>, Object> evolver_;
-
     private Set<IFGEvolveConsumer> evolveConsumers_;
 
-    public EvolvingNode(Integer componentUid, Object propertyId, int parentComponentUid, Container.SourceNode sourceNode, List<Object> nodePath, int nodeUid, Collection<Container.DependencyInfo> relAndAbsDependencyPaths, Collection<Object> inputDependencies, Object evolverCode, Container.IEvolverAccess evolverAccess)
+    private final Set<GetPropertyDelegate> allDelegates_;
+    private final Container.IEvolverAccess evolverAccess_;
+
+    public EvolvingNode(Integer componentUid, int parentComponentUid, Container.SourceNode sourceNode, int nodeUid, Container.IEvolverAccess evolverAccess)
     {
-        super(componentUid, propertyId, parentComponentUid, sourceNode, nodePath, nodeUid, relAndAbsDependencyPaths, inputDependencies, evolverCode);
+        super(componentUid, parentComponentUid, sourceNode, nodeUid);
 
         allDelegates_ = new HashSet<>();
         evolverAccess_ = evolverAccess;
     }
 
+    @Override
     public Collection<Object> getInputDependencies()
     {
         return sourceNode_.getInputDependencies();
     }
 
+    @Override
     public boolean isHasAmbiguousDependencies()
     {
         return sourceNode_.isHasAmbiguousDependencies();
@@ -78,13 +78,8 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
             Integer propertyIndex = c.getPropertyIndex(e);
             if (propertyIndex != null)
             {
-                //Tuple dependency = Tuple.triple(propertyIndex, d.getRelPath(), d.isAmbiguous());
-                //Tuple dependency = Tuple.pair(propertyIndex, d.getRelPath());
                 Dependency dependency = new Dependency(propertyIndex, d.getRelPath());
-
-                //dependencyIndices_.put(propertyIndex, dependency);
                 dependencyIndices_.add(dependency);
-
                 if (dependencyPostprocessor != null)
                 {
                     dependencyPostprocessor.accept(dependency);
@@ -93,9 +88,9 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         }
     }
 
+    @Override
     public void resolveDependencyIndices(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
     {
-        //dependencyIndices_ = new HashMap<>();
         Collection<Container.DependencyInfo> relAndAbsDependencyPaths = sourceNode_.getRelAndAbsDependencyPaths();
         dependencyIndices_ = new ArrayList<>(relAndAbsDependencyPaths.size());
         for (Container.DependencyInfo d : relAndAbsDependencyPaths)
@@ -104,6 +99,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         }
     }
 
+    @Override
     public Collection<Dependency> reevaluateAmbiguousDependencies(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
     {
         Collection<Dependency> newlyAddedDependencies = new ArrayList<>();
@@ -114,31 +110,27 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         return newlyAddedDependencies;
     }
 
+    @Override
     public Collection<Dependency> getDependencyIndices()
     {
-        //return dependencyIndices_.values();
         return dependencyIndices_;
     }
 
+    @Override
     public Object getEvolverCode()
     {
         return sourceNode_.getEvolverCode();
     }
 
+    @Override
     public Function<Map<Object, Object>, Object> getEvolver()
     {
         return this;
     }
 
-    public void setEvolver(Function<Map<Object, Object>, Object> evolver)
-    {
-        //evolver_ = evolver;
-        throw new UnsupportedOperationException();
-    }
-
+    @Override
     void forgetDependency(Integer nodeIndex)
     {
-        //dependencyIndices_.remove(nodeIndex);
         for (int i=0; i<dependencyIndices_.size(); i++)
         {
             if (dependencyIndices_.get(i).getNodeIndex() == nodeIndex)
@@ -148,10 +140,10 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
             }
         }
 
-        //((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
         unlinkAllDelegates();
     }
 
+    @Override
     void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
     {
         if (evolveConsumers_ == null)
@@ -161,20 +153,13 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         evolveConsumers_.add(evolveConsumer);
     }
 
+    @Override
     Collection<IFGEvolveConsumer> getEvolveConsumers()
     {
         return evolveConsumers_;
     }
 
-    // Below came from EvolverWrapper
-
-    private final Set<GetPropertyDelegate> allDelegates_;
-
-    //private final IFn evolverFn_;
-    //private final List<Object> evolvedComponentPath_;
-    //private final int nodeIndex_;
-    private final Container.IEvolverAccess evolverAccess_;
-
+    // Evolver fn functionality
 
     @Override
     public Object apply(Map<Object, Object> component)
@@ -262,7 +247,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     private GetPropertyDelegate createDelegate()
     {
-        GetPropertyDelegate delegate = new GetPropertyDelegate(/*evolvedComponentPath_*/dropLast(getNodePath()), evolverAccess_);
+        GetPropertyDelegate delegate = new GetPropertyDelegate(dropLast(getNodePath()), evolverAccess_);
         allDelegates_.add(delegate);
         return delegate;
     }
@@ -272,9 +257,9 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         return Integer.valueOf((getNodeIndex() << 14) + getterId.intValue());
     }
 
-    private static List<Object> dropLast(List<Object> path)
+    private List<Object> dropLast(List<Object> path)
     {
-        List<Object> list = new ArrayList<>(path);
+        List<Object> list = new ArrayList<>(path);  // TODO new CompactList<>(evolverAccess_.getKeyMatrix(), path);
         list.remove(list.size()-1);
         return list;
     }

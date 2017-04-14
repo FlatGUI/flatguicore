@@ -189,4 +189,47 @@ public class CompactListTest
         assertTrue(l1.equals(l2));
         assertTrue(l2.equals(l1));
     }
+
+    @Test
+    public void testSet()
+    {
+        ObjectMatrix<String> m = new ObjectMatrix<>();
+        CompactList l1 = new CompactList(m);
+        l1.add("x"); l1.add("y"); l1.add("z");
+
+        CompactList l2 = new CompactList(m);
+        l2.add("a"); l2.add("b"); l2.add("c");
+
+        l2.set(1, "y");
+        l2.set(2, "m");
+
+        l1.set(2, "m");
+
+        l2.set(0, "x");
+
+        assertEquals("x", l1.get(0));
+        assertEquals("y", l1.get(1));
+        assertEquals("m", l1.get(2));
+
+        assertEquals("x", l2.get(0));
+        assertEquals("y", l2.get(1));
+        assertEquals("m", l2.get(2));
+
+        assertEquals(3, l1.size());
+        assertEquals(3, l2.size());
+        assertTrue(l1.equals(l2));
+
+        l1.set(0, "n");
+        assertEquals(3, l1.size());
+        assertEquals(3, l2.size());
+        assertTrue(!l1.equals(l2));
+
+        assertEquals("n", l1.get(0));
+        assertEquals("y", l1.get(1));
+        assertEquals("m", l1.get(2));
+
+        assertEquals("x", l2.get(0));
+        assertEquals("y", l2.get(1));
+        assertEquals("m", l2.get(2));
+    }
 }

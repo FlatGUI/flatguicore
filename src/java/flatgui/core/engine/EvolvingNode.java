@@ -18,7 +18,8 @@ import java.util.function.Predicate;
  */
 public class EvolvingNode extends Node implements Function<Map<Object, Object>, Object>, IEvolverWrapper
 {
-    private Map<Integer, Tuple> dependencyIndices_;
+    //private Map<Integer, Tuple> dependencyIndices_;
+    private List<Dependency> dependencyIndices_;
 
     //private Function<Map<Object, Object>, Object> evolver_;
 
@@ -44,7 +45,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     private void findNodeIndices(Container.ComponentAccessor c, int pathIndex, Container.DependencyInfo d,
                                  List<Container.ComponentAccessor> components, Predicate<Object> isWildcard,
-                                 Consumer<Tuple> dependencyPostprocessor)
+                                 Consumer<Dependency> dependencyPostprocessor)
     {
         List<Object> absPath = d.getAbsPath();
         int absPathSize = absPath.size();
@@ -77,8 +78,13 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
             Integer propertyIndex = c.getPropertyIndex(e);
             if (propertyIndex != null)
             {
-                Tuple dependency = Tuple.triple(propertyIndex, d.getRelPath(), d.isAmbiguous());
-                dependencyIndices_.put(propertyIndex, dependency);
+                //Tuple dependency = Tuple.triple(propertyIndex, d.getRelPath(), d.isAmbiguous());
+                //Tuple dependency = Tuple.pair(propertyIndex, d.getRelPath());
+                Dependency dependency = new Dependency(propertyIndex, d.getRelPath());
+
+                //dependencyIndices_.put(propertyIndex, dependency);
+                dependencyIndices_.add(dependency);
+
                 if (dependencyPostprocessor != null)
                 {
                     dependencyPostprocessor.accept(dependency);
@@ -89,17 +95,18 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     public void resolveDependencyIndices(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
     {
-        dependencyIndices_ = new HashMap<>();
-
-        for (Container.DependencyInfo d : sourceNode_.getRelAndAbsDependencyPaths())
+        //dependencyIndices_ = new HashMap<>();
+        Collection<Container.DependencyInfo> relAndAbsDependencyPaths = sourceNode_.getRelAndAbsDependencyPaths();
+        dependencyIndices_ = new ArrayList<>(relAndAbsDependencyPaths.size());
+        for (Container.DependencyInfo d : relAndAbsDependencyPaths)
         {
             findNodeIndices(components.get(0), 1, d, components, isWildCard, null);
         }
     }
 
-    public Collection<Tuple> reevaluateAmbiguousDependencies(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
+    public Collection<Dependency> reevaluateAmbiguousDependencies(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
     {
-        Collection<Tuple> newlyAddedDependencies = new ArrayList<>();
+        Collection<Dependency> newlyAddedDependencies = new ArrayList<>();
         for (Container.DependencyInfo d : sourceNode_.getRelAndAbsDependencyPaths())
         {
             findNodeIndices(components.get(0), 1, d, components, isWildCard, newlyAddedDependencies::add);
@@ -107,9 +114,10 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         return newlyAddedDependencies;
     }
 
-    public Collection<Tuple> getDependencyIndices()
+    public Collection<Dependency> getDependencyIndices()
     {
-        return dependencyIndices_.values();
+        //return dependencyIndices_.values();
+        return dependencyIndices_;
     }
 
     public Object getEvolverCode()
@@ -130,7 +138,16 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     void forgetDependency(Integer nodeIndex)
     {
-        dependencyIndices_.remove(nodeIndex);
+        //dependencyIndices_.remove(nodeIndex);
+        for (int i=0; i<dependencyIndices_.size(); i++)
+        {
+            if (dependencyIndices_.get(i).getNodeIndex() == nodeIndex)
+            {
+                dependencyIndices_.remove(i);
+                break;
+            }
+        }
+
         //((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
         unlinkAllDelegates();
     }

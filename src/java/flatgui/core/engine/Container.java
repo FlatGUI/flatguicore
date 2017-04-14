@@ -433,7 +433,7 @@ public class Container
 
             for (Node n : nodesWithAmbiguousDependencies_)
             {
-                Collection<Tuple> newDependencies = n.reevaluateAmbiguousDependencies(components_, containerParser_::isWildcardPathElement);
+                Collection<Node.Dependency> newDependencies = n.reevaluateAmbiguousDependencies(components_, containerParser_::isWildcardPathElement);
                 markNodeAsDependent(n, newDependencies);
             }
 
@@ -727,18 +727,18 @@ public class Container
         markNodeAsDependent(n, n.getDependencyIndices());
     }
 
-    private void markNodeAsDependent(Node n, Collection<Tuple> dependencies)
+    private void markNodeAsDependent(Node n, Collection<Node.Dependency> dependencies)
     {
         dependencies
-            .forEach(dependencyTuple -> nodes_.get(dependencyTuple.getFirst()).addDependent(Integer.valueOf(n.getNodeIndex()), n.getNodePath(), dependencyTuple.getSecond()));
+            .forEach(d -> nodes_.get(d.getNodeIndex()).addDependent(Integer.valueOf(n.getNodeIndex()), n.getNodePath(), d.getRelPath(), keys_));
     }
 
-    private void unMarkNodeAsDependent(Node n, Collection<Tuple> dependencies)
+    private void unMarkNodeAsDependent(Node n, Collection<Node.Dependency> dependencies)
     {
         dependencies
                 .forEach(dependencyTuple -> {
                     // May be null - if node belonged to the component being removed
-                    Node dn = nodes_.get(dependencyTuple.getFirst());
+                    Node dn = nodes_.get(dependencyTuple.getNodeIndex());
                     if (dn != null)
                     {
                         dn.removeDependent(Integer.valueOf(n.getNodeIndex()));

@@ -5,10 +5,13 @@ package flatgui.core.engine;
 
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
+import flatgui.util.CompactList;
+import flatgui.util.ObjectMatrix;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Represents a property of a component (internal indexed)
@@ -24,21 +27,8 @@ public class Node
 
     private final int nodeUid_;
 
-    // Source
-//        private final boolean childrenProperty_;
-//        private final boolean childOrderProperty_;
-//
-//        private final List<Object> nodePath_;
-//        private final Object propertyId_;
-//        private final Collection<DependencyInfo> relAndAbsDependencyPaths_;
-//        private final boolean hasAmbiguousDependencies_;
-//        private final Collection<Object> inputDependencies_;
-//        private Object evolverCode_;
-    //
-    protected final Container.SourceNode sourceNode_;
-    //
     // TODO It should be enough to have 1 instance of SourceNode per app (not for container) and per cell prototype, not for each cell
-    // TODO Looks like 3rd (isAmbiguous element is not needed in this Tuple)
+    protected final Container.SourceNode sourceNode_;
 
     // TODO Optimize:
     // remove dependents covered by longer chains. Maybe not remove but just hide since longer chains may be provided
@@ -139,9 +129,9 @@ public class Node
         return dependentIndexToRelPath_;
     }
 
-    public void addDependent(Integer nodeIndex, List<Object> nodeAbsPath, List<Object> relPath)
+    public void addDependent(Integer nodeIndex, List<Object> nodeAbsPath, List<Object> relPath, ObjectMatrix<Object> keyMatrix)
     {
-        List<Object> actualRef = new ArrayList<>(relPath);
+        List<Object> actualRef = new CompactList<>(keyMatrix, relPath);
         int nodePathSize = sourceNode_.getNodePath().size();
         if (nodeAbsPath.size() < nodePathSize)
         {
@@ -176,12 +166,12 @@ public class Node
         // No dependencies here, so do nothing
     }
 
-    public Collection<Tuple> reevaluateAmbiguousDependencies(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
+    public Collection<Dependency> reevaluateAmbiguousDependencies(List<Container.ComponentAccessor> components, Predicate<Object> isWildCard)
     {
         throw new IllegalStateException(NO_EVOLVER_MSG);
     }
 
-    public Collection<Tuple> getDependencyIndices()
+    public Collection<Dependency> getDependencyIndices()
     {
         return Collections.emptyList();
     }
@@ -214,5 +204,27 @@ public class Node
     Collection<IFGEvolveConsumer> getEvolveConsumers()
     {
         return Collections.emptyList();
+    }
+
+    public static class Dependency
+    {
+        private int nodeIndex_;
+        private List<Object> relPath_;
+
+        public Dependency(int nodeIndex, List<Object> relPath)
+        {
+            nodeIndex_ = nodeIndex;
+            relPath_ = relPath;
+        }
+
+        public int getNodeIndex()
+        {
+            return nodeIndex_;
+        }
+
+        public List<Object> getRelPath()
+        {
+            return relPath_;
+        }
     }
 }

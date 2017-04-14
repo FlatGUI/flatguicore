@@ -133,6 +133,23 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
     }
 
     @Override
+    public T set(int index, T element)
+    {
+        if (index < size())
+        {
+            T elem = get(index);
+            int mxindex = objectData_.addIfAbsent(index, element);
+            setSlot(index, mxindex);
+            return elem;
+        }
+        else
+        {
+            throw new IndexOutOfBoundsException("Could set element at " + index + ": list size = " +
+                size());
+        }
+    }
+
+    @Override
     public T remove(int index)
     {
         int size = size();

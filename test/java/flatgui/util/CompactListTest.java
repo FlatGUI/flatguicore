@@ -232,4 +232,31 @@ public class CompactListTest
         assertEquals("y", l2.get(1));
         assertEquals("m", l2.get(2));
     }
+
+    @Test
+    public void testResizeAndDirtySlots()
+    {
+        ObjectMatrix<String> m = new ObjectMatrix<>();
+        CompactList cls = new CompactList(m);
+        cls.add("a"); cls.add("b"); cls.add("c");
+        cls.remove(cls.size()-1);
+        cls.remove(cls.size()-1);
+        cls.remove(cls.size()-1);
+        cls.add("x"); cls.add("y"); cls.add("z");
+
+        assertEquals(1, cls.getSlot(0));
+        assertEquals(1, cls.getSlot(1));
+        assertEquals(1, cls.getSlot(2));
+
+        cls.remove(cls.size()-1);
+
+        assertEquals(1, cls.getSlot(0));
+        assertEquals(1, cls.getSlot(1));
+        assertEquals(0, cls.getSlot(2));
+
+        CompactList cl1 = new CompactList(m, cls);
+        CompactList cl2 = new CompactList(m, new ArrayList<>(cls));
+
+        assertTrue(cl1.equals(cl2));
+    }
 }

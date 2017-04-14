@@ -6,6 +6,7 @@ package flatgui.core.engine;
 import clojure.lang.IFn;
 import clojure.lang.Keyword;
 import flatgui.core.IFGEvolveConsumer;
+import flatgui.util.CompactList;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -259,7 +260,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     private List<Object> dropLast(List<Object> path)
     {
-        List<Object> list = new ArrayList<>(path);  // TODO new CompactList<>(evolverAccess_.getKeyMatrix(), path);
+        List<Object> list  = new CompactList<>(evolverAccess_.getKeyMatrix(), path);
         list.remove(list.size()-1);
         return list;
     }

@@ -156,6 +156,7 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
         if (index == size-1)
         {
             T elem = get(index);
+            setSlot(index, 0);
             setSlot(SIZE_PLACE, size-1);
             return elem;
         }

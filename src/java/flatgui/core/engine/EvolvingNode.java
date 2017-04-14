@@ -170,7 +170,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
     }
 
     @Override
-    public GetPropertyDelegate getDelegateById(Integer getterId)
+    public GetPropertyDelegate getDelegateById(int getterId)
     {
         GetPropertyDelegate delegate = evolverAccess_.getDelegateByIdMap().get(getDelegateKey(getterId));
         if (delegate == null)
@@ -182,7 +182,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
     }
 
     @Override
-    public GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
+    public GetPropertyDelegate getDelegateByIdAndPath(int getterId, List<Object> path)
     {
         Map<List<Object>, GetPropertyDelegate> pathToDelegate = evolverAccess_.getDelegateByIdAndPathMap().get(getDelegateKey(getterId));
         if (pathToDelegate == null)
@@ -200,7 +200,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
     }
 
     @Override
-    public GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
+    public GetPropertyDelegate getDelegateByIdAndProperty(int getterId, Keyword property)
     {
         Map<Keyword, GetPropertyDelegate> propertyToDelegate = evolverAccess_.getDelegateByIdAndPropertyMap().get(getDelegateKey(getterId));
         if (propertyToDelegate == null)
@@ -218,7 +218,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
     }
 
     @Override
-    public GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
+    public GetPropertyDelegate getDelegateByIdPathAndProperty(int getterId, List<Object> path, Keyword property)
     {
         Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = evolverAccess_.getDelegateByIdPathAndPropertyMap().get(getDelegateKey(getterId));
         if (mapByPath == null)
@@ -253,9 +253,10 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
         return delegate;
     }
 
-    private Integer getDelegateKey(Integer getterId)
+    private Integer getDelegateKey(int getterId)
     {
-        return Integer.valueOf((getNodeIndex() << 14) + getterId.intValue());
+        // TODO review number and add check
+        return Integer.valueOf((getNodeIndex() << 14) + getterId);
     }
 
     private List<Object> dropLast(List<Object> path)

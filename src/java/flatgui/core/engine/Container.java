@@ -629,6 +629,7 @@ public class Container
         }
     }
 
+    // TODO check against CompactList element maximum size
     private Integer addContainer(
             Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container, Collection<Integer> addedIndicesCollector)
     {
@@ -1098,9 +1099,6 @@ public class Container
                 Map<Object, Object> component);
 
         void processComponentAfterIndexing(IComponent component);
-
-        Function<Map<Object, Object>, Object> compileEvolverCode(
-                Object propertyId, Object evolverCode, List<Object> path, int nodeIndex, Container.IEvolverAccess evolverAccess);
 
         /**
          * @param inputDependencies

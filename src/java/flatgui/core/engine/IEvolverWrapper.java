@@ -12,11 +12,11 @@ import java.util.List;
  */
 public interface IEvolverWrapper
 {
-    GetPropertyDelegate getDelegateById(Integer getterId);
+    GetPropertyDelegate getDelegateById(int getterId);
 
-    GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path);
+    GetPropertyDelegate getDelegateByIdAndPath(int getterId, List<Object> path);
 
-    GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property);
+    GetPropertyDelegate getDelegateByIdAndProperty(int getterId, Keyword property);
 
-    GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property);
+    GetPropertyDelegate getDelegateByIdPathAndProperty(int getterId, List<Object> path, Keyword property);
 }

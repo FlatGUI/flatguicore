@@ -56,13 +56,6 @@ public class FGClojureContainerParser extends ClojureContainerParser
         return CHILDREN_Z_ORDER_KW;
     }
 
-    @Override
-    public List<Object> getChildOrder(Map<Object, Object> container)
-    {
-        List<Object> zOrder = (List<Object>) container.get(CHILDREN_Z_ORDER_KW);
-        return zOrder != null ? zOrder : super.getChildOrder(container);
-    }
-
     public static Object getFocusMode(Map<Object, Object> focusState)
     {
         return focusState.get(MODE_KW);

@@ -13,7 +13,7 @@ import java.util.List;
 public class GetPropertyDynPathClojureFn extends GetPropertyClojureFn
 {
     @Override
-    protected ClojureContainerParser.GetPropertyDelegate getDelegate(Object path, Object property)
+    protected GetPropertyDelegate getDelegate(Object path, Object property)
     {
         return currentEvolverWrapper_.get().getDelegateByIdAndPath(getterId_, (List<Object>) path);
     }

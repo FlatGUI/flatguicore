@@ -11,7 +11,7 @@ package flatgui.core.engine;
 public class GetPropertyStaticClojureFn extends GetPropertyClojureFn
 {
     @Override
-    protected ClojureContainerParser.GetPropertyDelegate getDelegate(Object path, Object property)
+    protected GetPropertyDelegate getDelegate(Object path, Object property)
     {
         return currentEvolverWrapper_.get().getDelegateById(getterId_);
     }

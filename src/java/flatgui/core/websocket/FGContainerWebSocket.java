@@ -314,7 +314,7 @@ public class FGContainerWebSocket implements WebSocketListener
         statusMessage.append("|created app");
         setTextToRemote(statusMessage.toString());
 
-        container_.initialize();
+        //container_.initialize();
         if (containerConsumer_ != null)
         {
             containerConsumer_.accept(containerAccessor_);

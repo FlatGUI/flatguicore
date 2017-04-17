@@ -9,16 +9,18 @@
  */
 package flatgui.core.engine;
 
+import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.util.Tuple;
+import flatgui.util.CompactList;
+import flatgui.util.ObjectMatrix;
 
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * @author Denis Lebedev
@@ -29,6 +31,8 @@ public class Container
 
     private final Set<Integer> vacantComponentIndices_;
     private final Set<Integer> vacantNodeIndices_;
+
+    private final ObjectMatrix<Object> keys_;
 
     private final List<ComponentAccessor> components_;
     private final Map<List<Object>, Integer> componentPathToIndex_;
@@ -41,6 +45,7 @@ public class Container
     private final IContainerAccessor containerAccessor_;
     private final IPropertyValueAccessor propertyValueAccessor_;
     private final IContainerMutator containerMutator_;
+    private final IEvolverAccess evolverAccess_;
 
     private final IContainerParser containerParser_;
 
@@ -52,11 +57,19 @@ public class Container
 
     private Set<Integer> initializedNodes_;
 
+    // Evolver access TODO should not refer Clojure or ClojureContainerParser directly
+    private final HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
+    private final HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
+    private final HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
+    private final HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
+
     public static boolean debug_ = false;
 
     public Container(IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
     {
+        keys_ = new ObjectMatrix<>();
         containerParser_ = containerParser;
+        containerParser_.setKeyMatrix(keys_);
         resultCollector_ = resultCollector;
         components_ = new ArrayList<>();
         componentPathToIndex_ = new HashMap<>();
@@ -68,15 +81,64 @@ public class Container
         pathToIndex_ = new HashMap<>();
         nodeIndexToComponentCopyForConsumers_ = new LinkedHashMap<>();
 
+        delegateByIdMap_ = new HashMap<>();
+        delegateByIdAndPathMap_ = new HashMap<>();
+        delegateByIdAndPropertyMap_ = new HashMap<>();
+        delegateByIdPathAndPropertyMap_ = new HashMap<>();
+
         reusableNodeBuffer_ = new Node[1048576];
         reusableReasonBuffer_ = new Object[1048576];
         indexBufferSize_ = 0;
 
         containerAccessor_ = components_::get;
         propertyValueAccessor_ = this::getPropertyValue;
+        evolverAccess_ = new IEvolverAccess()
+        {
+            @Override
+            public Integer indexOfPath(List<Object> path)
+            {
+                return Container.this.indexOfPath(path);
+            }
+
+            @Override
+            public Object getPropertyValue(Integer index)
+            {
+                return Container.this.getPropertyValue(index);
+            }
+
+            @Override
+            public Map<Integer, GetPropertyDelegate> getDelegateByIdMap()
+            {
+                return Container.this.delegateByIdMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap()
+            {
+                return Container.this.delegateByIdAndPathMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
+            {
+                return Container.this.delegateByIdAndPropertyMap_;
+            }
+
+            @Override
+            public Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
+            {
+                return Container.this.delegateByIdPathAndPropertyMap_;
+            }
+
+            @Override
+            public ObjectMatrix<Object> getKeyMatrix()
+            {
+                return Container.this.keys_;
+            }
+        };
         containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
 
-        addContainer(null, new ArrayList<>(), container, null);
+        addContainer(null, Collections.emptyList(), container, null);
         finishContainerIndexing();
 
         initializeContainer();
@@ -117,7 +179,7 @@ public class Container
         long evolveStartTime = System.currentTimeMillis();
         indexBufferSize_ = 0;
 
-        log("----------------Started evolve cycle ---- for reason: " + valueToString(evolveReason));
+        if (debug_) logDebug("----------------Started evolve cycle ---- for reason: " + valueToString(evolveReason));
 
         ComponentAccessor initialComponentAccessor = components_.get(componentUid);
         Map<Object, Integer> propertyIdToNodeIndex = initialComponentAccessor.getPropertyIdToIndex();
@@ -134,7 +196,7 @@ public class Container
 
         for (int i=0; i<indexBufferSize_; i++)
         {
-            log(" Initial component: " + reusableNodeBuffer_[i].getNodePath());
+            if (debug_) logDebug(" Initial component: " + reusableNodeBuffer_[i].getNodePath());
         }
 
         Set<Integer> addedComponentIds = new HashSet<>();
@@ -151,10 +213,10 @@ public class Container
                 continue;
             }
             Object triggeringReason = reusableReasonBuffer_[currentCycleBufIndex_];
-            int nodeIndex = node.getNodeIndex().intValue();
+            int nodeIndex = node.getNodeIndex();
             Function<Map<Object, Object>, Object> evolver = node.getEvolver();
 
-            if (triggeringReason != null || initializedNodes_ != null && !initializedNodes_.contains(nodeIndex))
+            if (triggeringReason != null || initializedNodes_ != null && !initializedNodes_.contains(Integer.valueOf(nodeIndex)))
             {
                 Object oldValue;
                 Object newValue;
@@ -268,7 +330,7 @@ public class Container
 
                 if (changeDetected)
                 {
-                    log(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": " + valueToString(oldValue) + " -> " + valueToString(newValue));
+                    if (debug_) logDebug(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": " + valueToString(oldValue) + " -> " + valueToString(newValue));
                     containerMutator_.setValue(nodeIndex, newValue);
                     Collection<IFGEvolveConsumer> nodeEvolverConsumers = node.getEvolveConsumers();
                     if (nodeEvolverConsumers != null)
@@ -288,7 +350,7 @@ public class Container
 
                     if (triggeringReason != null && node.isChildrenProperty())
                     {
-                        log(" Detected children change");
+                        if (debug_) logDebug(" Detected children change");
                         Map<Object, Map<Object, Object>> newChildren = (Map<Object, Map<Object, Object>>) newValue;
 
                         Set<Object> idsToRemove = new HashSet<>(removedChildIds);
@@ -296,15 +358,11 @@ public class Container
                         Set<Object> idsToAdd = new HashSet<>(addedChildIds);
                         idsToAdd.addAll(changedChildIds);
 
-                        log(" Removing " + removedChildIds.size() + " removed and " + changedChildIds.size() + " changed children...");
-                        System.out.println(" Removing " + removedChildIds.size() +
-                                " ("+removedChildIds+")"
-                                + " removed and " + changedChildIds.size() + " changed children...");
+                        if (debug_) logDebug(" Removing " + removedChildIds.size() + " removed and " + changedChildIds.size() + " changed children...");
                         Set<Integer> removedChildIndices = new HashSet<>(idsToRemove.size());
                         for (Object id : idsToRemove)
                         {
-                            List<Object> childPath = new ArrayList<>(componentPath.size()+1);
-                            childPath.addAll(componentPath);
+                            List<Object> childPath = new CompactList<>(keys_, componentPath);
                             childPath.add(id);
                             Integer removedChildIndex = getComponentUid(childPath);
                             removeComponent(removedChildIndex);
@@ -313,8 +371,7 @@ public class Container
                             addedComponentIds.remove(removedChildIndex);
                         }
 
-                        log(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
-                        System.out.println(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
+                        if (debug_) logDebug(" Adding " + changedChildIds.size() + " changed and " + addedChildIds.size() + " added children...");
                         Set<Integer> newChildIndices = new HashSet<>(idsToAdd.size());
                         Map<Object, Integer> newChildIdToIndex = new HashMap<>();
 
@@ -338,8 +395,7 @@ public class Container
                         List<Integer> newChildIndices = new ArrayList<>(newChildIdOrder.size());
                         for (int i=0; i<newChildIdOrder.size(); i++)
                         {
-                            List<Object> childPath = new ArrayList<>(componentPath.size()+1);
-                            childPath.addAll(componentPath);
+                            List<Object> childPath = new CompactList<>(keys_, componentPath);
                             childPath.add(newChildIdOrder.get(i));
                             newChildIndices.add(getComponentUid(childPath));
                         }
@@ -350,7 +406,7 @@ public class Container
                 }
                 else
                 {
-                    log(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": no change (" + oldValue + ").");
+                    if (debug_) logDebug(" Evolved: " + nodeIndex + " " + node.getNodePath() + " for reason: " + valueToString(triggeringReason) + ": no change (" + oldValue + ").");
                 }
 
                 if (initializedNodes_ != null)
@@ -366,7 +422,7 @@ public class Container
 
         notifyEvolverConsumers();
 
-        log("---Ended evolve cycle");
+        if (debug_) logDebug("---Ended evolve cycle");
 
         if (!addedComponentIds.isEmpty())
         {
@@ -377,7 +433,7 @@ public class Container
 
             for (Node n : nodesWithAmbiguousDependencies_)
             {
-                Collection<Tuple> newDependencies = n.reevaluateAmbiguousDependencies(components_, containerParser_::isWildcardPathElement);
+                Collection<Node.Dependency> newDependencies = n.reevaluateAmbiguousDependencies(components_, containerParser_::isWildcardPathElement);
                 markNodeAsDependent(n, newDependencies);
             }
 
@@ -481,8 +537,7 @@ public class Container
 
         for (Object property : targetProperties)
         {
-            List fullPath = new ArrayList<>(path.size() + 1);
-            fullPath.addAll(path);
+            List fullPath = new CompactList(keys_, path);
             fullPath.add(property);
 
             Integer nodeIndex = pathToIndex_.get(fullPath);
@@ -574,13 +629,13 @@ public class Container
         }
     }
 
+    // TODO check against CompactList element maximum size
     private Integer addContainer(
             Integer parentComponentUid, List<Object> pathToContainer, Map<Object, Object> container, Collection<Integer> addedIndicesCollector)
     {
         // Add and thus index all components/properties
 
-        List<Object> componentPath = new ArrayList<>(pathToContainer.size()+1);
-        componentPath.addAll(pathToContainer);
+        List<Object> componentPath = new CompactList<>(keys_, pathToContainer);
         componentPath.add(containerParser_.getComponentId(container));
 
         ComponentAccessor component = new ComponentAccessor(
@@ -591,13 +646,12 @@ public class Container
         {
             addedIndicesCollector.add(componentUid);
         }
-        log("Added and indexed component " + componentPath + ": " + componentUid);
-        Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(
-                componentPath, container, propertyValueAccessor_);
+        if (debug_) logDebug("Added and indexed component " + componentPath + ": " + componentUid);
+        Collection<SourceNode> componentPropertyNodes = containerParser_.processComponent(componentPath, container);
         for (SourceNode node : componentPropertyNodes)
         {
             Integer nodeIndex = addNode(parentComponentUid, componentUid, node, container.get(node.getPropertyId()));
-            log("Indexing " + componentPath + " node " + node.getNodePath() + ": " + nodeIndex);
+            if (debug_) logDebug("Indexing " + componentPath + " node " + node.getNodePath() + ": " + nodeIndex);
             component.putPropertyIndex(node.getPropertyId(), nodeIndex);
         }
 
@@ -648,44 +702,47 @@ public class Container
         evolve(componentUid, null);
     }
 
-    private static List<Object> dropLast(List<Object> path)
+    private List<Object> dropLast(List<Object> path)
     {
-        List<Object> list = new ArrayList<>(path);
+        List<Object> list = new CompactList<>(keys_, path);
         list.remove(list.size()-1);
         return list;
     }
 
-    private void setupEvolversForNode(Container.Node n)
+    private void setupEvolversForNode(Node n)
     {
-        n.setEvolver(n.getEvolverCode() != null ? containerParser_.compileEvolverCode(
-                n.getPropertyId(), n.getEvolverCode(), this::indexOfPath, dropLast(n.getNodePath()), propertyValueAccessor_) : null);
+//        if (n.getEvolverCode() != null)
+//        {
+//            n.setEvolver(containerParser_.compileEvolverCode(
+//                    n.getPropertyId(), n.getEvolverCode(), dropLast(n.getNodePath()), n.getNodeIndex(), evolverAccess_));
+//        }
     }
 
-    private void resolveDependencyIndicesForNode(Container.Node n)
+    private void resolveDependencyIndicesForNode(Node n)
     {
         n.resolveDependencyIndices(components_, containerParser_::isWildcardPathElement);
     }
 
-    private void markNodeAsDependent(Container.Node n)
+    private void markNodeAsDependent(Node n)
     {
         markNodeAsDependent(n, n.getDependencyIndices());
     }
 
-    private void markNodeAsDependent(Container.Node n, Collection<Tuple> dependencies)
+    private void markNodeAsDependent(Node n, Collection<Node.Dependency> dependencies)
     {
         dependencies
-            .forEach(dependencyTuple -> nodes_.get(dependencyTuple.getFirst()).addDependent(n.getNodeIndex(), n.getNodePath(), dependencyTuple.getSecond()));
+            .forEach(d -> nodes_.get(d.getNodeIndex()).addDependent(Integer.valueOf(n.getNodeIndex()), n.getNodePath(), d.getRelPath(), keys_));
     }
 
-    private void unMarkNodeAsDependent(Container.Node n, Collection<Tuple> dependencies)
+    private void unMarkNodeAsDependent(Node n, Collection<Node.Dependency> dependencies)
     {
         dependencies
                 .forEach(dependencyTuple -> {
                     // May be null - if node belonged to the component being removed
-                    Node dn = nodes_.get(dependencyTuple.getFirst());
+                    Node dn = nodes_.get(dependencyTuple.getNodeIndex());
                     if (dn != null)
                     {
-                        dn.removeDependent(n.getNodeIndex());
+                        dn.removeDependent(Integer.valueOf(n.getNodeIndex()));
                     }
                 });
     }
@@ -719,17 +776,24 @@ public class Container
             index = vacantNodeIndices_.stream().findAny().get();
             vacantNodeIndices_.remove(index);
         }
-        Node node = new Node(
-                componentUid,
-                sourceNode.getPropertyId(),
-                parentComponentUid,
-                sourceNode.isChildrenProperty(),
-                sourceNode.isChildOrderProperty(),
-                sourceNode.getNodePath(),
-                index,
-                sourceNode.getRelAndAbsDependencyPaths(),
-                sourceNode.getInputDependencies(),
-                sourceNode.getEvolverCode());
+        Node node;
+        if (sourceNode.getEvolverCode() != null)
+        {
+            node = new EvolvingNode(
+                    componentUid,
+                    parentComponentUid != null ? parentComponentUid.intValue() : -1,
+                    sourceNode,
+                    index,
+                    evolverAccess_);
+        }
+        else
+        {
+            node = new Node(
+                    componentUid,
+                    parentComponentUid != null ? parentComponentUid.intValue() : -1,
+                    sourceNode,
+                    index);
+        }
         int indexInt = index.intValue();
         if (index < nodes_.size())
         {
@@ -768,7 +832,7 @@ public class Container
         for (Integer i : dependents.keySet())
         {
             Node dependent = nodes_.get(i.intValue());
-            List<Object> invokerRefRelPath = new ArrayList<>(dependents.get(i));
+            List<Object> invokerRefRelPath = new CompactList<>(keys_, dependents.get(i));
             // By convention, do not include property into what (get-reason) returns
             invokerRefRelPath.remove(invokerRefRelPath.size()-1);
 
@@ -778,7 +842,7 @@ public class Container
             reusableNodeBuffer_[indexBufferSize_] = dependent;
             reusableReasonBuffer_[indexBufferSize_] = invokerRefRelPath;
 
-            log("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
+            if (debug_) logDebug("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
 
             indexBufferSize_ ++;
         }
@@ -807,7 +871,7 @@ public class Container
     private void initializeContainer()
     {
         initializedNodes_ = new HashSet<>();
-        log("========================Started initialization cycle================================");
+        if (debug_) logDebug("========================Started initialization cycle================================");
         // New components may be added to, or some may be removed from components_ during initialization.
         // So iterate over the snapshot.
         List<Container.ComponentAccessor> components = new ArrayList<>(components_);
@@ -815,12 +879,12 @@ public class Container
         {
             evolve(Integer.valueOf(i), null);
         }
-        log("=====Ended initialization cycle");
+        if (debug_) logDebug("=====Ended initialization cycle");
         initializedNodes_.clear();
         initializedNodes_ = null;
     }
 
-    static void log(String message)
+    static void logDebug(String message)
     {
         if (debug_)
         {
@@ -945,6 +1009,8 @@ public class Container
 
         private final Collection<DependencyInfo> relAndAbsDependencyPaths_;
 
+        private final boolean hasAmbiguousDependencies_;
+
         private final Object evolverCode_;
 
         private final List<Object> inputDependencies_;
@@ -963,6 +1029,16 @@ public class Container
             childOrderProperty_ = childOrderProperty;
             nodePath_ = nodePath;
             relAndAbsDependencyPaths_ = relAndAbsDependencyPaths;
+            boolean hasAmbiguousDependencies = false;
+            for (DependencyInfo dependencyInfo : relAndAbsDependencyPaths_)
+            {
+                if (dependencyInfo.isAmbiguous())
+                {
+                    hasAmbiguousDependencies = true;
+                    break;
+                }
+            }
+            hasAmbiguousDependencies_ = hasAmbiguousDependencies;
             evolverCode_ = evolverCode;
             inputDependencies_ = inputDependencies;
         }
@@ -992,6 +1068,11 @@ public class Container
             return relAndAbsDependencyPaths_;
         }
 
+        public boolean isHasAmbiguousDependencies()
+        {
+            return hasAmbiguousDependencies_;
+        }
+
         public Object getEvolverCode()
         {
             return evolverCode_;
@@ -1005,25 +1086,19 @@ public class Container
 
     public interface IContainerParser
     {
+        void setKeyMatrix(ObjectMatrix<Object> keys);
+
         Object getComponentId(Map<Object, Object> container);
 
         Object getChildrenPropertyName();
 
         Object getChildOrderPropertyName();
 
-        List<Object> getChildOrder(Map<Object, Object> container);
-
         Collection<SourceNode> processComponent(
                 List<Object> componentPath,
-                Map<Object, Object> component,
-                Container.IPropertyValueAccessor propertyValueAccessor);
+                Map<Object, Object> component);
 
         void processComponentAfterIndexing(IComponent component);
-
-        Function<Map<Object, Object>, Object> compileEvolverCode(Object propertyId, Object evolverCode,
-                                                                 Function<List<Object>, Integer> indexProvider,
-                                                                 List<Object> componentPath,
-                                                                 IPropertyValueAccessor propertyValueAccessor);
 
         /**
          * @param inputDependencies
@@ -1060,6 +1135,21 @@ public class Container
     public interface IPropertyValueAccessor
     {
         Object getPropertyValue(Integer index);
+    }
+
+    public interface IEvolverAccess extends IPropertyValueAccessor
+    {
+        Integer indexOfPath(List<Object> path);
+
+        Map<Integer, GetPropertyDelegate> getDelegateByIdMap();
+
+        Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap();
+
+        Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap();
+
+        Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap();
+
+        ObjectMatrix<Object> getKeyMatrix();
     }
 
     public interface IContainerMutator
@@ -1300,240 +1390,4 @@ public class Container
         }
     }
 
-    /**
-     * Represents a property of a component (internal indexed)
-     */
-    public static class Node
-    {
-        private final Integer componentUid_;
-        private final Object propertyId_;
-        private final Integer parentComponentUid_;
-        private final boolean childrenProperty_;
-        private final boolean childOrderProperty_;
-        private final List<Object> nodePath_;
-        private final Integer nodeUid_;
-        private final Collection<DependencyInfo> relAndAbsDependencyPaths_;
-        private final boolean hasAmbiguousDependencies_;
-        private final Collection<Object> inputDependencies_;
-        private Map<Integer, Tuple> dependencyIndices_;
-        private Object evolverCode_;
-        private Function<Map<Object, Object>, Object> evolver_;
-        private Set<IFGEvolveConsumer> evolveConsumers_;
-
-        // TODO Optimize:
-        // remove dependents covered by longer chains. Maybe not remove but just hide since longer chains may be provided
-        // by components that may be removed
-        private final Map<Integer, List<Object>> dependentIndexToRelPath_;
-
-        public Node(
-                Integer componentUid,
-                Object propertyId,
-                Integer parentComponentUid,
-                boolean childrenProperty,
-                boolean childOrderProperty,
-                List<Object> nodePath,
-                Integer nodeUid,
-                Collection<DependencyInfo> relAndAbsDependencyPaths,
-                Collection<Object> inputDependencies,
-                Object evolverCode)
-        {
-            componentUid_ = componentUid;
-            propertyId_ = propertyId;
-            parentComponentUid_ = parentComponentUid;
-            childrenProperty_ = childrenProperty;
-            childOrderProperty_ = childOrderProperty;
-            nodePath_ = nodePath;
-            nodeUid_ = nodeUid;
-            relAndAbsDependencyPaths_ = relAndAbsDependencyPaths;
-            boolean hasAmbiguousDependencies = false;
-            for (DependencyInfo dependencyInfo : relAndAbsDependencyPaths_)
-            {
-                if (dependencyInfo.isAmbiguous())
-                {
-                    hasAmbiguousDependencies = true;
-                    break;
-                }
-            }
-            hasAmbiguousDependencies_ = hasAmbiguousDependencies;
-            inputDependencies_ = inputDependencies;
-            dependentIndexToRelPath_ = new HashMap<>();
-            evolverCode_ = evolverCode;
-        }
-
-        public Integer getComponentUid()
-        {
-            return componentUid_;
-        }
-
-        public Object getPropertyId()
-        {
-            return propertyId_;
-        }
-
-        public Integer getParentComponentUid()
-        {
-            return parentComponentUid_;
-        }
-
-        public boolean isChildrenProperty()
-        {
-            return childrenProperty_;
-        }
-
-        public boolean isChildOrderProperty()
-        {
-            return childOrderProperty_;
-        }
-
-        public Integer getNodeIndex()
-        {
-            return nodeUid_;
-        }
-
-        public List<Object> getNodePath()
-        {
-            return nodePath_;
-        }
-
-        public Collection<Object> getInputDependencies()
-        {
-            return inputDependencies_;
-        }
-
-        public boolean isHasAmbiguousDependencies()
-        {
-            return hasAmbiguousDependencies_;
-        }
-
-        private void findNodeIndices(ComponentAccessor c, int pathIndex, DependencyInfo d,
-                                     List<ComponentAccessor> components, Predicate<Object> isWildcard,
-                                     Consumer<Tuple> dependencyPostprocessor)
-        {
-            List<Object> absPath = d.getAbsPath();
-            int absPathSize = absPath.size();
-            if (absPathSize == 1)
-            {
-                return;
-            }
-            Object e = absPath.get(pathIndex);
-            if (pathIndex < absPathSize-1)
-            {
-                if (isWildcard.test(e))
-                {
-                    List<Integer> allChildIndices = c.getChildIndices();
-                    for (Integer childIndex : allChildIndices)
-                    {
-                        findNodeIndices(components.get(childIndex), pathIndex+1, d, components, isWildcard, dependencyPostprocessor);
-                    }
-                }
-                else
-                {
-                    Integer childIndex = c.getChildIndex(e);
-                    if (childIndex != null)
-                    {
-                        findNodeIndices(components.get(childIndex), pathIndex+1, d, components, isWildcard, dependencyPostprocessor);
-                    }
-                }
-            }
-            else
-            {
-                Integer propertyIndex = c.getPropertyIndex(e);
-                if (propertyIndex != null)
-                {
-                    Tuple dependency = Tuple.triple(propertyIndex, d.getRelPath(), d.isAmbiguous());
-                    dependencyIndices_.put(propertyIndex, dependency);
-                    if (dependencyPostprocessor != null)
-                    {
-                        dependencyPostprocessor.accept(dependency);
-                    }
-                }
-            }
-        }
-
-        public void resolveDependencyIndices(List<ComponentAccessor> components, Predicate<Object> isWildCard)
-        {
-            dependencyIndices_ = new HashMap<>();
-
-            for (DependencyInfo d : relAndAbsDependencyPaths_)
-            {
-                findNodeIndices(components.get(0), 1, d, components, isWildCard, null);
-            }
-        }
-
-        public Collection<Tuple> reevaluateAmbiguousDependencies(List<ComponentAccessor> components, Predicate<Object> isWildCard)
-        {
-            Collection<Tuple> newlyAddedDependencies = new ArrayList<>();
-            for (DependencyInfo d : relAndAbsDependencyPaths_)
-            {
-                findNodeIndices(components.get(0), 1, d, components, isWildCard, newlyAddedDependencies::add);
-            }
-            return newlyAddedDependencies;
-        }
-
-        public Collection<Tuple> getDependencyIndices()
-        {
-            return dependencyIndices_.values();
-        }
-
-        public Map<Integer, List<Object>> getDependentIndices()
-        {
-            return dependentIndexToRelPath_;
-        }
-
-        public void addDependent(Integer nodeIndex, List<Object> nodeAbsPath, List<Object> relPath)
-        {
-            List<Object> actualRef = new ArrayList<>(relPath);
-            if (nodeAbsPath.size() < nodePath_.size())
-            {
-                // Replace wildcards (:*) with actual child ids. Start from 1 not to replace *this
-                for (int i=1; i<relPath.size(); i++)
-                {
-                    actualRef.set(i, nodePath_.get(nodePath_.size() - relPath.size() + i));
-                }
-            }
-
-            log(nodeUid_ + " " + nodePath_ + " added dependent: " + nodeIndex + " " + nodeAbsPath + " referenced as " + relPath + " actual ref " + actualRef);
-            dependentIndexToRelPath_.put(nodeIndex, actualRef);
-        }
-
-        public void removeDependent(Integer nodeIndex)
-        {
-            dependentIndexToRelPath_.remove(nodeIndex);
-        }
-
-        public Object getEvolverCode()
-        {
-            return evolverCode_;
-        }
-
-        public Function<Map<Object, Object>, Object> getEvolver()
-        {
-            return evolver_;
-        }
-
-        public void setEvolver(Function<Map<Object, Object>, Object> evolver)
-        {
-            evolver_ = evolver;
-        }
-
-        void forgetDependency(Integer nodeIndex)
-        {
-            dependencyIndices_.remove(nodeIndex);
-            ((ClojureContainerParser.EvolverWrapper)evolver_).unlinkAllDelegates();
-        }
-
-        void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
-        {
-            if (evolveConsumers_ == null)
-            {
-                evolveConsumers_ = new HashSet<>();
-            }
-            evolveConsumers_.add(evolveConsumer);
-        }
-
-        Collection<IFGEvolveConsumer> getEvolveConsumers()
-        {
-            return evolveConsumers_;
-        }
-    }
 }

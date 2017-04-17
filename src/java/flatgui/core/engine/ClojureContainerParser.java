@@ -15,7 +15,8 @@ import flatgui.core.FGHostStateEvent;
 import flatgui.core.FGTimerEvent;
 import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseWheelEvent;
-import flatgui.core.util.Tuple;
+import flatgui.util.CompactList;
+import flatgui.util.ObjectMatrix;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -65,6 +66,14 @@ public class ClojureContainerParser implements Container.IContainerParser
         INPUT_EVENT_KEYS = Collections.unmodifiableMap(m);
     }
 
+    private ObjectMatrix<Object> keys_;
+
+    @Override
+    public void setKeyMatrix(ObjectMatrix<Object> keys)
+    {
+        keys_ = keys;
+    }
+
     @Override
     public Object getComponentId(Map<Object, Object> container)
     {
@@ -84,21 +93,13 @@ public class ClojureContainerParser implements Container.IContainerParser
     }
 
     @Override
-    public List<Object> getChildOrder(Map<Object, Object> container)
-    {
-        // No determined order in this impl
-        Map<Object, Object> children = (Map<Object, Object>) container.get(getChildrenPropertyName());
-        return children != null ? new ArrayList<>(children.keySet()) : null;
-    }
-
-    @Override
     public Object getChildrenPropertyName()
     {
         return CHILDREN_KEY;
     }
 
     @Override
-    public Collection<Container.SourceNode> processComponent(List<Object> componentPath, Map<Object, Object> component, Container.IPropertyValueAccessor propertyValueAccessor)
+    public Collection<Container.SourceNode> processComponent(List<Object> componentPath, Map<Object, Object> component)
     {
         Map<Object, Object> evolvers = (Map<Object, Object>) component.get(EVOLVERS_KEY);
 
@@ -116,8 +117,7 @@ public class ClojureContainerParser implements Container.IContainerParser
         }
         for (Object propertyId : allPropertyIds)
         {
-            List<Object> nodePath = new ArrayList<>(componentPath.size()+1);
-            nodePath.addAll(componentPath);
+            List<Object> nodePath = new CompactList<>(keys_, componentPath);
             nodePath.add(propertyId);
 
             boolean hasEvolver = evolvers != null && evolvers.get(propertyId) != null;
@@ -149,7 +149,7 @@ public class ClojureContainerParser implements Container.IContainerParser
                         .filter(relDep -> !processingRoot || relDep.size() > 1)
                         .map(relDep -> new Container.DependencyInfo(
                                 relDep,
-                                buildAbsPath(componentPath, relDep),
+                                buildAbsPath(keys_, componentPath, relDep),
                                 relDep.stream().anyMatch(e -> WILDCARD_KEY.equals(e))))
                         .collect(Collectors.toList());
                 //dependencyPaths = GetPropertyClojureFnRegistry.attachToInstance(symbol, componentPath, propertyValueAccessor);
@@ -175,66 +175,6 @@ public class ClojureContainerParser implements Container.IContainerParser
     }
 
     @Override
-    public Function<Map<Object, Object>, Object> compileEvolverCode(
-            Object propertyId, Object evolverCode, Function<List<Object>, Integer> indexProvider, List<Object> path, Container.IPropertyValueAccessor propertyValueAccessor)
-    {
-        if (evolverCode != null)
-        {
-            try
-            {
-                IFn evolverFn = (IFn) evolverCode;
-//                return componentAccessor -> {
-//                    try
-//                    {
-//                        GetPropertyClojureFn.setAbsPath(path);
-//                        GetPropertyClojureFn.setIndexProvider(indexProvider);
-//                        GetPropertyClojureFn.setPropertyValueAccessor(propertyValueAccessor);
-//                        return evolverFn.invoke(componentAccessor);
-//                    }
-//                    catch (Throwable ex)
-//                    {
-//                        throw new RuntimeException("Failed evolver for " + path + " " + propertyId + ": ", ex);
-//                    }
-//                };
-                return new EvolverWrapper(evolverFn, path, indexProvider, propertyValueAccessor);
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-                return componentAccessor -> {throw new IllegalStateException("Could not instantiate evolver for " + path + " " + propertyId);};
-            }
-        }
-        else
-        {
-            return componentAccessor -> {throw new IllegalStateException("No evolver for " + path + " " + propertyId);};
-        }
-
-// TODO(IND)
-//
-//        IFn evolverFn = (IFn) compileEvolver_.invoke(evolverCode, indexProvider, path, propertyId);
-//        if (evolverFn != null)
-//        {
-//            return componentAccessor -> {
-//                try
-//                {
-//                    return evolverFn.invoke(componentAccessor);
-//                }
-//                catch (Throwable ex)
-//                {
-//                    Map<Object, Object> evolverFnMeta = (Map<Object, Object>) ((IMeta)evolverFn).meta();
-//                    Object src = evolverFnMeta.get(SOURCE_META_KEY);
-//                    throw new RuntimeException("Failed evolver for " + path + " " + propertyId + ": " + (src != null ? src : "<null>"), ex);
-//                }
-//            };
-//        }
-//        else
-//        {
-//            // Error is already logged in this case
-//            return componentAccessor -> {throw new IllegalStateException("Evolver is not compiled for " + path + " " + propertyId);};
-//        }
-    }
-
-    @Override
     public boolean isInterestedIn(Collection<Object> inputDependencies, Class<?> evolveReasonClass)
     {
         // For all input channel events (kw != null), check if depends on; otherwise just accept
@@ -253,18 +193,24 @@ public class ClojureContainerParser implements Container.IContainerParser
     {
     }
 
-    static List<Object> buildAbsPath(List<Object> componentPath, List<Object> relPath)
+    static List<Object> buildAbsPath(ObjectMatrix<Object> keyMatrix, List<Object> componentPath, List<Object> relPath)
     {
-        List<Object> absPath = new ArrayList<>(componentPath);
+        List<Object> absPath;
         if (relPath.isEmpty())
         {
+            absPath = new CompactList<>(keyMatrix, componentPath);
             absPath.remove(absPath.size()-1);
         }
         else if (relPath.get(0).equals(THIS_KW))
         {
-            List<Object> next = new ArrayList<>(relPath);
-            next.remove(0);
-            absPath.addAll(next);
+//            List<Object> next = new ArrayList<>(relPath);
+//            next.remove(0);
+//            absPath.addAll(next);
+            absPath = new CompactList<>(keyMatrix, componentPath);
+            for (int i=1; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         else if (relPath.get(0).equals(UP_LEVEL_KW))
         {
@@ -274,187 +220,28 @@ public class ClojureContainerParser implements Container.IContainerParser
                 upLevelCount++;
             }
             int componentPathCountToTake = componentPath.size() - upLevelCount - 1;
-            absPath = absPath.subList(0, componentPathCountToTake);
-            absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
+            absPath = new CompactList<>(keyMatrix);
+            //absPath = absPath.subList(0, componentPathCountToTake);
+            for (int i=0; i<componentPathCountToTake; i++)
+            {
+                absPath.add(componentPath.get(i));
+            }
+            //absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
+            for (int i=upLevelCount; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         else
         {
+            absPath = new CompactList<>(keyMatrix, componentPath);
             absPath.remove(absPath.size()-1);
-            absPath.addAll(relPath);
+            //absPath.addAll(relPath);
+            for (int i=0; i<relPath.size(); i++)
+            {
+                absPath.add(relPath.get(i));
+            }
         }
         return absPath;
-    }
-
-    /**
-     * One instance per evolver use case (unlike GetPropertyClojureFn that has one instance per evolver function)
-     * and per application/thread.
-     * Keeps the index of referred property which GetPropertyClojureFn cannot keep because it's different depending
-     * on where evolver is used.
-     */
-    static class GetPropertyDelegate
-    {
-        private boolean linked_;
-        private Integer accessedPropertyIndex_;
-
-        private final List<Object> evolvedComponentPath_;
-        private final Function<List<Object>, Integer> indexProvider_;
-        private final Container.IPropertyValueAccessor propertyValueAccessor_;
-
-        public GetPropertyDelegate(List<Object> evolvedComponentPath, Function<List<Object>, Integer> indexProvider, Container.IPropertyValueAccessor propertyValueAccessor)
-        {
-            evolvedComponentPath_ = evolvedComponentPath;
-            indexProvider_ = indexProvider;
-            propertyValueAccessor_ = propertyValueAccessor;
-        }
-
-        Object getProperty()
-        {
-            return propertyValueAccessor_.getPropertyValue(accessedPropertyIndex_);
-        }
-
-        boolean isLinked()
-        {
-            return linked_;
-        }
-
-        void link(List<Object> accessedPropertyRelPath, Object accessedProperty)
-        {
-            List<Object> accessedPropertyAbsPath = buildAbsPath(evolvedComponentPath_, accessedPropertyRelPath);
-            accessedPropertyAbsPath.add(accessedProperty);
-            accessedPropertyIndex_ = indexProvider_.apply(accessedPropertyAbsPath);
-            Container.log(evolvedComponentPath_ + " linked " + accessedPropertyAbsPath + " -> " + accessedPropertyIndex_ + " Delegate: " + this);
-            if (accessedPropertyIndex_ != null)
-            {
-                // accessedPropertyIndex_ may not be resolved if referenced component does not exist. Referenced component
-                // may be added later so keeping linked_ == false allows giving it another try
-                linked_ = true;
-            }
-        }
-
-        void unlink()
-        {
-            linked_ = false;
-        }
-    }
-
-
-    /**
-     * One instance per evolver use case and per application/thread (unlike actual Clojure evolver
-     * that has one instance per process)
-     */
-    static class EvolverWrapper implements Function<Map<Object, Object>, Object>
-    {
-        private HashMap<Integer, GetPropertyDelegate> delegateByIdMap_;
-        private HashMap<Integer, Map<List<Object>, GetPropertyDelegate>> delegateByIdAndPathMap_;
-        private HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
-        private HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
-
-        private final Set<GetPropertyDelegate> allDelegates_;
-
-        private final IFn evolverFn_;
-        private final List<Object> evolvedComponentPath_;
-        private final Function<List<Object>, Integer> indexProvider_;
-        private final Container.IPropertyValueAccessor propertyValueAccessor_;
-
-        public EvolverWrapper(IFn evolverFn, List<Object> evolvedComponentPath, Function<List<Object>, Integer> indexProvider, Container.IPropertyValueAccessor propertyValueAccessor)
-        {
-            evolverFn_ = evolverFn;
-            evolvedComponentPath_ = evolvedComponentPath;
-            indexProvider_ = indexProvider;
-            propertyValueAccessor_ = propertyValueAccessor;
-            delegateByIdMap_ = new HashMap<>();
-            delegateByIdAndPathMap_ = new HashMap<>();
-            delegateByIdAndPropertyMap_ = new HashMap<>();
-            delegateByIdPathAndPropertyMap_ = new HashMap<>();
-
-            allDelegates_ = new HashSet<>();
-        }
-
-        @Override
-        public Object apply(Map<Object, Object> component)
-        {
-            GetPropertyStaticClojureFn.visit(this);
-            return evolverFn_.invoke(component);
-        }
-
-        GetPropertyDelegate getDelegateById(Integer getterId)
-        {
-            GetPropertyDelegate delegate = delegateByIdMap_.get(getterId);
-            if (delegate == null)
-            {
-                delegate = createDelegate();
-                delegateByIdMap_.put(getterId, delegate);
-            }
-            return delegate;
-        }
-
-        GetPropertyDelegate getDelegateByIdAndPath(Integer getterId, List<Object> path)
-        {
-            Map<List<Object>, GetPropertyDelegate> pathToDelegate = delegateByIdAndPathMap_.get(getterId);
-            if (pathToDelegate == null)
-            {
-                pathToDelegate = new HashMap<>();
-                delegateByIdAndPathMap_.put(getterId, pathToDelegate);
-            }
-            GetPropertyDelegate delegate = pathToDelegate.get(path);
-            if (delegate == null)
-            {
-                delegate = createDelegate();
-                pathToDelegate.put(path, delegate);
-            }
-            return delegate;
-        }
-
-        GetPropertyDelegate getDelegateByIdAndProperty(Integer getterId, Keyword property)
-        {
-            Map<Keyword, GetPropertyDelegate> propertyToDelegate = delegateByIdAndPropertyMap_.get(getterId);
-            if (propertyToDelegate == null)
-            {
-                propertyToDelegate = new HashMap<>();
-                delegateByIdAndPropertyMap_.put(getterId, propertyToDelegate);
-            }
-            GetPropertyDelegate delegate = propertyToDelegate.get(property);
-            if (delegate == null)
-            {
-                delegate = createDelegate();
-                propertyToDelegate.put(property, delegate);
-            }
-            return delegate;
-        }
-
-        GetPropertyDelegate getDelegateByIdPathAndProperty(Integer getterId, List<Object> path, Keyword property)
-        {
-            Map<List<Object>, Map<Keyword, GetPropertyDelegate>> mapByPath = delegateByIdPathAndPropertyMap_.get(getterId);
-            if (mapByPath == null)
-            {
-                mapByPath = new HashMap<>();
-                delegateByIdPathAndPropertyMap_.put(getterId, mapByPath);
-            }
-            Map<Keyword, GetPropertyDelegate> propertyToDelegate = mapByPath.get(path);
-            if (propertyToDelegate == null)
-            {
-                propertyToDelegate = new HashMap<>();
-                mapByPath.put(path, propertyToDelegate);
-            }
-            GetPropertyDelegate delegate = propertyToDelegate.get(property);
-            if (delegate == null)
-            {
-                delegate = createDelegate();
-                propertyToDelegate.put(property, delegate);
-            }
-            return delegate;
-        }
-
-        void unlinkAllDelegates()
-        {
-            allDelegates_.forEach(d -> d.unlink());
-        }
-
-        private GetPropertyDelegate createDelegate()
-        {
-            GetPropertyDelegate delegate = new GetPropertyDelegate(evolvedComponentPath_, indexProvider_, propertyValueAccessor_);
-            allDelegates_.add(delegate);
-            return delegate;
-        }
     }
 }

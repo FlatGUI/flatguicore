@@ -9,6 +9,7 @@ import clojure.lang.Var;
 import flatgui.core.awt.FGDefaultPrimitivePainter;
 import flatgui.core.engine.Container;
 import flatgui.core.engine.IResultCollector;
+import flatgui.core.engine.Node;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -76,7 +77,7 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
     }
 
     @Override
-    public void appendResult(Integer parentComponentUid, List<Object> path, Container.Node node, Object newValue)
+    public void appendResult(int parentComponentUid, List<Object> path, Node node, Object newValue)
     {
         Integer componentUid = node.getComponentUid();
         Object property = node.getPropertyId();
@@ -87,13 +88,14 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
         // TODO
         // Evolved property node can already contain boolean flags so that there is no need to compare.
         // But it has to be a UI subclass
-        if (property.equals(VISIBLE_POPUP_KW))
+        if (property.equals(VISIBLE_POPUP_KW) && parentComponentUid != -1)
         {
-            Set<Integer> visiblePopupChildIndices = parentToVisiblePopupChildCount_.get(parentComponentUid);
+            Integer parentUid = Integer.valueOf(parentComponentUid);
+            Set<Integer> visiblePopupChildIndices = parentToVisiblePopupChildCount_.get(parentUid);
             if (visiblePopupChildIndices == null)
             {
                 visiblePopupChildIndices = new HashSet<>();
-                parentToVisiblePopupChildCount_.put(parentComponentUid, visiblePopupChildIndices);
+                parentToVisiblePopupChildCount_.put(parentUid, visiblePopupChildIndices);
             }
             if (newValue != null && !(newValue instanceof Boolean && !((Boolean) newValue).booleanValue()))
             {

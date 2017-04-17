@@ -16,14 +16,14 @@
 (defn evolve
   ([container property reason target]
    (let [results (atom {})
-         result-collector (proxy [IResultCollector] []
-                            (appendResult [_parentComponentUid, _path, node, newValue]
+         result-collector (reify IResultCollector
+                            (appendResult [_this _parentComponentUid, _path, node, newValue]
                               (swap! results (fn [r] (if (= property (.getPropertyId node))
                                                        newValue
                                                        r))))
-                            (componentAdded [_parentComponentUid _componentUid])
-                            (componentRemoved [_componentUid])
-                            (postProcessAfterEvolveCycle [_a _m]))
+                            (componentAdded [_this _parentComponentUid _componentUid])
+                            (componentRemoved [_this _componentUid])
+                            (postProcessAfterEvolveCycle [_this _a _m]))
          container-engine (Container.
                             (ClojureContainerParser.)
                             result-collector

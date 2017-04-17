@@ -15,7 +15,7 @@ import java.util.List;
 public class GetDynPropertyDynPathClojureFn extends GetPropertyClojureFn
 {
     @Override
-    protected ClojureContainerParser.GetPropertyDelegate getDelegate(Object path, Object property)
+    protected GetPropertyDelegate getDelegate(Object path, Object property)
     {
         return currentEvolverWrapper_.get().getDelegateByIdPathAndProperty(getterId_, (List<Object>) path, (Keyword) property);
     }

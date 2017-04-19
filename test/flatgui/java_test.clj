@@ -8,18 +8,8 @@
 
 (ns flatgui.java-test
   (:require [clojure.test :as test])
-  (:import (org.junit.runner JUnitCore)
-           (flatgui.core.websocket FGPaintVectorBinaryCoderTest)
-           (flatgui.util TestUtil)))
+  (:import (flatgui.util TestUtil)))
 
 (test/deftest java-text
-  (let [junit (JUnitCore.)
-        result (TestUtil/runClass junit FGPaintVectorBinaryCoderTest)
-        failure-count (.getFailureCount result)
-        failure-text (if (> failure-count 0)
-                       (let [failures (.getFailures result)]
-                         (map (fn [f] (str (.toString f) "\n")) failures)))
-        _ (println "Run JUnit tests: " (.getRunCount result))
-        _ (println "JUnit failures: " failure-count)
-        _ (if (> failure-count 0) (print failure-text))]
+  (let [failure-count (TestUtil/runJavaTests)]
     (test/is (= 0 failure-count))))

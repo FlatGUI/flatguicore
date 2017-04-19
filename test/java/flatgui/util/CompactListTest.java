@@ -29,7 +29,7 @@ public class CompactListTest
         CompactList<String, ?> l = new CompactList<>(null);
 
         l.setSlot(4, 4002);
-        l.setSlot(3, 6);//5);
+        l.setSlot(3, 5);
         l.setSlot(9, 4095);
         l.setSlot(2, 4095);
         l.setSlot(0, 123);

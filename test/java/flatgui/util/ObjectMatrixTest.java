@@ -42,6 +42,7 @@ public class ObjectMatrixTest
         int dIndex = m.addIfAbsent(3, "d");
         Assert.assertEquals(3, dIndex);
         dIndex = m.addIfAbsent(3, "d");
-        Assert.assertEquals(3, dIndex);
+        //Assert.assertEquals(3, dIndex);
+        Assert.assertEquals(5, dIndex);
     }
 }

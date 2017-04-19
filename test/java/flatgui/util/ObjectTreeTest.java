@@ -29,7 +29,8 @@ public class ObjectTreeTest
         int[] code = t.addPath(Arrays.asList("x", "y"));
         Assert.assertArrayEquals(new int[]{0, 0}, code);
         assertEquals("x", t.getRoot().getObject());
-        assertEquals("y", t.getRoot().getChildAt(0).getObject());
+        //assertEquals("y", t.getRoot().getChildAt(0).getObject());
+        assertEquals("5", t.getRoot().getChildAt(0).getObject());
 
         code = t.addPath(Arrays.asList("x", "y", "z", "w"));
         Assert.assertArrayEquals(new int[]{0, 0, 0, 0}, code);

@@ -9,11 +9,13 @@
  */
 package flatgui.util;
 
+import org.junit.Test;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Enumeration;
@@ -69,19 +71,26 @@ public class TestUtil
             try
             {
                 Class<?> clazz = Class.forName(name);
-                Result result = junit.run(clazz);
-                System.out.println(" -- run count: " + result.getRunCount());
-                System.out.println(" -- ignore count: " + result.getIgnoreCount());
-                System.out.println(" -- failure count: " + result.getFailureCount());
-                System.out.println(" -- run time: " + result.getRunTime());
-
-                if (result.getFailureCount() > 0)
+                if (isRunnableJUnitClass(clazz))
                 {
-                    failureCount += result.getFailureCount();
-                    result.getFailures().forEach(f -> {
-                        System.out.println(f.toString());
-                        f.getException().printStackTrace();
-                    });
+                    Result result = junit.run(clazz);
+                    System.out.println(" -- run count: " + result.getRunCount());
+                    System.out.println(" -- ignore count: " + result.getIgnoreCount());
+                    System.out.println(" -- failure count: " + result.getFailureCount());
+                    System.out.println(" -- run time: " + result.getRunTime());
+
+                    if (result.getFailureCount() > 0)
+                    {
+                        failureCount += result.getFailureCount();
+                        result.getFailures().forEach(f -> {
+                            System.out.println(f.toString());
+                            f.getException().printStackTrace();
+                        });
+                    }
+                }
+                else
+                {
+                    System.out.println("Nothing to test: class does not have methods annotated with " + Test.class.getSimpleName());
                 }
             }
             catch(Throwable ex)
@@ -110,10 +119,23 @@ public class TestUtil
             }
             else
             {
-                 failCnt += runToFailCnt.apply(file).intValue();
+                failCnt += runToFailCnt.apply(file).intValue();
             }
         }
 
         return failCnt;
+    }
+
+    private static boolean isRunnableJUnitClass(Class<?> clazz)
+    {
+        Method[] methods = clazz.getMethods();
+        for (Method m : methods)
+        {
+            if (m.isAnnotationPresent(Test.class))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

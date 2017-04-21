@@ -3,6 +3,7 @@
  */
 package flatgui.core.engine.ui;
 
+import clojure.lang.Symbol;
 import clojure.lang.Var;
 import flatgui.core.awt.AbstractHostComponent;
 import flatgui.core.engine.*;
@@ -48,7 +49,14 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     public static FGAWTAppContainer createAndInit(String containerNs, String containerVarName)
     {
+        Var require = clojure.lang.RT.var("clojure.core", "require");
+        require.invoke(Symbol.intern(containerNs));
         Var containerVar = clojure.lang.RT.var(containerNs, containerVarName);
+        return createAndInit(containerVar);
+    }
+
+    public static FGAWTAppContainer createAndInit(Var containerVar)
+    {
         Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
 
         FGAWTAppContainer appContainer = new FGAWTAppContainer(container);

@@ -35,12 +35,18 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
     public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx)
     {
+        this(containerId, container, interopUtil, resultCollector, unitSizePx, new FGMouseEventParser(unitSizePx));
+    }
+
+    public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx,
+                          FGMouseEventParser mouseEventParser)
+    {
         super(containerId, new FGClojureContainerParser(),
                 resultCollector, assocInterop(container, interopUtil));
 
         interopUtil_ = interopUtil;
 
-        mouseEventParser_ = new FGMouseEventParser(unitSizePx);
+        mouseEventParser_ = mouseEventParser;
         getInputEventParser().registerReasonClassParser(MouseEvent.class, mouseEventParser_);
         getInputEventParser().registerReasonClassParser(MouseWheelEvent.class, new FGMouseEventParser(unitSizePx));
         getInputEventParser().registerReasonClassParser(KeyEvent.class, new FGKeyEventParser());

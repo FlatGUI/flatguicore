@@ -7,6 +7,7 @@ import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseWheelEvent;
 import flatgui.core.engine.Container;
 import flatgui.core.engine.IInputEventParser;
+import flatgui.test.TestMouseSource;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -48,6 +49,7 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
         double mouseY = ((double)mouseEvent.getY()) / ((double)unitSizePx_);
 
         Integer targetComponentUid = getTargetComponentUid(0, container, mouseEvent, mouseX, mouseY);
+        onTargetComponentFound(mouseEvent);
 
         if (newLeftButtonDown)
         {
@@ -160,9 +162,23 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
                 }
             }
         }
-        mouseXRel_ = mouseX;
-        mouseYRel_ = mouseY;
+        setMouseXRel(mouseX);
+        setMouseYRel(mouseY);
         return rootContainer.isInterestedIn(componentUid, mouseEvent) ? componentUid : null;
+    }
+
+    protected final void setMouseXRel(double mouseXRel)
+    {
+        mouseXRel_ = mouseXRel;
+    }
+
+    protected final void setMouseYRel(double mouseYRel)
+    {
+        mouseYRel_ = mouseYRel;
+    }
+
+    protected void onTargetComponentFound(MouseEvent event)
+    {
     }
 
     private static boolean in(double n, double min, double max)
@@ -177,7 +193,7 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
                 0, false, MouseEvent.NOBUTTON);
     }
 
-    private static MouseEvent deriveFGEvent(MouseEvent e, double mouseXRel, double mouseYRel)
+    public static MouseEvent deriveFGEvent(MouseEvent e, double mouseXRel, double mouseYRel)
     {
 //        public MouseWheelEvent (Component source, int id, long when, int modifiers,
 //        int x, int y, int xAbs, int yAbs, int clickCount, boolean popupTrigger,

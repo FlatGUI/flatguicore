@@ -10,8 +10,14 @@
   (:require [flatgui.comlogic :as fgc]
             [flatgui.util.matrix :as m]
             [flatgui.awt :as awt]
-            [flatgui.base :as fg])
-  (:import (flatgui.core.engine ClojureContainerParser Container IResultCollector)))
+            [flatgui.base :as fg]
+            [clojure.test :as test])
+  (:import (flatgui.core.engine ClojureContainerParser IResultCollector Container)
+           (java.awt.event MouseEvent)
+           (flatgui.test TestMouseSource)
+           (flatgui.core.engine.ui FGMouseEventParser FGTestAppContainer)))
+
+(def dummy-source (java.awt.Container.))
 
 (defn evolve
   ([container property reason target]
@@ -31,6 +37,29 @@
          _ (.evolve container-engine target reason)]
      @results))
   ([container property reason] (evolve container property reason [:main])))
+
+(defn mouse-event [id modifiers click-count button]
+  (FGMouseEventParser/deriveFGEvent
+    (MouseEvent. dummy-source id 0 modifiers 0 0 0 0 click-count false button)
+    0 0))
+
+(defn mouse-left [id]
+  (mouse-event id MouseEvent/BUTTON1_DOWN_MASK 1 MouseEvent/BUTTON1))
+
+(def left-click-events
+  [;TODO (move-mouse-to container target)
+   (mouse-left MouseEvent/MOUSE_PRESSED)
+   (mouse-left MouseEvent/MOUSE_RELEASED)
+   (mouse-left MouseEvent/MOUSE_CLICKED)])
+
+(defn left-click [container target] (.evolve container target left-click-events))
+
+
+(defn check-property [container target property expected-value]
+  (test/is (= expected-value (.getProperty container target property))))
+
+(defn create-container [c-path c-ns c-name]
+  (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
 
 ; TODO #44
 ;(def dummy-source (Container.))

@@ -52,6 +52,11 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
     public static FGTestAppContainer createAndInit(String containerNs, String containerVarName)
     {
         Var containerVar = clojure.lang.RT.var(containerNs, containerVarName);
+        return createAndInit(containerVar);
+    }
+
+    public static FGTestAppContainer createAndInit(Var containerVar)
+    {
         Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
 
         FGTestAppContainer appContainer = new FGTestAppContainer(container);

@@ -118,6 +118,7 @@
                                 :input-channel-dependencies (conj (flatgui.dependency/get-input-dependencies body) 'list)
                                 :relative-dependencies (conj (flatgui.dependency/get-all-dependencies body) 'list)))))
 
+;; TODO Deprecated
 (defn defroot [container] container)
 
 ;;; TODO move below to dedicated namespace(s)

@@ -58,8 +58,11 @@
 (defn check-property [container target property expected-value]
   (test/is (= expected-value (.getProperty container target property))))
 
-(defn create-container [c-path c-ns c-name]
+(defn create-container-from-file [c-path c-ns c-name]
   (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
+
+(defn create-container [c-var]
+  (FGTestAppContainer/createAndInit c-var))
 
 ; TODO #44
 ;(def dummy-source (Container.))

@@ -14,8 +14,7 @@
             [clojure.test :as test])
   (:import (flatgui.core.engine ClojureContainerParser IResultCollector Container)
            (java.awt.event MouseEvent)
-           (flatgui.test TestMouseSource)
-           (flatgui.core.engine.ui FGMouseEventParser FGTestAppContainer)))
+           (flatgui.core.engine.ui FGMouseEventParser FGTestAppContainer FGTestMouseEventParser)))
 
 (def dummy-source (java.awt.Container.))
 
@@ -38,13 +37,19 @@
      @results))
   ([container property reason] (evolve container property reason [:main])))
 
-(defn mouse-event [id modifiers click-count button]
-  (FGMouseEventParser/deriveFGEvent
-    (MouseEvent. dummy-source id 0 modifiers 0 0 0 0 click-count false button)
-    0 0))
+(defn mouse-event
+  ([id modifiers click-count button]
+   (FGMouseEventParser/deriveFGEvent
+     (MouseEvent. dummy-source id 0 modifiers 0 0 0 0 click-count false button)
+     0 0))
+  ([id modifiers click-count button x y]
+   (let [xint (FGTestMouseEventParser/doubleToInt x)
+         yint (FGTestMouseEventParser/doubleToInt y)]
+     (MouseEvent. dummy-source id 0 modifiers xint yint xint yint click-count false button))))
 
-(defn mouse-left [id]
-  (mouse-event id MouseEvent/BUTTON1_DOWN_MASK 1 MouseEvent/BUTTON1))
+(defn mouse-left
+  ([id] (mouse-event id MouseEvent/BUTTON1_DOWN_MASK 1 MouseEvent/BUTTON1))
+  ([id x y] (mouse-event id MouseEvent/BUTTON1_DOWN_MASK 1 MouseEvent/BUTTON1 x y)))
 
 (def left-click-events
   [;TODO (move-mouse-to container target)
@@ -52,8 +57,15 @@
    (mouse-left MouseEvent/MOUSE_RELEASED)
    (mouse-left MouseEvent/MOUSE_CLICKED)])
 
-(defn left-click [container target] (.evolve container target left-click-events))
+(defn create-left-click-events [x y]
+  [;TODO (move-mouse-to container target)
+   (mouse-left MouseEvent/MOUSE_PRESSED x y)
+   (mouse-left MouseEvent/MOUSE_RELEASED x y)
+   (mouse-left MouseEvent/MOUSE_CLICKED x y)])
 
+(defn left-click
+  ([container target] (.evolve container target left-click-events))
+  ([container x y] (.evolve container (create-left-click-events x y))))
 
 (defn check-property [container target property expected-value]
   (test/is (= expected-value (.getProperty container target property))))

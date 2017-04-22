@@ -16,12 +16,14 @@ import flatgui.core.websocket.FGWebInteropUtil;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.*;
+import java.util.concurrent.Future;
 
 /**
  * @author Denis Lebedev
  */
 public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
 {
+
     public FGTestAppContainer(Map<Object, Object> container)
     {
         this(container, DFLT_UNIT_SIZE_PX);
@@ -66,6 +68,20 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
     }
 
     @Override
+    public Future<?> evolve(Object evolveReason)
+    {
+        if (evolveReason instanceof Collection)
+        {
+            evolveCons((Collection<Object>) evolveReason);
+            return null;
+        }
+        else
+        {
+            return super.evolve(evolveReason);
+        }
+    }
+
+    @Override
     public void evolve(List<Object> targetPath, Object evolveReason)
     {
         if (evolveReason instanceof Collection)
@@ -81,5 +97,10 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
     private void evolveCons(List<Object> targetPath, Collection<Object> evolveReason)
     {
         getEvolverExecutorService().submit(() -> evolveReason.forEach(r -> getContainer().evolve(targetPath, r)));
+    }
+
+    private void evolveCons(Collection<Object> evolveReason)
+    {
+        evolveReason.forEach(r -> evolve(r));
     }
 }

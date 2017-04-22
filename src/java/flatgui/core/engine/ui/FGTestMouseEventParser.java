@@ -9,34 +9,43 @@
  */
 package flatgui.core.engine.ui;
 
-import flatgui.test.TestMouseSource;
+import flatgui.core.engine.Container;
 
 import java.awt.event.MouseEvent;
+import java.util.Map;
 
 /**
  * @author Denis Lebedev
  */
 public class FGTestMouseEventParser extends FGMouseEventParser
 {
+    static final double TEST_SCALE = 1024.0d;
+
     public FGTestMouseEventParser(int unitSizePx)
     {
         super(unitSizePx);
     }
 
     @Override
-    protected void onTargetComponentFound(MouseEvent mouseEvent)
+    public Map<MouseEvent, Integer> parseInputEvent(Container container, MouseEvent mouseEvent)
     {
-        super.onTargetComponentFound(mouseEvent);
-        Object source = mouseEvent.getSource();
-        if (source instanceof TestMouseSource)
-        {
-            int x = ((TestMouseSource) source).getLocalX();
-            int y = ((TestMouseSource) source).getLocalY();
-            if (x >= 0 && y >= 0)
-            {
-                setMouseXRel(x);
-                setMouseYRel(y);
-            }
-        }
+        return super.parseInputEvent(container, mouseEvent);
+    }
+
+    public static int doubleToInt(double d)
+    {
+        return (int) (d * TEST_SCALE);
+    }
+
+    @Override
+    protected double scaleMouseX(double mouseEventX)
+    {
+        return mouseEventX / TEST_SCALE;
+    }
+
+    @Override
+    protected double scaleMouseY(double mouseEventY)
+    {
+        return mouseEventY / TEST_SCALE;
     }
 }

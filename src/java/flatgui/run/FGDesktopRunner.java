@@ -23,15 +23,17 @@ import java.util.function.Consumer;
  */
 public class FGDesktopRunner
 {
-    public static void runDesktop(
+    public static FGAWTAppContainer runDesktop(
             String containerNs, String containerName, String windowTitle, Image windowIcon, Consumer<Throwable> exceptionHandler)
     {
         Var containerVar = FGRunUtil.getVar(containerNs, containerName);
-        runDesktop(containerVar, windowTitle, windowIcon, exceptionHandler);
+        return runDesktop(containerVar, windowTitle, windowIcon, exceptionHandler);
     }
 
-    public static void runDesktop(Var containerVar, String windowTitle, Image windowIcon, Consumer<Throwable> exceptionHandler)
+    public static FGAWTAppContainer runDesktop(Var containerVar, String windowTitle, Image windowIcon, Consumer<Throwable> exceptionHandler)
     {
+        FGAWTAppContainer appContainer = FGAWTAppContainer.createAndInit(containerVar);
+
         EventQueue.invokeLater(() -> {
             try
             {
@@ -44,7 +46,6 @@ public class FGDesktopRunner
                     frame.setIconImage(windowIcon);
                 }
 
-                FGAWTAppContainer appContainer = FGAWTAppContainer.createAndInit(containerVar);
                 Component awtComponent = appContainer.getComponent();
 
                 frame.add(awtComponent, BorderLayout.CENTER);
@@ -73,5 +74,7 @@ public class FGDesktopRunner
                 }
             }
         });
+
+        return appContainer;
     }
 }

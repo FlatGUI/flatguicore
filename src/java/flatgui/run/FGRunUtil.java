@@ -3,13 +3,16 @@
  */
 package flatgui.run;
 
+import clojure.lang.Keyword;
 import clojure.lang.Symbol;
 import clojure.lang.Var;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * @author Denis Lebedev
@@ -42,5 +45,12 @@ public class FGRunUtil
             }
             return null;
         }
+    }
+
+    public static java.util.List<Object> toPath(String... stringIds)
+    {
+        return Arrays.stream(stringIds)
+                .map(Keyword::intern)
+                .collect(Collectors.toList());
     }
 }

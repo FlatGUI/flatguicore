@@ -4,6 +4,7 @@
 package flatgui.core.engine.ui;
 
 import clojure.lang.Var;
+import flatgui.core.FGHostStateEvent;
 import flatgui.core.awt.AbstractHostComponent;
 import flatgui.core.engine.*;
 import flatgui.core.engine.Container;
@@ -11,6 +12,8 @@ import flatgui.core.websocket.FGWebInteropUtil;
 import flatgui.run.FGRunUtil;
 
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.geom.NoninvertibleTransformException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -23,7 +26,7 @@ import java.util.function.Consumer;
  */
 public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
 {
-    private final HostComponent hostComponent_;
+    private HostComponent hostComponent_;
 
     public FGAWTAppContainer(Map<Object, Object> container)
     {
@@ -33,8 +36,6 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
     public FGAWTAppContainer(Map<Object, Object> container, int unitSizePx)
     {
         super(container.get(ClojureContainerParser.getIdKey()).toString(), container, new FGWebInteropUtil(unitSizePx), new FGClojureResultCollector(unitSizePx), unitSizePx);
-
-        hostComponent_ = new HostComponent();
     }
 
     public static FGAWTAppContainer loadSourceCreateAndInit(InputStream source, String containerNs, String containerVarName)
@@ -65,6 +66,14 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     public final Component getComponent()
     {
+        if (!EventQueue.isDispatchThread())
+        {
+            throw new IllegalStateException("this method should be called only on EDT");
+        }
+        if (hostComponent_ == null)
+        {
+            hostComponent_ = new HostComponent();
+        }
         return hostComponent_;
     }
 
@@ -102,6 +111,21 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     private class HostComponent extends AbstractHostComponent
     {
+        public HostComponent()
+        {
+            addComponentListener(new ComponentAdapter()
+            {
+                @Override
+                public void componentResized(ComponentEvent e)
+                {
+                    int w = getWidth();
+                    int h = getHeight();
+                    FGHostStateEvent hostStateEvent = FGHostStateEvent.createHostSizeEvent(new Dimension(w, h));
+                    evolve(hostStateEvent);
+                }
+            });
+        }
+
         @Override
         protected void changeCursorIfNeeded() throws Exception
         {

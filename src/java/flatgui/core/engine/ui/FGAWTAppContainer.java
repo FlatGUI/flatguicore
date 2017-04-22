@@ -3,12 +3,12 @@
  */
 package flatgui.core.engine.ui;
 
-import clojure.lang.Symbol;
 import clojure.lang.Var;
 import flatgui.core.awt.AbstractHostComponent;
 import flatgui.core.engine.*;
 import flatgui.core.engine.Container;
 import flatgui.core.websocket.FGWebInteropUtil;
+import flatgui.run.FGRunUtil;
 
 import java.awt.*;
 import java.awt.geom.NoninvertibleTransformException;
@@ -49,9 +49,7 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     public static FGAWTAppContainer createAndInit(String containerNs, String containerVarName)
     {
-        Var require = clojure.lang.RT.var("clojure.core", "require");
-        require.invoke(Symbol.intern(containerNs));
-        Var containerVar = clojure.lang.RT.var(containerNs, containerVarName);
+        Var containerVar = FGRunUtil.getVar(containerNs, containerVarName);
         return createAndInit(containerVar);
     }
 

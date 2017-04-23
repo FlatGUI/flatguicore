@@ -261,7 +261,8 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
                 catch (Throwable ex)
                 {
                     System.out.println("ERROR painting component " + childIndex + " " +
-                            containerAccessor.getComponent(childIndex).get(FGClojureContainerParser.ID_KW));
+                            containerAccessor.getComponent(childIndex).get(FGClojureContainerParser.ID_KW) + " " +
+                            lookVectors_.get(childIndex));
                     throw ex;
                 }
             }

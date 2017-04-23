@@ -7,6 +7,7 @@ import clojure.lang.Associative;
 import clojure.lang.Keyword;
 import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
+import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.IFGInteropUtil;
 import flatgui.core.engine.AppContainer;
 
@@ -62,6 +63,11 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
     public final Interop getInteropUtil()
     {
         return interopUtil_;
+    }
+
+    public void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
+    {
+        getContainer().addEvolveConsumer(evolveConsumer);
     }
 
     private static Map<Object, Object> assocInterop(Map<Object, Object> container, IFGInteropUtil interopUtil)

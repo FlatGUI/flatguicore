@@ -39,7 +39,7 @@ public class FGDesktopRunner
             {
                 Frame frame = new Frame(windowTitle);
                 frame.setSize(600, 400);
-                frame.setLocation(10, 10);
+                frame.setLocation(400, 300);
                 frame.setLayout(new BorderLayout());
                 if (windowIcon != null)
                 {

@@ -47,10 +47,15 @@ public class FGRunUtil
         }
     }
 
+    public static Object toKey(String s)
+    {
+        return Keyword.intern(s);
+    }
+
     public static java.util.List<Object> toPath(String... stringIds)
     {
         return Arrays.stream(stringIds)
-                .map(Keyword::intern)
+                .map(FGRunUtil::toKey)
                 .collect(Collectors.toList());
     }
 }

@@ -150,4 +150,7 @@
 ;; Utilities for working with components
 ;;
 
-
+(defn wait-table-model-coords-shown [container table-path coords]
+  (wait-for-property-pred container table-path :in-use-model
+                              (fn [v] (let [sc->id (:screen-coord->cell-id v)]
+                                        (= (set coords) (set (map (fn [[k _cid]] k) sc->id)))))))

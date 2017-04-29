@@ -44,8 +44,8 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
     {
         boolean newLeftButtonDown = (mouseEvent.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK) == MouseEvent.BUTTON1_DOWN_MASK;
 
-        double mouseX = ((double)mouseEvent.getX()) / ((double)unitSizePx_);
-        double mouseY = ((double)mouseEvent.getY()) / ((double)unitSizePx_);
+        double mouseX = scaleMouseX(mouseEvent.getX());
+        double mouseY = scaleMouseY(mouseEvent.getY());
 
         Integer targetComponentUid = getTargetComponentUid(0, container, mouseEvent, mouseX, mouseY);
 
@@ -91,6 +91,16 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
         {
             return Collections.emptyMap();
         }
+    }
+
+    protected double scaleMouseX(double mouseEventX)
+    {
+        return mouseEventX / (double)unitSizePx_;
+    }
+
+    protected double scaleMouseY(double mouseEventY)
+    {
+        return mouseEventY / (double)unitSizePx_;
     }
 
     private static double mxX(List<List<Number>> m)
@@ -160,9 +170,19 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
                 }
             }
         }
-        mouseXRel_ = mouseX;
-        mouseYRel_ = mouseY;
+        setMouseXRel(mouseX);
+        setMouseYRel(mouseY);
         return rootContainer.isInterestedIn(componentUid, mouseEvent) ? componentUid : null;
+    }
+
+    protected final void setMouseXRel(double mouseXRel)
+    {
+        mouseXRel_ = mouseXRel;
+    }
+
+    protected final void setMouseYRel(double mouseYRel)
+    {
+        mouseYRel_ = mouseYRel;
     }
 
     private static boolean in(double n, double min, double max)
@@ -177,7 +197,7 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
                 0, false, MouseEvent.NOBUTTON);
     }
 
-    private static MouseEvent deriveFGEvent(MouseEvent e, double mouseXRel, double mouseYRel)
+    public static MouseEvent deriveFGEvent(MouseEvent e, double mouseXRel, double mouseYRel)
     {
 //        public MouseWheelEvent (Component source, int id, long when, int modifiers,
 //        int x, int y, int xAbs, int yAbs, int clickCount, boolean popupTrigger,

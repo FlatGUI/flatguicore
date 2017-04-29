@@ -7,6 +7,7 @@ import clojure.lang.Associative;
 import clojure.lang.Keyword;
 import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
+import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.IFGInteropUtil;
 import flatgui.core.engine.AppContainer;
 
@@ -35,12 +36,18 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
     public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx)
     {
+        this(containerId, container, interopUtil, resultCollector, unitSizePx, new FGMouseEventParser(unitSizePx));
+    }
+
+    public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx,
+                          FGMouseEventParser mouseEventParser)
+    {
         super(containerId, new FGClojureContainerParser(),
                 resultCollector, assocInterop(container, interopUtil));
 
         interopUtil_ = interopUtil;
 
-        mouseEventParser_ = new FGMouseEventParser(unitSizePx);
+        mouseEventParser_ = mouseEventParser;
         getInputEventParser().registerReasonClassParser(MouseEvent.class, mouseEventParser_);
         getInputEventParser().registerReasonClassParser(MouseWheelEvent.class, new FGMouseEventParser(unitSizePx));
         getInputEventParser().registerReasonClassParser(KeyEvent.class, new FGKeyEventParser());
@@ -56,6 +63,11 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
     public final Interop getInteropUtil()
     {
         return interopUtil_;
+    }
+
+    public void addEvolveConsumer(IFGEvolveConsumer evolveConsumer)
+    {
+        getContainer().addEvolveConsumer(evolveConsumer);
     }
 
     private static Map<Object, Object> assocInterop(Map<Object, Object> container, IFGInteropUtil interopUtil)

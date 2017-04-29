@@ -3,6 +3,7 @@
  */
 package flatgui.core.engine;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +94,17 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
     public Future<?> evolve(Object evolveReason)
     {
         return evolverExecutorService_.submit(() -> evolveImpl(evolveReason));
+    }
+
+    public Object getProperty(List<Object> path, Object property) throws ExecutionException, InterruptedException
+    {
+        Object value = evolverExecutorService_.submit(() -> {
+            Integer componentUid = getComponentUid(path);
+            Container.IComponent component = container_.getComponent(componentUid);
+            Integer propertyIndex = component.getPropertyIndex(property);
+            return getContainer().getPropertyValue(propertyIndex);
+        }).get();
+        return value;
     }
 
     protected void evolveImpl(Object evolveReason)

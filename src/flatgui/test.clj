@@ -13,10 +13,30 @@
             [flatgui.base :as fg]
             [clojure.test :as test])
   (:import (flatgui.core.engine ClojureContainerParser IResultCollector Container)
-           (java.awt.event MouseEvent)
+           (java.awt.event MouseEvent KeyEvent)
            (flatgui.core.engine.ui FGMouseEventParser FGTestAppContainer FGTestMouseEventParser)))
 
 (def dummy-source (java.awt.Container.))
+
+(def wait-attempts 10)
+
+(def wait-interval-millis 1000)
+
+(defn enable-traces-for-failed-tests []
+  (defmethod clojure.test/report :fail [m]
+    (clojure.test/with-test-out
+      (clojure.test/inc-report-counter :fail)
+      (println "\nFAIL in" (clojure.test/testing-vars-str m))
+      (when (seq clojure.test/*testing-contexts*) (println (clojure.test/testing-contexts-str)))
+      (when-let [message (:message m)] (println message))
+      (println "expected:" (pr-str (:expected m)))
+      (println "  actual:" (pr-str (:actual m)))
+      (let [trace (.getStackTrace (Thread/currentThread))]
+        (loop [i 0]
+          (if (< i (alength trace))
+            (do
+              (println (.toString (aget trace i)))
+              (recur (inc i)))))))))
 
 (defn evolve
   ([container property reason target]
@@ -36,6 +56,38 @@
          _ (.evolve container-engine target reason)]
      @results))
   ([container property reason] (evolve container property reason [:main])))
+
+(defn event-> [container target event] (.evolve container target event))
+
+(defn create-container-from-file [c-path c-ns c-name]
+  (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
+
+(defn create-container [c-var]
+  (FGTestAppContainer/createAndInit c-var))
+
+(defn check-property [container target property expected-value]
+  (let [result (test/is (= expected-value (.getProperty container target property)))]
+    (if (map? result) result)))
+
+(defn get-property [container target property] (.getProperty container target property))
+
+(defn wait-for-property-pred [container target property pred]
+  (let [actual-value (loop [a 0
+                            v (.getProperty container target property)]
+                       (if (and (not (pred v)) (< a wait-attempts))
+                         (do
+                           (fg/log-debug (str "Waiting " wait-interval-millis " mills, attempt " (inc a) " of " wait-attempts))
+                           (Thread/sleep wait-interval-millis)
+                           (recur
+                             (inc a)
+                             (.getProperty container target property)))
+                         v))]
+    (let [result (test/is (pred actual-value))]
+      (if (map? result) result))))
+
+;;
+;; Mouse
+;;
 
 (defn mouse-event
   ([id modifiers click-count button]
@@ -67,100 +119,35 @@
   ([container target] (.evolve container target left-click-events))
   ([container x y] (.evolve container (create-left-click-events x y))))
 
-(defn check-property [container target property expected-value]
-  (test/is (= expected-value (.getProperty container target property))))
+;;
+;; Keyboard
+;;
 
-(defn create-container-from-file [c-path c-ns c-name]
-  (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
+(defn key-event [id key-code char-code]
+  (KeyEvent. dummy-source id 0 0 (if (= id KeyEvent/KEY_TYPED) KeyEvent/VK_UNDEFINED key-code) char-code))
 
-(defn create-container [c-var]
-  (FGTestAppContainer/createAndInit c-var))
+(defn create-key-type-events [key-code char-code]
+  [(key-event KeyEvent/KEY_PRESSED key-code char-code)
+   (key-event KeyEvent/KEY_TYPED key-code char-code)
+   (key-event KeyEvent/KEY_RELEASED key-code char-code)])
 
-; TODO #44
-;(def dummy-source (Container.))
-;
-;(defn resolve-feed-fn [container]
-;  (if-let [fg-contanier (:_fg-container container)]
-;    (fn [_container target reason]
-;      (do
-;        (.feedTargetedEvent fg-contanier target (FGEvolveInputData. reason false))
-;        container))
-;    flatgui.widgets._old_componentbase/evolve-container))
-;
-;(defn access-container [fg-container-accessor] {:_fg-container fg-container-accessor})
-;
-;(defn get-container [fg-container-accessor] (.getContainer (.getFGModule fg-container-accessor)))
-;
-;;;;
-;;;; Helpers for hi-level simulators
-;;;;
-;
-;(defn create-mouse-event [container id modifiers click-count button target]
-;  (let [abs-pos-mx (get-in container (conj (fgc/get-access-key target) :abs-position-matrix))
-;        x (* (+ (m/mx-x abs-pos-mx) (awt/px)) (awt/unitsizepx))
-;        y (* (+ (m/mx-y abs-pos-mx) (awt/px)) (awt/unitsizepx))]
-;    (MouseEvent. dummy-source id 0 modifiers x y x y click-count false button)))
-;
-;(defn move-mouse-to [container target]
-;  ((resolve-feed-fn container)
-;    container
-;    target
-;    (create-mouse-event container MouseEvent/MOUSE_MOVED 0 0 0 target)))
-;
-;(defn simulate-mouse-left [container id target]
-;  ((resolve-feed-fn container)
-;    container
-;    target
-;    (create-mouse-event container id MouseEvent/BUTTON1_DOWN_MASK 1 MouseEvent/BUTTON1 target)))
-;
-;;;;
-;;;; Hi-level event simulators
-;;;;
-;
-;(defn simulate-mouse-click [container target]
-;  (-> (move-mouse-to container target)
-;      (simulate-mouse-left MouseEvent/MOUSE_PRESSED target)
-;      (simulate-mouse-left MouseEvent/MOUSE_RELEASED target)
-;      (simulate-mouse-left MouseEvent/MOUSE_CLICKED target)))
-;
-;(defn simulate-key-event [container id key-code char-code target]
-;  ((resolve-feed-fn container)
-;    container
-;    target
-;    (KeyEvent. dummy-source id 0 0 (if (= id KeyEvent/KEY_TYPED) KeyEvent/VK_UNDEFINED key-code) char-code)))
-;
-;(defn simulate-key-type [container key-code char-code target]
-;  (-> (simulate-key-event container KeyEvent/KEY_PRESSED key-code char-code target)
-;      (simulate-key-event KeyEvent/KEY_TYPED key-code char-code target)
-;      (simulate-key-event KeyEvent/KEY_RELEASED key-code char-code target)))
-;
-;(defn simulate-string-type [container str target]
-;  (let [len (.length str)]
-;    (loop [c container
-;           i 0]
-;      (if (< i len)
-;        (recur
-;          (simulate-key-type
-;            c
-;            (int (.charAt (clojure.string/upper-case (String/valueOf (.charAt str i))) 0))
-;            (.charAt str i)
-;            target)
-;          (inc i))
-;        c))))
-;
-;;;;
-;;;; Utilities to find components
-;;;;
-;
-;;;; Table
-;
-;(defn table-cell [container table-path pred]
-;  (let [cells-path (conj (fgc/get-access-key (conj table-path :content-pane)) :children)
-;        children (get-in container cells-path)
-;        matching (filter (fn [[_id c]] (pred c)) children)]
-;    (if-not (empty? matching)
-;      (vec (concat table-path [:content-pane (first (first matching))]))
-;      (throw (IllegalArgumentException. (str "No cell matching predicate " pred))))))
-;
-;(defn click-cell-with-text [container table-path text]
-;  (simulate-mouse-click container (table-cell container table-path (fn [cell] (= text (:text cell))))))
+(defn create-string-type-events [str]
+  (let [len (.length str)]
+    (loop [i 0
+           events nil]
+      (if (< i len)
+        (recur
+          (inc i)
+          (concat events (create-key-type-events (int (.charAt str i)) (.charAt str i))))
+        events))))
+
+(defn type-string
+  ([container target str] (.evolve container target (create-string-type-events str)))
+  ([container str] (.evolve container (create-string-type-events str))))
+
+
+;;
+;; Utilities for working with components
+;;
+
+

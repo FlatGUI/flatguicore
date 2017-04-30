@@ -66,8 +66,7 @@
   (FGTestAppContainer/createAndInit c-var))
 
 (defn check-property [container target property expected-value]
-  (let [result (test/is (= expected-value (.getProperty container target property)))]
-    (if (map? result) result)))
+  (test/is (= expected-value (.getProperty container target property))))
 
 (defn get-property [container target property] (.getProperty container target property))
 
@@ -82,8 +81,7 @@
                              (inc a)
                              (.getProperty container target property)))
                          v))]
-    (let [result (test/is (pred actual-value))]
-      (if (map? result) result))))
+    (test/is (pred actual-value))))
 
 ;;
 ;; Mouse
@@ -146,11 +144,21 @@
   ([container str] (.evolve container (create-string-type-events str))))
 
 
+;;;
+;;; Utilities for working with components
+;;;
+
 ;;
-;; Utilities for working with components
+;; Table (flatgui.widgets.table2.table)
 ;;
 
 (defn wait-table-model-coords-shown [container table-path coords]
   (wait-for-property-pred container table-path :in-use-model
                               (fn [v] (let [sc->id (:screen-coord->cell-id v)]
                                         (= (set coords) (set (map (fn [[k _cid]] k) sc->id)))))))
+
+(defn wait-table-cell-property [container table-path coord property pred]
+  (let [cid (wait-for-property-pred container table-path :in-use-model
+                                    (fn [v] (let [sc->id (:screen-coord->cell-id v)]
+                                              (get sc->id coord))))]
+    (wait-for-property-pred container (conj table-path cid) property pred)))

@@ -122,12 +122,21 @@
 ;;
 
 (defn key-event [id key-code char-code]
-  (KeyEvent. dummy-source id 0 0 (if (= id KeyEvent/KEY_TYPED) KeyEvent/VK_UNDEFINED key-code) char-code))
+  (KeyEvent. dummy-source id 0 0 (if (= id KeyEvent/KEY_TYPED) KeyEvent/VK_UNDEFINED key-code) (char char-code)))
 
-(defn create-key-type-events [key-code char-code]
-  [(key-event KeyEvent/KEY_PRESSED key-code char-code)
-   (key-event KeyEvent/KEY_TYPED key-code char-code)
-   (key-event KeyEvent/KEY_RELEASED key-code char-code)])
+(defn create-key-type-events
+  ([key-code char-code]
+   [(key-event KeyEvent/KEY_PRESSED key-code char-code)
+    (key-event KeyEvent/KEY_TYPED key-code char-code)
+    (key-event KeyEvent/KEY_RELEASED key-code char-code)])
+  ([key-code char-code cnt]
+    (loop [i 0
+           e []]
+      (if (< i cnt)
+        (recur
+          (inc i)
+          (vec (concat e (create-key-type-events key-code char-code))))
+        e))))
 
 (defn create-string-type-events [str]
   (let [len (.length str)]
@@ -142,6 +151,10 @@
 (defn type-string
   ([container target str] (.evolve container target (create-string-type-events str)))
   ([container str] (.evolve container (create-string-type-events str))))
+
+(defn type-key
+  ([container target key-code char-code cnt] (.evolve container target (create-key-type-events key-code char-code cnt)))
+  ([container key-code char-code cnt] (.evolve container (create-key-type-events key-code char-code cnt))))
 
 
 ;;;

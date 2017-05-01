@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 /**
@@ -88,6 +89,19 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
                 Integer.valueOf(0));
     }
 
+    @Override
+    public void evolve(List<Object> targetPath, Object evolveReason)
+    {
+        try
+        {
+            getEvolverExecutorService().submit(() -> getContainer().evolve(targetPath, evolveReason)).get();
+            hostComponent_.repaint();
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            e.printStackTrace();
+        }
+    }
 
     //
     // Special methods needed for FGLegacyCoreGlue - will be refactored

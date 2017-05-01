@@ -27,7 +27,8 @@
                         "snapshots" {:url "https://oss.sonatype.org/content/repositories/snapshots/" :creds :gpg}
                         "clojars" {:url "https://clojars.org/repo/"
                                    :username :env/clojars_user
-                                   :password :env/clojars_password}}
+                                   :password :env/clojars_password
+                                   :sign-releases false}}
   :java-source-paths ["src/java" "test/java"]
   :omit-source true
   :aot :all

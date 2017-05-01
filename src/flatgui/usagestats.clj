@@ -22,7 +22,6 @@
                    MouseEvent/MOUSE_MOVED :mouse-moved
                    MouseEvent/MOUSE_DRAGGED :mouse-dragged
                    nil)
-                 ;(str :mouse (.getID reason))
 
                  (instance? KeyEvent reason)
                  (condp = (.getID reason)

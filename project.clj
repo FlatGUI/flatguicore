@@ -6,7 +6,7 @@
 ; the terms of this license.
 ; You must not remove this notice, or any other, from this software.
 
-(def flatgui-version "0.2.1")
+(def flatgui-version "0.2.2-SNAPSHOT")
 
 (def jetty-version "9.2.7.v20150116")
 
@@ -27,8 +27,7 @@
                         "snapshots" {:url "https://oss.sonatype.org/content/repositories/snapshots/" :creds :gpg}
                         "clojars" {:url "https://clojars.org/repo/"
                                    :username :env/clojars_user
-                                   :password :env/clojars_password
-                                   :sign-releases false}}
+                                   :password :env/clojars_password}}
   :java-source-paths ["src/java" "test/java"]
   :omit-source true
   :aot :all

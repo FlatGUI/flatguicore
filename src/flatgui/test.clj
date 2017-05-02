@@ -65,6 +65,9 @@
 (defn create-container [c-var]
   (FGTestAppContainer/createAndInit c-var))
 
+(defn init-container [c]
+  (FGTestAppContainer/init c))
+
 (defn check-property [container target property expected-value]
   (test/is (= expected-value (.getProperty container target property))))
 
@@ -165,13 +168,16 @@
 ;; Table (flatgui.widgets.table2.table)
 ;;
 
+(defn wait-table-cell-id [container table-path coord]
+  (wait-for-property-pred container table-path :in-use-model
+                          (fn [v] (let [sc->id (:screen-coord->cell-id v)]
+                                    (get sc->id coord)))))
+
 (defn wait-table-model-coords-shown [container table-path coords]
   (wait-for-property-pred container table-path :in-use-model
                               (fn [v] (let [sc->id (:screen-coord->cell-id v)]
                                         (= (set coords) (set (map (fn [[k _cid]] k) sc->id)))))))
 
 (defn wait-table-cell-property [container table-path coord property pred]
-  (let [cid (wait-for-property-pred container table-path :in-use-model
-                                    (fn [v] (let [sc->id (:screen-coord->cell-id v)]
-                                              (get sc->id coord))))]
+  (let [cid (wait-table-cell-id container table-path coord)]
     (wait-for-property-pred container (conj table-path cid) property pred)))

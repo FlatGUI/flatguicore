@@ -60,7 +60,11 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
     public static FGTestAppContainer createAndInit(Var containerVar)
     {
         Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
+        return init(container);
+    }
 
+    public static FGTestAppContainer init(Map<Object, Object> container)
+    {
         FGTestAppContainer appContainer = new FGTestAppContainer(container);
         appContainer.initialize();
 

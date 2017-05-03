@@ -12,12 +12,18 @@
             [flatgui.responsefeed])
   (:import (flatgui.core.engine GetPropertyStaticClojureFn GetDynPropertyDynPathClojureFn GetDynPropertyClojureFn GetPropertyDynPathClojureFn)))
 
+(defn- path-argument? [e]
+  (or (vector? e) (symbol? e)))
+
+(defn- deprecated-component-sym? [s]
+  (= 'component s) )
+
 (defn get-property-call? [form]
   (and
     (= 'get-property (first form))
     (or
-      (vector? (second form))
-      (and (= 'component (second form)) (vector? (first (next (next form))))))))
+      (path-argument? (second form))
+      (and (deprecated-component-sym? (second form)) (path-argument? (first (next (next form))))))))
 
 (defn get-reason-call? [form]
   (or
@@ -45,10 +51,10 @@
   (cond
     (and (seq? %) (get-property-call? %))
     (let [m (meta %)
-          % (if (symbol? (second %)) (conj (drop 2 %) (first %)) %) ;backward compatibility
+          % (if (deprecated-component-sym? (second %)) (conj (drop 2 %) (first %)) %) ;backward compatibility
           % (replace-gp % property)
           path-&-prop (next %)
-          path (first path-&-prop)
+          path (flatgui.dependency/resolve-path-arg % (first path-&-prop))
           dyn-path (some #(not (keyword? %)) path)
           property (last path-&-prop)
           dyn-property (not (keyword? property))

@@ -240,6 +240,38 @@
         _ (.evolve container-engine [:main] {})]
     (test/is (= (+ 5 3 11 22 100 200) (get @results :res)))))
 
+(def init-&-evolve-test-non-vec-path-p1 [:this])
+(test/deftest init-&-evolve-test-non-vec-path
+  (let [p2 [:this :c1]
+        _ (core/defevolverfn evolver-res :res
+                             (+ (get-property init-&-evolve-test-non-vec-path-p1 :x)
+                                (get-property p2 :a)))
+        _ (core/defevolverfn :a (if-let [a (:a (get-reason))] a old-a))
+        container (core/defroot
+                    {:id :main
+                     :res nil
+                     :x 11
+                     :evolvers {:res evolver-res}
+                     :children {:c1 {:id :c1
+                                     :a 1
+                                     :evolvers {:a a-evolver}}}})
+        results (atom {})
+        result-collector (proxy [IResultCollector] []
+                           (appendResult [_parentComponentUid, _path, node, newValue]
+                             (swap! results (fn [r]
+                                              (if (not (or (= :children (.getPropertyId node)) (= :evolvers (.getPropertyId node))))
+                                                (assoc r (.getPropertyId node) newValue)
+                                                r)))
+                             )
+                           (componentAdded [_parentComponentUid _componentUid])
+                           (postProcessAfterEvolveCycle [_a _m]))
+        container-engine (Container.
+                           (ClojureContainerParser.)
+                           result-collector
+                           container)
+        _ (.evolve container-engine [:main :c1] {:a 5})]
+    (test/is (= (+ 11 5) (get @results :res)))))
+
 (test/deftest accessor-call-test
   (let [_ (core/defaccessorfn tfn [x] (+ x 2 (:a {:a (first [x 1 2])})))
         _ (core/defevolverfn :a (if (not (nil? (get-reason)))

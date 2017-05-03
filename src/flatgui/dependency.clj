@@ -17,22 +17,29 @@
             [flatgui.inputchannels.clipboard :as clipboard]
             [flatgui.inputchannels.timer :as timer]))
 
+(defn resolve-path-arg [s e]
+  (if-let [p (cond
+               (vector? e) e
+               (symbol? e) (let [sr (if-let [r (if (resolve e) (var-get (resolve e)))]
+                                      r
+                                      (if-let [b (get @Compiler/LOCAL_ENV e)]
+                                        (.eval (.init b))))]
+                             (if (vector? sr) sr)))]
+    p
+    (throw (IllegalArgumentException.
+             (str
+               "get-property path argument should be a vector or a symbol that constantly resolves to a vector when parsing: ("
+               (apply str (map (fn [e] (str e " ")) s)) ")" )))))
 
 (defn get-dependency [s]
-  (do
-
-    ;(println " ------- get-dependency2 for " s)
-    ;(if (= '(:apply-feature vfc) s) (println " ------- get-dependency2 for " s " of class " (.getClass s)  " eval " (eval s) ))
-    ;(if (= 'apply-feature s) (println " ------- get-dependency2 for " s " of class " (.getClass s)  ))
-
-    (if (seq? s)
-      (let [ n (first s)]
-        (if (and (symbol? n) (= "get-property" (name n)))
-          (let [ full-path (condp = (count s)
-                             3 (if (vector? (nth s 1)) (fgc/conjv (nth s 1) (nth s 2)) (throw (IllegalArgumentException. (str "get-property argument 0 should be a vector: " s))))
-                             4 (if (vector? (nth s 2)) (fgc/conjv (nth s 2) (nth s 3)) (throw (IllegalArgumentException. (str "get-property argument 1 should be a vector: " s))))
-                             (throw (IllegalArgumentException. (str "There should be 3 or 4 arguments to get-property: " s))))]
-            (mapv (fn [e] (if (keyword? e) e :*)) full-path)))))))
+  (if (seq? s)
+    (let [ n (first s)]
+      (if (and (symbol? n) (= "get-property" (name n)))
+        (let [ full-path (condp = (count s)
+                           3 (fgc/conjv (resolve-path-arg s (nth s 1)) (nth s 2))
+                           4 (fgc/conjv (resolve-path-arg s (nth s 2)) (nth s 3))
+                           (throw (IllegalArgumentException. (str "There should be 3 or 4 arguments to get-property: " s))))]
+          (mapv (fn [e] (if (keyword? e) e :*)) full-path))))))
 
 (defn get-all-dependencies [c]
   (do

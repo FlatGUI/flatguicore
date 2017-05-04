@@ -18,7 +18,7 @@
 
 (def dummy-source (java.awt.Container.))
 
-(def wait-attempts 10)
+(def wait-attempts 5)
 
 (def wait-interval-millis 1000)
 
@@ -84,7 +84,7 @@
                              (inc a)
                              (.getProperty container target property)))
                          v))]
-    (test/is (pred actual-value))))
+    (test/is (pred actual-value) (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value))))
 
 ;;
 ;; Mouse

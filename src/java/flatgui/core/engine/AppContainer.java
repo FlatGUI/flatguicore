@@ -100,6 +100,10 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
     {
         Object value = evolverExecutorService_.submit(() -> {
             Integer componentUid = getComponentUid(path);
+            if (componentUid == null)
+            {
+                throw new IllegalArgumentException("Component not found for path: " + path);
+            }
             Container.IComponent component = container_.getComponent(componentUid);
             Integer propertyIndex = component.getPropertyIndex(property);
             return getContainer().getPropertyValue(propertyIndex);

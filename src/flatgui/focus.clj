@@ -377,3 +377,31 @@
 
       :else ; Neither event type - ignore
       old-focus-state)))
+
+;; This is good for containers inside which it is still needed to manage focus, but which are
+;; completely detached (meaning focus traversal) from whole application component hierachy.
+;; User can still click into such containers, but they do not become parts of Tab/Ctrl+Tab traversal.
+;; In such case multiple containers may own focus at the same time so additional management
+;; may be needed (like drop focus when window is inactive or table row is not selected).
+;; Such containers have to be declared with these parameters:
+;; :closed-focus-root true
+;; :focus-state {:mode :has-focus
+;;               :focused-child nil}
+;; This is needed for performance reasons for containers with many children
+;; (like table where cells are children)
+(fg/defevolverfn simple-focus-state-evolver :focus-state
+  (let [reason (fg/get-reason)
+        this-mode (:mode old-focus-state)]
+    (cond
+
+      (keyboard/key-event? component)
+      (focus-state-keyboard component old-focus-state this-mode)
+
+      (mouse/mouse-left? component)
+      (focus-state-mouse component old-focus-state this-mode)
+
+      (fgc/child-reason? reason)
+      (focus-state-child component old-focus-state this-mode)
+
+      :else ; Neither event type - ignore
+      old-focus-state)))

@@ -243,9 +243,11 @@
 (def init-&-evolve-test-non-vec-path-p1 [:this])
 (test/deftest init-&-evolve-test-non-vec-path
   (let [p2 [:this :c1]
+        p3 [init-&-evolve-test-non-vec-path-p1 :c1]  ;Here nested vector in vector will be flattened
         _ (core/defevolverfn evolver-res :res
                              (+ (get-property init-&-evolve-test-non-vec-path-p1 :x)
-                                (get-property p2 :a)))
+                                (get-property p2 :a)
+                                (get-property p3 :b)))
         _ (core/defevolverfn :a (if-let [a (:a (get-reason))] a old-a))
         container (core/defroot
                     {:id :main
@@ -254,6 +256,7 @@
                      :evolvers {:res evolver-res}
                      :children {:c1 {:id :c1
                                      :a 1
+                                     :b 2
                                      :evolvers {:a a-evolver}}}})
         results (atom {})
         result-collector (proxy [IResultCollector] []
@@ -270,7 +273,7 @@
                            result-collector
                            container)
         _ (.evolve container-engine [:main :c1] {:a 5})]
-    (test/is (= (+ 11 5) (get @results :res)))))
+    (test/is (= (+ 11 5 2) (get @results :res)))))
 
 (test/deftest accessor-call-test
   (let [_ (core/defaccessorfn tfn [x] (+ x 2 (:a {:a (first [x 1 2])})))

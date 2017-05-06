@@ -63,7 +63,7 @@
                             dyn-path (GetPropertyDynPathClojureFn.)
                             dyn-property (GetDynPropertyClojureFn.)
                             :else (GetPropertyStaticClojureFn.))]
-      (with-meta (conj path-&-prop get-property-fn) m))
+      (with-meta (list get-property-fn path property) m))
     (and (seq? %) (get-reason-call? %))
     (with-meta (list '.getEvolveReason 'component) (meta %))
     (old-value-ref? % property)

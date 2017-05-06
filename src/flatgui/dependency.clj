@@ -17,6 +17,9 @@
             [flatgui.inputchannels.clipboard :as clipboard]
             [flatgui.inputchannels.timer :as timer]))
 
+(defn fmapv [v]
+  (vec (mapcat (fn [e] (if (vector? e) (fmapv e) [e])) v)))
+
 (defn resolve-path-arg [s e]
   (if-let [p (cond
                (vector? e) e
@@ -25,7 +28,7 @@
                                       (if-let [b (get @Compiler/LOCAL_ENV e)]
                                         (.eval (.init b))))]
                              (if (vector? sr) sr)))]
-    p
+    (fmapv p)
     (throw (IllegalArgumentException.
              (str
                "get-property path argument should be a vector or a symbol that constantly resolves to a vector when parsing: ("

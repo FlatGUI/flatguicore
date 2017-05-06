@@ -63,10 +63,14 @@ public class Container
     private final HashMap<Integer, Map<Keyword, GetPropertyDelegate>> delegateByIdAndPropertyMap_;
     private final HashMap<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> delegateByIdPathAndPropertyMap_;
 
+    private final String containerId_;
+
     public static boolean debug_ = false;
 
-    public Container(IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
+    public Container(String containerId, IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
     {
+        containerId_ = containerId;
+
         keys_ = new ObjectMatrix<>();
         containerParser_ = containerParser;
         containerParser_.setKeyMatrix(keys_);
@@ -947,7 +951,7 @@ public class Container
                 // TODO container id -> session id
                 Map<Object, Object> componentCopy = nodeIndexToComponentCopyForConsumers_.get(nodeIndex);
                 Thread t = new Thread(() ->
-                        evolveConsumer.acceptEvolveResult(null, componentCopy),
+                        evolveConsumer.acceptEvolveResult(containerId_, componentCopy),
                         "FlatGUI Evolver Consumer Notifier");
                 t.start();
             }

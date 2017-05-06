@@ -71,6 +71,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "init-&-evolve-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -108,6 +109,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         _container-engine (Container.
+                            "init-&-evolve-test2"
                             (ClojureContainerParser.)
                             result-collector
                             container)
@@ -139,6 +141,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "init-&-evolve-test3"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -184,6 +187,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "init-&-evolve-test-non-const-path"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -234,6 +238,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "init-&-evolve-test-non-const-path2"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -269,6 +274,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "init-&-evolve-test-non-vec-path"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -295,6 +301,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "accessor-call-test"
                             (ClojureContainerParser.)
                             result-collector
                             container)
@@ -326,6 +333,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "evolver-call-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -434,6 +442,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "add-children-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -476,6 +485,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "add-children-test1"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -522,6 +532,7 @@
                            (componentAdded [_parentComponentUid _componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "add-children-dependency-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -568,6 +579,7 @@
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (conj r componentUid))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "change-remove-children-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -617,6 +629,7 @@
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (conj r componentUid))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "change-remove-children-test1"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -651,6 +664,7 @@
                            (componentRemoved [componentUid] (swap! removed-res (fn [r] (assoc r componentUid (inc (get r componentUid))))))
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "add-remove-with-children-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -699,6 +713,7 @@
                            (componentRemoved [_componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "add-remove-with-children-dep-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -743,6 +758,7 @@
                            (componentRemoved [_componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "remove-add-dependent-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -793,6 +809,7 @@
                            (componentRemoved [_componentUid])
                            (postProcessAfterEvolveCycle [_a _m]))
         container-engine (Container.
+                           "remove-dependency-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)
@@ -834,6 +851,7 @@
                               (.signal condition)
                               (.unlock lock))))
         container-engine (Container.
+                           "evolve-consumer-test"
                            (ClojureContainerParser.)
                            result-collector
                            container)

@@ -48,7 +48,7 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
                 new LinkedBlockingQueue<>(),
                 new AppThreadFactory(containerId_));
         Future<Container> containerFuture =
-                evolverExecutorService_.submit(() -> new Container(containerParser_, resultCollector_, containerMap_));
+                evolverExecutorService_.submit(() -> new Container(containerId_, containerParser_, resultCollector_, containerMap_));
         try
         {
             container_ = containerFuture.get();

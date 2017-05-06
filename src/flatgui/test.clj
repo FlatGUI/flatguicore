@@ -50,6 +50,7 @@
                             (componentRemoved [_this _componentUid])
                             (postProcessAfterEvolveCycle [_this _a _m]))
          container-engine (Container.
+                            "flatgui.test"
                             (ClojureContainerParser.)
                             result-collector
                             container)

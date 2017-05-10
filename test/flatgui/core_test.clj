@@ -148,6 +148,36 @@
         _ (.evolve container-engine [:main :c2] {})]
     (test/is (= 27 (get @results :res)))))
 
+(test/deftest init-&-evolve-test4
+  (let [_ (core/defevolverfn evolver-res :res (+
+                                                (get-property [:main :c1] :a)
+                                                (get-property [:this :c2] :b))) ; Both :this and actual id (:main) work
+        container (core/defroot
+                    {:id :main
+                     :res nil
+                     :evolvers {:res evolver-res}
+                     :children {:c1 {:id :c1
+                                     :a 5}
+                                :c2 {:id :c2
+                                     :b 3}}})
+        results (atom {})
+        result-collector (proxy [IResultCollector] []
+                           (appendResult [_parentComponentUid, _path, node, newValue]
+                             (swap! results (fn [r]
+                                              (if (not (or (= :children (.getPropertyId node)) (= :evolvers (.getPropertyId node))))
+                                                (assoc r (.getPropertyId node) newValue)
+                                                r)))
+                             )
+                           (componentAdded [_parentComponentUid _componentUid])
+                           (postProcessAfterEvolveCycle [_a _m]))
+        container-engine (Container.
+                           "init-&-evolve-test4"
+                           (ClojureContainerParser.)
+                           result-collector
+                           container)
+        _ (.evolve container-engine [:main] {})]
+    (test/is (= 8 (get @results :res)))))
+
 (defn- get-cmpnd-key [m k]
   (second (first (filter (fn [[mk _mv]] (= mk k)) m))))
 

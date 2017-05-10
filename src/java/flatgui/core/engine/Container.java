@@ -53,7 +53,7 @@ public class Container
     private Object[] reusableReasonBuffer_;
     private int indexBufferSize_;
     private int currentCycleBufIndex_;
-    private Map<Integer, Map<Object, Object>> nodeIndexToComponentCopyForConsumers_;
+    private Set<Integer> nodeIndicesToNotifyConsumers_;
 
     private Set<Integer> initializedNodes_;
 
@@ -83,7 +83,7 @@ public class Container
         nodesWithAmbiguousDependencies_ = new ArrayList<>();
         values_ = new ArrayList<>();
         pathToIndex_ = new HashMap<>();
-        nodeIndexToComponentCopyForConsumers_ = new LinkedHashMap<>();
+        nodeIndicesToNotifyConsumers_ = new LinkedHashSet<>();
 
         delegateByIdMap_ = new HashMap<>();
         delegateByIdAndPathMap_ = new HashMap<>();
@@ -205,7 +205,7 @@ public class Container
 
         Set<Integer> addedComponentIds = new HashSet<>();
         currentCycleBufIndex_ = 0;
-        nodeIndexToComponentCopyForConsumers_.clear();
+        nodeIndicesToNotifyConsumers_.clear();
         while (currentCycleBufIndex_ < indexBufferSize_)
         {
             Node node = reusableNodeBuffer_[currentCycleBufIndex_];
@@ -339,13 +339,7 @@ public class Container
                     Collection<IFGEvolveConsumer> nodeEvolverConsumers = node.getEvolveConsumers();
                     if (nodeEvolverConsumers != null)
                     {
-                        Map<Object, Object> componentCopy = nodeIndexToComponentCopyForConsumers_.get(node.getNodeIndex());
-                        if (componentCopy == null)
-                        {
-                            componentCopy = new HashMap<>();
-                            nodeIndexToComponentCopyForConsumers_.put(node.getNodeIndex(), componentCopy);
-                        }
-                        componentCopy.put(node.getPropertyId(), newValue);
+                        nodeIndicesToNotifyConsumers_.add(Integer.valueOf(nodeIndex));
                     }
 
                     List<Object> componentPath = component.getComponentPath();
@@ -943,20 +937,20 @@ public class Container
 
     private void notifyEvolverConsumers()
     {
-        for (Integer nodeIndex : nodeIndexToComponentCopyForConsumers_.keySet())
+        for (Integer nodeIndex : nodeIndicesToNotifyConsumers_)
         {
             Node node = nodes_.get(nodeIndex.intValue());
             for (IFGEvolveConsumer evolveConsumer : node.getEvolveConsumers())
             {
-                // TODO container id -> session id
-                Map<Object, Object> componentCopy = nodeIndexToComponentCopyForConsumers_.get(nodeIndex);
+                // This copy is safe to let consumer notifier thread read from it
+                Map<Object, Object> componentCopy = Collections.unmodifiableMap(getComponent(node.getComponentUid()));
                 Thread t = new Thread(() ->
                         evolveConsumer.acceptEvolveResult(containerId_, componentCopy),
                         "FlatGUI Evolver Consumer Notifier");
                 t.start();
             }
         }
-        nodeIndexToComponentCopyForConsumers_.clear();
+        nodeIndicesToNotifyConsumers_.clear();
     }
 
     // // //

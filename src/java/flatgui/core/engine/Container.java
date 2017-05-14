@@ -513,6 +513,18 @@ public class Container
         return index != null ? (V) values_.get(index.intValue()) : null;
     }
 
+    public <V> V getPropertyValue(List<Object> path, Object property)
+    {
+        Integer componentUid = getComponentUid(path);
+        if (componentUid == null)
+        {
+            throw new IllegalArgumentException("Component not found for path: " + path);
+        }
+        Container.IComponent component = getComponent(componentUid);
+        Integer propertyIndex = component.getPropertyIndex(property);
+        return getPropertyValue(propertyIndex);
+    }
+
     public IResultCollector getResultCollector()
     {
         return resultCollector_;

@@ -98,16 +98,7 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     public Object getProperty(List<Object> path, Object property) throws ExecutionException, InterruptedException
     {
-        Object value = evolverExecutorService_.submit(() -> {
-            Integer componentUid = getComponentUid(path);
-            if (componentUid == null)
-            {
-                throw new IllegalArgumentException("Component not found for path: " + path);
-            }
-            Container.IComponent component = container_.getComponent(componentUid);
-            Integer propertyIndex = component.getPropertyIndex(property);
-            return getContainer().getPropertyValue(propertyIndex);
-        }).get();
+        Object value = evolverExecutorService_.submit(() -> getContainer().getPropertyValue(path, property)).get();
         return value;
     }
 

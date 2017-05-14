@@ -95,7 +95,7 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
         try
         {
             getEvolverExecutorService().submit(() -> getContainer().evolve(targetPath, evolveReason)).get();
-            hostComponent_.repaint();
+            EventQueue.invokeLater(() -> hostComponent_.repaint());
         }
         catch (InterruptedException | ExecutionException e)
         {

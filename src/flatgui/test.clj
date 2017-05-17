@@ -69,14 +69,11 @@
 (defn init-container [c]
   (FGTestAppContainer/init c))
 
-(defn check-property [container target property expected-value]
-  (test/is (= expected-value (.getProperty container target property))))
-
 (defn get-property [container target property] (.getProperty container target property))
 
 (defn wait-for-property-pred [container target property pred]
   (let [actual-value (loop [a 0
-                            interval 1
+                            interval 5
                             v (.getProperty container target property)]
                        (if (and (not (pred v)) (< a wait-attempts))
                          (do
@@ -88,6 +85,9 @@
                              (.getProperty container target property)))
                          v))]
     (test/is (pred actual-value) (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value))))
+
+(defn wait-for-property [container target property expected-value]
+  (wait-for-property-pred container target property (fn [v] (= expected-value v))))
 
 ;;
 ;; Mouse

@@ -76,13 +76,15 @@
 
 (defn wait-for-property-pred [container target property pred]
   (let [actual-value (loop [a 0
+                            interval 1
                             v (.getProperty container target property)]
                        (if (and (not (pred v)) (< a wait-attempts))
                          (do
-                           (fg/log-debug (str "Waiting " wait-interval-millis " mills, attempt " (inc a) " of " wait-attempts))
-                           (Thread/sleep wait-interval-millis)
+                           (fg/log-debug (str "Waiting " interval " millis, attempt " (inc a) " of " wait-attempts))
+                           (Thread/sleep interval)
                            (recur
                              (inc a)
+                             wait-interval-millis
                              (.getProperty container target property)))
                          v))]
     (test/is (pred actual-value) (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value))))

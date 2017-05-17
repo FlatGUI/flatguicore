@@ -12,6 +12,7 @@ package flatgui.core;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Denis Lebedev
@@ -39,6 +40,7 @@ public interface IFGEvolveConsumer
      *                  processed by Container, or null for local desktop
      *                  applications
      * @param containerObject reference to freshly evolved Container
+     * @param originalReason original reason that caused evolve cycle
      */
-    void acceptEvolveResult(Object sessionId, Object containerObject);
+    void acceptEvolveResult(Object sessionId, Object containerObject, Object originalReason);
 }

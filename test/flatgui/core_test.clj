@@ -874,7 +874,7 @@
         evolve-consumer (proxy [IFGEvolveConsumer] []
                           (getTargetPath [] [:main])
                           (getTargetProperties [] [:a])
-                          (acceptEvolveResult [_session-id component]
+                          (acceptEvolveResult [_session-id component _reason]
                             (do
                               (.lock lock)
                               (swap! consumed-results (fn [_] [(:a component) (.getName (Thread/currentThread))]))

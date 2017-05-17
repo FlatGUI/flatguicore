@@ -13,7 +13,6 @@ import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
-import flatgui.core.util.Tuple;
 import flatgui.util.CompactList;
 import flatgui.util.ObjectMatrix;
 
@@ -53,6 +52,8 @@ public class Container
     private Object[] reusableReasonBuffer_;
     private int indexBufferSize_;
     private int currentCycleBufIndex_;
+
+    private Object originalReasonForConsumers_;
     private Set<Integer> nodeIndicesToNotifyConsumers_;
 
     private Set<Integer> initializedNodes_;
@@ -65,9 +66,16 @@ public class Container
 
     private final String containerId_;
 
+    private Consumer<Runnable> consumerNotifier_;
+
     public static boolean debug_ = false;
 
     public Container(String containerId, IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container)
+    {
+        this(containerId, containerParser, resultCollector, container, r -> new Thread(r, "FlatGUI Evolver Consumer Notifier").start());
+    }
+
+    public Container(String containerId, IContainerParser containerParser, IResultCollector resultCollector, Map<Object, Object> container, Consumer<Runnable> consumerNotifier)
     {
         containerId_ = containerId;
 
@@ -140,7 +148,10 @@ public class Container
                 return Container.this.keys_;
             }
         };
-        containerMutator_ = (nodeIndex, newValue) -> values_.set(nodeIndex, newValue);
+        containerMutator_ = (nodeIndex, newValue) ->
+            {synchronized (Container.this) {values_.set(nodeIndex, newValue);}};
+
+        consumerNotifier_  = consumerNotifier;
 
         addContainer(null, Collections.emptyList(), container, null);
         finishContainerIndexing();
@@ -339,6 +350,7 @@ public class Container
                     Collection<IFGEvolveConsumer> nodeEvolverConsumers = node.getEvolveConsumers();
                     if (nodeEvolverConsumers != null)
                     {
+                        originalReasonForConsumers_ = evolveReason;
                         nodeIndicesToNotifyConsumers_.add(Integer.valueOf(nodeIndex));
                     }
 
@@ -507,9 +519,8 @@ public class Container
         return nodes_.size();
     }
 
-    public <V> V getPropertyValue(Integer index)
+    public synchronized <V> V getPropertyValue(Integer index)
     {
-        //TODO see "strict" return (V) values_.get(index.intValue());
         return index != null ? (V) values_.get(index.intValue()) : null;
     }
 
@@ -602,7 +613,7 @@ public class Container
             vacantNodeIndices_.add(i);
             Node node = nodes_.set(i.intValue(), null);
             nodesWithAmbiguousDependencies_.remove(node);//TODO there should be indices, not nodes
-            values_.set(i.intValue(), null);
+            containerMutator_.setValue(i.intValue(), null);
             pathToIndex_.remove(node.getNodePath());
             unMarkNodeAsDependent(node, node.getDependencyIndices());
             for (Integer dependentIndex : node.getDependentIndices().keySet())
@@ -808,12 +819,15 @@ public class Container
         if (index < nodes_.size())
         {
             nodes_.set(indexInt, node);
-            values_.set(indexInt, initialValue);
+            containerMutator_.setValue(indexInt, initialValue);
         }
         else
         {
             nodes_.add(node);
-            values_.add(initialValue);
+            synchronized (this)
+            {
+                values_.add(initialValue);
+            }
             if (node.isHasAmbiguousDependencies())
             {
                 nodesWithAmbiguousDependencies_.add(node);
@@ -956,10 +970,7 @@ public class Container
             {
                 // This copy is safe to let consumer notifier thread read from it
                 Map<Object, Object> componentCopy = Collections.unmodifiableMap(getComponent(node.getComponentUid()));
-                Thread t = new Thread(() ->
-                        evolveConsumer.acceptEvolveResult(containerId_, componentCopy),
-                        "FlatGUI Evolver Consumer Notifier");
-                t.start();
+                consumerNotifier_.accept(() -> evolveConsumer.acceptEvolveResult(containerId_, componentCopy, originalReasonForConsumers_));
             }
         }
         nodeIndicesToNotifyConsumers_.clear();
@@ -1189,6 +1200,11 @@ public class Container
             propertyIdToIndex_ = new HashMap<>();
             values_ = Collections.unmodifiableList(values);
             globalIndexToValueProvider_ = globalIndexToValueProvider;
+        }
+
+        public Object getId()
+        {
+            return componentPath_.get(componentPath_.size()-1);
         }
 
         @Override

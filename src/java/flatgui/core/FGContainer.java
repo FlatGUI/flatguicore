@@ -326,7 +326,7 @@ public class FGContainer implements IFGContainer
             .filter(consumer -> shouldInvokeEvolveConsumer(module, consumer))
             .forEach(consumer ->
                 new Thread(() ->
-                    consumer.acceptEvolveResult(containerId_, module.getContainer()),
+                    consumer.acceptEvolveResult(containerId_, module.getContainer(), null),
                     "FlatGUI Evolver Consumer Notifier").start());
     }
 

@@ -3,12 +3,10 @@
  */
 package flatgui.core.engine;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Denis Lebedev
@@ -24,6 +22,7 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     private final InputEventParser reasonParser_;
     private ThreadPoolExecutor evolverExecutorService_;
+    private ThreadPoolExecutor notifierExecutorService_;
 
     private boolean active_ = false;
 
@@ -46,9 +45,14 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         evolverExecutorService_ = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
-                new AppThreadFactory(containerId_));
+                new FGExecutorThreadFactory("FlatGUI Evolver ", containerId_));
+        notifierExecutorService_ = new ThreadPoolExecutor(1, 1,
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                new FGExecutorThreadFactory("FlatGUI Ev.Notifier ", containerId_));
         Future<Container> containerFuture =
-                evolverExecutorService_.submit(() -> new Container(containerId_, containerParser_, resultCollector_, containerMap_));
+                evolverExecutorService_.submit(() -> new Container(
+                        containerId_, containerParser_, resultCollector_, containerMap_, this::submitNotifierTask));
         try
         {
             container_ = containerFuture.get();
@@ -98,8 +102,7 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     public Object getProperty(List<Object> path, Object property) throws ExecutionException, InterruptedException
     {
-        Object value = evolverExecutorService_.submit(() -> getContainer().getPropertyValue(path, property)).get();
-        return value;
+        return getContainer().getPropertyValue(path, property);
     }
 
     protected void evolveImpl(Object evolveReason)
@@ -151,29 +154,15 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         return resultCollector_;
     }
 
-    private static class AppThreadFactory implements ThreadFactory
+    private void submitNotifierTask(Runnable r)
     {
-        private static final String NAME_PREFIX = "FlatGUI Evolver ";
-
-        private final ThreadGroup group_;
-        private final AtomicInteger threadNumber_ = new AtomicInteger(1);
-        private final String namePrefix_;
-
-        AppThreadFactory(String containerId)
+        try
         {
-            SecurityManager s = System.getSecurityManager();
-            group_ = s != null ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-            namePrefix_ = NAME_PREFIX + containerId + " ";
+            notifierExecutorService_.submit(r).get();
         }
-
-        public Thread newThread(Runnable r)
+        catch (Exception e)
         {
-            Thread t = new Thread(group_, r, namePrefix_ + threadNumber_.getAndIncrement());
-            if (t.isDaemon())
-                t.setDaemon(false);
-            if (t.getPriority() != Thread.NORM_PRIORITY)
-                t.setPriority(Thread.NORM_PRIORITY);
-            return t;
+            e.printStackTrace();
         }
     }
 }

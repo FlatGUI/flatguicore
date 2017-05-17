@@ -92,15 +92,8 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
     @Override
     public void evolve(List<Object> targetPath, Object evolveReason)
     {
-        try
-        {
-            getEvolverExecutorService().submit(() -> getContainer().evolve(targetPath, evolveReason)).get();
-            EventQueue.invokeLater(() -> hostComponent_.repaint());
-        }
-        catch (InterruptedException | ExecutionException e)
-        {
-            e.printStackTrace();
-        }
+        getEvolverExecutorService().submit(() -> getContainer().evolve(targetPath, evolveReason));
+        getEvolverExecutorService().submit(() -> EventQueue.invokeLater(() -> hostComponent_.repaint()));
     }
 
     //

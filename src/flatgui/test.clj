@@ -64,7 +64,11 @@
   (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
 
 (defn create-container [c-var]
-  (FGTestAppContainer/createAndInit c-var))
+  (if (coll? c-var)
+    (let [c (FGTestAppContainer/createAndInit (first c-var))]
+      ((second c-var) c)
+      c)
+    (FGTestAppContainer/createAndInit c-var)))
 
 (defn init-container [c]
   (FGTestAppContainer/init c))
@@ -88,6 +92,39 @@
 
 (defn wait-for-property [container target property expected-value]
   (wait-for-property-pred container target property (fn [v] (= expected-value v))))
+
+;;
+;; Combining test into scenarios
+;;
+
+(def standard-interstep-delay-millis 100)
+
+(defn- gen-wait [clause] (list 'Thread/sleep (list '* clause standard-interstep-delay-millis)))
+
+(defn- ensure-size [s size] (map #(if (< % (count s)) (nth s %)) (range size)))
+
+(defn interleave-long [& colls]
+  (let [max-size (count (apply max-key count colls))]
+    (filter #(not (nil? %)) (apply interleave (map (fn [c] (ensure-size c max-size)) colls)))))
+
+(declare clause-processor)
+
+(defn clause-processor [clause]
+  (cond
+
+    (number? clause)
+    (gen-wait clause)
+
+    (and (seq? clause) (= 'inter (first clause)))
+    (map clause-processor (apply interleave-long (rest clause)))
+
+    :else clause))
+
+(defmacro defscenario [scenario-name container-var-coll & clauses]
+  (let [scenario (map clause-processor clauses)]
+    (list 'clojure.test/deftest scenario-name
+          (concat (list 'let ['containers (list 'mapv (list 'fn ['cv] (list 'flatgui.test/create-container 'cv)) container-var-coll)
+                              'container (list 'nth 'containers 0)]) scenario))))
 
 ;;
 ;; Mouse

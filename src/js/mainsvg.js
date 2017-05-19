@@ -729,7 +729,8 @@ hostSVG.addEventListener("mousemove", sendMouseMoveEventToServer, false);
 
 function getEncodedHostResizeEvent()
 {
-    return encodeHostSize(hostSVG.width, hostSVG.height)
+    var bBox = hostSVG.getBoundingClientRect();
+    return encodeHostSize(bBox.width, bBox.height);
 }
 
 // Start streaming

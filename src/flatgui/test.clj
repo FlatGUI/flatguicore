@@ -58,7 +58,9 @@
      @results))
   ([container property reason] (evolve container property reason [:main])))
 
-(defn event-> [container target event] (.evolve container target event))
+(defn path [& elements] (vec (apply mapcat #(if (coll? %) % [%]) elements)))
+
+(defn event-> [container target event] (.evolve container (path target) event))
 
 (defn create-container-from-file [c-path c-ns c-name]
   (FGTestAppContainer/loadSourceCreateAndInit c-path c-ns c-name))
@@ -73,12 +75,12 @@
 (defn init-container [c]
   (FGTestAppContainer/init c))
 
-(defn get-property [container target property] (.getProperty container target property))
+(defn get-property [container target property] (.getProperty container (path target) property))
 
 (defn wait-for-property-pred [container target property pred]
   (let [actual-value (loop [a 0
                             interval 5
-                            v (.getProperty container target property)]
+                            v (.getProperty container (path target) property)]
                        (if (and (not (pred v)) (< a wait-attempts))
                          (do
                            (fg/log-debug (str "Waiting " interval " millis, attempt " (inc a) " of " wait-attempts))
@@ -86,7 +88,7 @@
                            (recur
                              (inc a)
                              wait-interval-millis
-                             (.getProperty container target property)))
+                             (.getProperty container (path target) property)))
                          v))]
     (test/is (pred actual-value) (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value))))
 
@@ -97,7 +99,7 @@
 ;; Combining test into scenarios
 ;;
 
-(def standard-interstep-delay-millis 100)
+(def standard-interstep-delay-millis 1000)
 
 (defn- gen-wait [clause] (list 'Thread/sleep (list '* clause standard-interstep-delay-millis)))
 
@@ -124,7 +126,13 @@
   (let [scenario (map clause-processor clauses)]
     (list 'clojure.test/deftest scenario-name
           (concat (list 'let ['containers (list 'mapv (list 'fn ['cv] (list 'flatgui.test/create-container 'cv)) container-var-coll)
-                              'container (list 'nth 'containers 0)]) scenario))))
+                              'cc (list 'count 'containers)
+                              'container (list 'nth 'containers 0)
+                              'container-0 (list 'nth 'containers 0)
+                              'container-1 (list 'if (list '< 1 'cc) (list 'nth 'containers 1))
+                              'container-2 (list 'if (list '< 2 'cc) (list 'nth 'containers 2))
+                              'container-3 (list 'if (list '< 3 'cc) (list 'nth 'containers 3))
+                              'container-4 (list 'if (list '< 4 'cc) (list 'nth 'containers 4))]) scenario))))
 
 ;;
 ;; Mouse
@@ -157,7 +165,7 @@
    (mouse-left MouseEvent/MOUSE_CLICKED x y)])
 
 (defn left-click
-  ([container target] (.evolve container target left-click-events))
+  ([container target] (.evolve container (path target) left-click-events))
   ([container x y] (.evolve container (create-left-click-events x y))))
 
 ;;
@@ -192,7 +200,7 @@
         events))))
 
 (defn type-string
-  ([container target str] (.evolve container target (create-string-type-events str)))
+  ([container target str] (.evolve container (path target) (create-string-type-events str)))
   ([container str] (.evolve container (create-string-type-events str))))
 
 (defn type-key
@@ -209,15 +217,17 @@
 ;;
 
 (defn wait-table-cell-id [container table-path coord]
-  (wait-for-property-pred container table-path :in-use-model
+  (wait-for-property-pred container (path table-path) :in-use-model
                           (fn [v] (let [sc->id (:screen-coord->cell-id v)]
                                     (get sc->id coord)))))
 
 (defn wait-table-model-coords-shown [container table-path coords]
-  (wait-for-property-pred container table-path :in-use-model
+  (wait-for-property-pred container (path table-path) :in-use-model
                               (fn [v] (let [sc->id (:screen-coord->cell-id v)]
                                         (= (set coords) (set (map (fn [[k _cid]] k) sc->id)))))))
 
-(defn wait-table-cell-property [container table-path coord property pred]
-  (let [cid (wait-table-cell-id container table-path coord)]
-    (wait-for-property-pred container (conj table-path cid) property pred)))
+(defn wait-table-cell-property
+  ([container table-path cell-subpath coord property pred]
+   (let [cid (wait-table-cell-id container table-path coord)]
+     (wait-for-property-pred container (path (vec (concat (conj table-path cid) cell-subpath))) property pred)))
+  ([container table-path coord property pred] (wait-table-cell-property container table-path [] coord property pred)))

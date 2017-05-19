@@ -31,6 +31,11 @@ public class FGLegacyCoreGlue implements IFGContainer, IFGModule
         glueModule_ = glueModule;
     }
 
+    public final FGRemoteAppContainer getRemoteAppContainer()
+    {
+        return container_;
+    }
+
     public Collection<ByteBuffer> getDiffsToTransmit()
     {
         return container_.getDiffsToTransmit();

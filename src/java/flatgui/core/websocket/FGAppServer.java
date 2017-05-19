@@ -18,6 +18,7 @@ import flatgui.core.FGEvolveInputData;
 import flatgui.core.FGLogger;
 import flatgui.core.IFGContainer;
 import flatgui.core.IFGTemplate;
+import flatgui.core.engine.ui.FGRemoteAppContainer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
@@ -62,10 +63,15 @@ public class FGAppServer
 
     public FGAppServer(IFGTemplate template, int port) throws Exception
     {
-        this(template, port, DEFAULT_MAPPING, null);
+        this(template, port, DEFAULT_MAPPING, null, null);
     }
 
-    public FGAppServer(IFGTemplate template, int port, String mapping, Consumer<IFGContainer> containerConsumer) throws Exception
+    public FGAppServer(IFGTemplate template,
+                       int port,
+                       String mapping,
+                       // TODO get rid of this one
+                       Consumer<IFGContainer> containerConsumer,
+                       Consumer<FGRemoteAppContainer> instanceConsumer) throws Exception
     {
         server_ = new Server(port);
 
@@ -89,7 +95,7 @@ public class FGAppServer
         mappingToTextHtmlServletMap_ = new HashMap<>();
         mappingToCustomServletMap_ = new HashMap<>();
 
-        addApplication(mapping, template, containerConsumer);
+        addApplication(mapping, template, containerConsumer, instanceConsumer);
 
         Servlet apiServlet = new ApiServlet();
         ServletHolder h = new ServletHolder(apiServlet);
@@ -98,13 +104,13 @@ public class FGAppServer
 
     public synchronized void addApplication(String mapping, IFGTemplate template)
     {
-        addApplication(mapping, template, null);
+        addApplication(mapping, template, null, null);
     }
 
-    public synchronized void addApplication(String mapping, IFGTemplate template, Consumer<IFGContainer> containerConsumer)
+    public synchronized void addApplication(String mapping, IFGTemplate template, Consumer<IFGContainer> containerConsumer, Consumer<FGRemoteAppContainer> instanceConsumer)
     {
         mapping = ensureMapping(mapping);
-        FGWebSocketServlet servlet = new FGWebSocketServlet(template, containerConsumer);
+        FGWebSocketServlet servlet = new FGWebSocketServlet(template, containerConsumer, instanceConsumer);
         ServletHolder h = new ServletHolder(servlet);
         handler_.addServletWithMapping(h, mapping);
         mappingToAppTemplateMap_.put(mapping, servlet);
@@ -288,12 +294,14 @@ public class FGAppServer
         private final FGContainerSessionHolder sessionHolder_;
         private Consumer<IFGContainer> containerConsumer_;
         private BiConsumer<Object, IFGContainer> sessionCloseConsumer_;
+        private final Consumer<FGRemoteAppContainer> instanceConsumer_;
 
-        FGWebSocketServlet(IFGTemplate template, Consumer<IFGContainer> containerConsumer)
+        FGWebSocketServlet(IFGTemplate template, Consumer<IFGContainer> containerConsumer, Consumer<FGRemoteAppContainer> instanceConsumer)
         {
             setTemplate(template);
             sessionHolder_ = new FGContainerSessionHolder(new FGSessionContainerHost());
             setContainerConsumer(containerConsumer);
+            instanceConsumer_ = instanceConsumer;
         }
 
         @Override
@@ -337,7 +345,7 @@ public class FGAppServer
 
         private Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp)
         {
-            return new FGContainerWebSocket(template_, sessionHolder_, containerConsumer_, sessionCloseConsumer_);
+            return new FGContainerWebSocket(template_, sessionHolder_, containerConsumer_, instanceConsumer_, sessionCloseConsumer_);
         }
     }
 

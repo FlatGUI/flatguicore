@@ -16,6 +16,8 @@ import clojure.lang.Var;
 import flatgui.core.*;
 import flatgui.core.awt.HostComponent;
 
+import flatgui.core.engine.remote.FGLegacyCoreGlue;
+import flatgui.core.engine.ui.FGRemoteAppContainer;
 import org.eclipse.jetty.websocket.api.CloseStatus;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
@@ -53,6 +55,7 @@ public class FGContainerWebSocket implements WebSocketListener
     // TODO have some template provider instead
     private final IFGTemplate template_;
     private final Consumer<IFGContainer> containerConsumer_;
+    private final Consumer<FGRemoteAppContainer> instanceConsumer_;
     private final BiConsumer<Object, IFGContainer> sessionCloseConsumer_;
     private ExecutorService endpointTransportService_;
     private final FGPredictor predictor_;
@@ -81,11 +84,13 @@ public class FGContainerWebSocket implements WebSocketListener
     public FGContainerWebSocket(IFGTemplate template,
                                 FGContainerSessionHolder sessionHolder,
                                 Consumer<IFGContainer> containerConsumer,
+                                Consumer<FGRemoteAppContainer> instanceConsumer,
                                 BiConsumer<Object, IFGContainer> sessionCloseConsumer)
     {
         template_ = template;
         sessionHolder_ = sessionHolder;
         containerConsumer_ = containerConsumer;
+        instanceConsumer_ = instanceConsumer;
         sessionCloseConsumer_ = sessionCloseConsumer;
         predictor_ = new FGPredictor();
 
@@ -308,6 +313,10 @@ public class FGContainerWebSocket implements WebSocketListener
                 " remote: " + session_.getRemoteAddress());
 
         container_ = fgSession_.getContainer();
+
+        // TODO refactor
+        FGLegacyCoreGlue legacyCoreGlue = (FGLegacyCoreGlue) container_.getContainer();
+        instanceConsumer_.accept(legacyCoreGlue.getRemoteAppContainer());
 
         fonts.forEach(container_::markFontAsHavingReceivedMetrics);
 

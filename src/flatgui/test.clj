@@ -67,13 +67,13 @@
 
 (defn create-container [c-var]
   (if (coll? c-var)
-    (let [c (FGTestAppContainer/createAndInit (first c-var))]
-      ((second c-var) c)
+    (let [c (FGTestAppContainer/createAndInit (first c-var) (second c-var))]
+      ((last c-var) c)
       c)
-    (FGTestAppContainer/createAndInit c-var)))
+    (FGTestAppContainer/createAndInit nil c-var)))
 
 (defn init-container [c]
-  (FGTestAppContainer/init c))
+  (FGTestAppContainer/init nil c))
 
 (defn get-property [container target property] (.getProperty container (path target) property))
 

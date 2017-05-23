@@ -23,15 +23,14 @@ import java.util.concurrent.Future;
  */
 public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
 {
-
-    public FGTestAppContainer(Map<Object, Object> container)
+    public FGTestAppContainer(String containerId, Map<Object, Object> container)
     {
-        this(container, DFLT_UNIT_SIZE_PX);
+        this(containerId != null ? containerId : container.get(ClojureContainerParser.getIdKey()).toString(), container, DFLT_UNIT_SIZE_PX);
     }
 
-    public FGTestAppContainer(Map<Object, Object> container, int unitSizePx)
+    public FGTestAppContainer(String containerId, Map<Object, Object> container, int unitSizePx)
     {
-        super(container.get(ClojureContainerParser.getIdKey()).toString(), container, new FGWebInteropUtil(unitSizePx),
+        super(containerId, container, new FGWebInteropUtil(unitSizePx),
                 new FGClojureResultCollector(unitSizePx), unitSizePx, new FGTestMouseEventParser(unitSizePx));
     }
 
@@ -48,24 +47,24 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
         System.out.println(clojure.lang.RT.byteCast(1));
         clojure.lang.Compiler.load(new StringReader(sourceCode));
 
-        return createAndInit(containerNs, containerVarName);
+        return createAndInit(null, containerNs, containerVarName);
     }
 
-    public static FGTestAppContainer createAndInit(String containerNs, String containerVarName)
+    public static FGTestAppContainer createAndInit(String containerId, String containerNs, String containerVarName)
     {
         Var containerVar = clojure.lang.RT.var(containerNs, containerVarName);
-        return createAndInit(containerVar);
+        return createAndInit(containerId, containerVar);
     }
 
-    public static FGTestAppContainer createAndInit(Var containerVar)
+    public static FGTestAppContainer createAndInit(String containerId, Var containerVar)
     {
         Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
-        return init(container);
+        return init(containerId, container);
     }
 
-    public static FGTestAppContainer init(Map<Object, Object> container)
+    public static FGTestAppContainer init(String containerId, Map<Object, Object> container)
     {
-        FGTestAppContainer appContainer = new FGTestAppContainer(container);
+        FGTestAppContainer appContainer = new FGTestAppContainer(containerId, container);
         appContainer.initialize();
 
         return appContainer;

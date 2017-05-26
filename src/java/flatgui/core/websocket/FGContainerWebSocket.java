@@ -316,7 +316,10 @@ public class FGContainerWebSocket implements WebSocketListener
 
         // TODO refactor
         FGLegacyCoreGlue legacyCoreGlue = (FGLegacyCoreGlue) container_.getContainer();
-        instanceConsumer_.accept(legacyCoreGlue.getRemoteAppContainer());
+        if (instanceConsumer_ != null)
+        {
+            instanceConsumer_.accept(legacyCoreGlue.getRemoteAppContainer());
+        }
 
         fonts.forEach(container_::markFontAsHavingReceivedMetrics);
 

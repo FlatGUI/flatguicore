@@ -127,15 +127,17 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
 
             // TODO creating Clojure map should not be needed after (*1)
             Object componentClj = PersistentHashMap.create(componentAccessor);
-            Object lookResult = rebuildLook_.invoke(componentClj);
+            //Object lookResult = rebuildLook_.invoke(componentClj);
             //System.out.println("-DLTEMP- (2)FGClojureResultCollector.postProcessAfterEvolveCycle " + changedComponentUid + " " + lookResult);
             List<Object> lookVec = (List<Object>) rebuildLook_.invoke(componentClj);
-
-            containerMutator.setValue(componentDataCache.getLookVecIndex(), lookVec);
-
-            lookVectors_.set(changedComponentUid.intValue(), lookVec);
-
-            lookVectorGenerated(changedComponentUid, lookVec);
+            List<Object> oldLookVec = changedComponentUid.intValue() < lookVectors_.size()
+                    ? lookVectors_.get(changedComponentUid.intValue()) : null;
+            if (!Objects.equals(oldLookVec, lookVec))
+            {
+                containerMutator.setValue(componentDataCache.getLookVecIndex(), lookVec);
+                lookVectors_.set(changedComponentUid.intValue(), lookVec);
+                lookVectorGenerated(changedComponentUid, lookVec);
+            }
         }
 
         changedComponents_.clear();

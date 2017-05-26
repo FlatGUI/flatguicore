@@ -572,7 +572,6 @@ function decodeCommandVector(stream, byteLength)
                     selStr += stringPools[index][si] + "\n";
                 }
                 selStr += stringPools[index][endStartLinePoolId].substring(0,endStartLinePos);
-                console.log("SELECT: m " + selStr)
             }
             applyTextSelection(index, selStr);
             break;
@@ -628,7 +627,6 @@ function applyTextSelection(index, selStr)
     if (index)
     {
         var absPos = getComponentAbsPosition(index);
-        console.log("APLSELECT: s " + selStr + " x=" + absPos.x + " y=" + absPos.y);
         d.style.left = absPos.x + 'px';
         d.style.top = absPos.y + 'px';
         d.style.width = clipSizes[index].w + 'px';

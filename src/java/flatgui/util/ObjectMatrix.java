@@ -18,7 +18,7 @@ import java.util.RandomAccess;
  */
 public class ObjectMatrix<T> implements RandomAccess, IObjectListCoder<T>, IMatrix<T>
 {
-    private static final int ROW_CAPACITY = 10;
+    private static final int ROW_CAPACITY = 12;
     private static final int COL_CAPACITY = 4096;
 
     private final T[][] data_;

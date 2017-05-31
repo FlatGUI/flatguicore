@@ -195,53 +195,61 @@ public class ClojureContainerParser implements Container.IContainerParser
 
     static List<Object> buildAbsPath(ObjectMatrix<Object> keyMatrix, List<Object> componentPath, List<Object> relPath)
     {
-        List<Object> absPath;
-        if (relPath.isEmpty())
+        try
         {
-            absPath = new CompactList<>(keyMatrix, componentPath);
-            absPath.remove(absPath.size()-1);
-        }
-        else if (relPath.get(0).equals(THIS_KW))
-        {
+            List<Object> absPath;
+            if (relPath.isEmpty())
+            {
+                absPath = new CompactList<>(keyMatrix, componentPath);
+                absPath.remove(absPath.size() - 1);
+            }
+            else if (relPath.get(0).equals(THIS_KW))
+            {
 //            List<Object> next = new ArrayList<>(relPath);
 //            next.remove(0);
 //            absPath.addAll(next);
-            absPath = new CompactList<>(keyMatrix, componentPath);
-            for (int i=1; i<relPath.size(); i++)
-            {
-                absPath.add(relPath.get(i));
+                absPath = new CompactList<>(keyMatrix, componentPath);
+                for (int i = 1; i < relPath.size(); i++)
+                {
+                    absPath.add(relPath.get(i));
+                }
             }
+            else if (relPath.get(0).equals(UP_LEVEL_KW))
+            {
+                int upLevelCount = 0;
+                while (upLevelCount < relPath.size() && relPath.get(upLevelCount).equals(UP_LEVEL_KW))
+                {
+                    upLevelCount++;
+                }
+                int componentPathCountToTake = componentPath.size() - upLevelCount - 1;
+                absPath = new CompactList<>(keyMatrix);
+                //absPath = absPath.subList(0, componentPathCountToTake);
+                for (int i = 0; i < componentPathCountToTake; i++)
+                {
+                    absPath.add(componentPath.get(i));
+                }
+                //absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
+                for (int i = upLevelCount; i < relPath.size(); i++)
+                {
+                    absPath.add(relPath.get(i));
+                }
+            }
+            else
+            {
+                absPath = new CompactList<>(keyMatrix, componentPath);
+                absPath.remove(absPath.size() - 1);
+                //absPath.addAll(relPath);
+                for (int i = 0; i < relPath.size(); i++)
+                {
+                    absPath.add(relPath.get(i));
+                }
+            }
+            return absPath;
         }
-        else if (relPath.get(0).equals(UP_LEVEL_KW))
+        catch (Exception ex)
         {
-            int upLevelCount = 0;
-            while (upLevelCount < relPath.size() && relPath.get(upLevelCount).equals(UP_LEVEL_KW))
-            {
-                upLevelCount++;
-            }
-            int componentPathCountToTake = componentPath.size() - upLevelCount - 1;
-            absPath = new CompactList<>(keyMatrix);
-            //absPath = absPath.subList(0, componentPathCountToTake);
-            for (int i=0; i<componentPathCountToTake; i++)
-            {
-                absPath.add(componentPath.get(i));
-            }
-            //absPath.addAll(relPath.subList(upLevelCount, relPath.size()));
-            for (int i=upLevelCount; i<relPath.size(); i++)
-            {
-                absPath.add(relPath.get(i));
-            }
+            throw new IllegalStateException("Can't build path (path too long) " +
+                componentPath + " + " + relPath, ex);
         }
-        else
-        {
-            absPath = new CompactList<>(keyMatrix, componentPath);
-            absPath.remove(absPath.size()-1);
-            //absPath.addAll(relPath);
-            for (int i=0; i<relPath.size(); i++)
-            {
-                absPath.add(relPath.get(i));
-            }
-        }
-        return absPath;
     }
 }

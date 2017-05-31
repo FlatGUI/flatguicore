@@ -20,8 +20,10 @@ import java.util.stream.Stream;
  * @author Denis Lebedev
  */
 public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> extends AbstractList<T> implements RandomAccess
-{                                             // 0   1   2   3   4 | 5   6   7   8   9  Size
-    static final int[] DISTRIBUTION = new int[]{10, 13, 13, 14, 14, 12, 12, 12, 12, 12, 4};
+{
+                                              // 0   1   2   3   4   5 | 6   7   8   9  10  11 Size
+    static final int[] DISTRIBUTION = new int[]{10, 10, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 4};
+
     private static final int[] INDICES;
     private static final int[] SHIFTS;
     private static final int[] MASKS;
@@ -126,6 +128,11 @@ public class CompactList<T, Data extends IObjectListCoder<T> & IMatrix<T>> exten
     public boolean add(T t)
     {
         int size = size();
+        if (size == DISTRIBUTION.length-1)
+        {
+            throw new UnsupportedOperationException("List already contains the maximum of " +
+                    (DISTRIBUTION.length-1) + " elements");
+        }
         int mxindex = objectData_.addIfAbsent(size, t);
         setSlot(size, mxindex);
         setSlot(SIZE_PLACE, size+1);

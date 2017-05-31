@@ -28,27 +28,27 @@ public class CompactListTest
     {
         CompactList<String, ?> l = new CompactList<>(null);
 
-        l.setSlot(4, 4002);
+        l.setSlot(4, 2002);
         l.setSlot(3, 5);
-        l.setSlot(9, 4095);
-        l.setSlot(2, 4095);
+        l.setSlot(9, 1023);
+        l.setSlot(2, 2047);
         l.setSlot(0, 123);
         l.setSlot(7, 5);
         l.setSlot(1, 111);
-        l.setSlot(6, 2222);
-        l.setSlot(5, 3333);
-        l.setSlot(8, 4000);
+        l.setSlot(6, 1011);
+        l.setSlot(5, 1055);
+        l.setSlot(8, 1000);
 
-        assertEquals(4002, l.getSlot(4));
+        assertEquals(2002, l.getSlot(4));
         assertEquals(5, l.getSlot(3));
-        assertEquals(4095, l.getSlot(9));
-        assertEquals(4095, l.getSlot(2));
+        assertEquals(1023, l.getSlot(9));
+        assertEquals(2047, l.getSlot(2));
         assertEquals(123, l.getSlot(0));
         assertEquals(5, l.getSlot(7));
         assertEquals(111, l.getSlot(1));
-        assertEquals(2222, l.getSlot(6));
-        assertEquals(3333, l.getSlot(5));
-        assertEquals(4000, l.getSlot(8));
+        assertEquals(1011, l.getSlot(6));
+        assertEquals(1055, l.getSlot(5));
+        assertEquals(1000, l.getSlot(8));
     }
 
     @Test

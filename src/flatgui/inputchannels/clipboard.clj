@@ -24,7 +24,12 @@ flatgui.inputchannels.clipboard
   (let [transferable (.getData repaint-reason)]
     (if (.isDataFlavorSupported transferable DataFlavor/stringFlavor)
       (.getTransferData transferable DataFlavor/stringFlavor)
-      "")))
+      )))
+
+(channelbase/definputparser get-image FGClipboardEvent
+  (let [transferable (.getData repaint-reason)]
+    (if (.isDataFlavorSupported transferable DataFlavor/imageFlavor)
+      (.getTransferData transferable DataFlavor/imageFlavor))))
 
 (defn find-clipboard-dependency [s-expr]
   (channelbase/find-channel-dependency s-expr 'flatgui.inputchannels.clipboard :clipboard))

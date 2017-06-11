@@ -46,13 +46,15 @@ public class FGKeyEventParser extends FGFocusTargetedEventParser<KeyEvent, Objec
 
     public static boolean isClipboardCopyEvent(KeyEvent r)
     {
-        return (r.getKeyCode() == KeyEvent.VK_C || r.getKeyCode() == KeyEvent.VK_INSERT)
+        return r.getID() != KeyEvent.KEY_PRESSED &&
+                (r.getKeyCode() == KeyEvent.VK_C || r.getKeyCode() == KeyEvent.VK_INSERT)
                 && (r.getModifiers() & KeyEvent.CTRL_MASK) != 0;
     }
 
     public static boolean isClipboardPasteEvent(KeyEvent r)
     {
-        return (r.getKeyCode() == KeyEvent.VK_V && (r.getModifiers() & KeyEvent.CTRL_MASK) != 0
+        return r.getID() != KeyEvent.KEY_RELEASED &&
+                (r.getKeyCode() == KeyEvent.VK_V && (r.getModifiers() & KeyEvent.CTRL_MASK) != 0
                 || r.getKeyCode() == KeyEvent.VK_INSERT && (r.getModifiers() & KeyEvent.SHIFT_MASK) != 0);
     }
 }

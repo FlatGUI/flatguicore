@@ -31,6 +31,9 @@ textMeasurer.setAttribute('fill', '#000');
 textMeasurer.textContent = '';
 hostSVG.appendChild(textMeasurer);
 
+var defs = document.createElementNS(svgNS, 'defs');
+hostSVG.appendChild(defs);
+
 function adjustSVGSize()
 {
     hostSVG.setAttribute('width', window.innerWidth);
@@ -79,9 +82,8 @@ function genChildrenSubElemId(index)
 
 var currentlyDecodedColorStr;
 
-function addImageToG(gElem, imageUrl, x, y, w, h)
+function addImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
 {
-    // TODO adjust image size to g size in case of draw mode?
     var im = document.createElementNS(svgNS, 'image');
     im.setAttribute('x', x);
     im.setAttribute('y', y);
@@ -90,8 +92,61 @@ function addImageToG(gElem, imageUrl, x, y, w, h)
         im.setAttribute('width', w);
         im.setAttribute('height', h);
     }
+    else
+    {
+        var loadNotify = function(img){
+            im.setAttribute('width', img.width);
+            im.setAttribute('height', img.height);
+        }
+        getImage(componentIndex, imageUrl, loadNotify);
+    }
     im.setAttribute('href', imageUrl);
     gElem.appendChild(im);
+}
+
+function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
+{
+    var loadNotify = function(img){
+        console.log("Got image w = " + img.width);
+        console.log("Got image h = " + img.height);
+
+        if (w <= img.width && h <= img.height)
+        {
+            addImageToG(gElem, componentIndex, imageUrl, x, y, w, h);
+        }
+        else
+        {
+            var patternId = 'pattern'+componentIndex;
+            var pt = document.createElementNS(svgNS, 'pattern');
+            pt.setAttribute('id', patternId);
+            pt.setAttribute('x', x);
+            pt.setAttribute('y', y);
+            pt.setAttribute('width', img.width);
+            pt.setAttribute('height', img.height);
+            pt.setAttribute('patternUnits', "userSpaceOnUse");
+            var im = document.createElementNS(svgNS, 'image');
+            im.setAttribute('x', 0);
+            im.setAttribute('y', 0);
+            im.setAttribute('width', img.width);
+            im.setAttribute('height', img.height);
+            im.setAttribute('href', imageUrl);
+            pt.appendChild(im);
+
+            var r = document.createElementNS(svgNS,'rect');
+            r.setAttribute('x',x);
+            r.setAttribute('y',y);
+            r.setAttribute('width', w);
+            r.setAttribute('height', h);
+            r.style.fill = 'url(#'+patternId+')'
+
+            var oldPt = document.getElementById(patternId);
+            if (oldPt) defs.removeChild(oldPt);
+            defs.appendChild(pt);
+
+            gElem.appendChild(r);
+        }
+    }
+    getImage(componentIndex, imageUrl, loadNotify);
 }
 
 function setClipToG(gElem, codeObj)
@@ -251,44 +306,20 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     // This is ok, look vector update with new image may arrive before string pool update, just need to check
                     if (imageUrl)
                     {
-                        //var img = getImage(componentIndex, imageUrl);
-                        //ctx.drawImage(img, codeObj.x, codeObj.y);
-                        addImageToG(gElem, imageUrl, codeObj.x, codeObj.y, null, null);
+                        addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, null, null);
                     }
                     c += codeObj.len;
                     break;
                 case CODE_FIT_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
 
-                    //var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i]);
-                    //ctx.drawImage(img, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
-                    addImageToG(gElem, resourceStringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    addImageToG(gElem, componentIndex, resourceStringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y, codeObj.w, codeObj.h);
 
                     c += codeObj.len;
                     break;
                 case CODE_FILL_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
-                    var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i]);
-                    var w = img.width;
-                    var h = img.height;
-                    if (codeObj.w <= w && codeObj.h <= h)
-                    {
-                        //TODO ctx.drawImage(img, codeObj.x, codeObj.y);
-                    }
-                    else if (w > 0 && h >0)
-                    {
-                        for (var ix=0; ix<codeObj.w; ix+=w)
-                        {
-                            for (var iy=0; iy<codeObj.h; iy+=h)
-                            {
-                                //TODO ctx.drawImage(img, codeObj.x+ix, codeObj.y+iy);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        decodeLog("Cannot fill image with zero size: w=" + w + " h=" + h);
-                    }
+                    fillImageToG(gElem, componentIndex, resourceStringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y, codeObj.w, codeObj.h);
                     c += codeObj.len;
                     break;
                 case CODE_SET_FONT:

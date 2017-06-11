@@ -15,10 +15,14 @@ import flatgui.core.FGHostStateEvent;
 import flatgui.core.engine.ui.FGKeyEventParser;
 import flatgui.core.engine.ui.FGTransferable;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.image.*;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -304,17 +308,33 @@ public class FGInputEventDecoder
                     }
                     int len = lenHi * 256 + lenLo;
 
-                    char[] charArray = new char[len];
-                    for (int i = 0; i < len; i++)
+                    int contentType = array[ofs + 3];
+
+                    if (contentType == FGClipboardEvent.CLIPBOARD_TEXT_PLAIN)
                     {
-                        charArray[i] = (char) array[ofs + 3 + i];
+                        char[] charArray = new char[len];
+                        for (int i = 0; i < len; i++)
+                        {
+                            charArray[i] = (char) array[ofs + 4 + i];
+                        }
+                        String data = String.valueOf(charArray);
+
+                        System.out.println("-DLTEMP- ClipboardBinaryParser.parseImpl received data = " + data +
+                                " lenLo = " + lenLo + " lenHi = " + lenHi + " len = " + len);
+
+                        return FGClipboardEvent.createPasteEvent(FGTransferable.createTextTransferable(data));
                     }
-                    String data = String.valueOf(charArray);
-
-                    System.out.println("-DLTEMP- ClipboardBinaryParser.parseImpl received data = " + data  +
-                        " lenLo = " + lenLo + " lenHi = " + lenHi + " len = " + len);
-
-                    return FGClipboardEvent.createPasteEvent(new FGTransferable(data));
+                    else if (contentType == FGClipboardEvent.CLIPBOARD_IMAGE_PNG)
+                    {
+                        InputStream in = new ByteArrayInputStream(array, 4, array.length-4);
+                        BufferedImage image = ImageIO.read(in);
+                        return FGClipboardEvent.createPasteEvent(FGTransferable.createImageTransferable(image));
+                    }
+                    else
+                    {
+                        System.out.println("-DLTEMP- ClipboardBinaryParser.parseImpl content type not supported: " + contentType);
+                        return null;
+                    }
                 }
                 else if (id == FGClipboardEvent.CLIPBOARD_COPY)
                 {

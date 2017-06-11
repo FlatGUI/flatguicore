@@ -60,7 +60,7 @@ var userRequestsDataExport = false;
 //    }
 //}
 
-function getImage(index, uri) // TODO it looks like this is needed for canvas only, not for SVG
+function getImage(index, uri, loadNotify)
 {
 //    var w;
 //    var h;
@@ -104,6 +104,22 @@ function getImage(index, uri) // TODO it looks like this is needed for canvas on
     if (img)
     {
         //console.log("For " + index + " found cached image for key " + requestedUriWH);
+        if (loadNotify)
+        {
+            if (img.onload == null)
+            {
+                // Already loaded
+                loadNotify(img);
+            }
+            else
+            {
+                var prevOnLoad = img.onload;
+                img.onload = function(){
+                    prevOnLoad();
+                    loadNotify(img);
+                };
+            }
+        }
         return img;
     }
     else
@@ -121,6 +137,11 @@ function getImage(index, uri) // TODO it looks like this is needed for canvas on
 //                {
 //                    resizeImage(img, w, h);
 //                }
+                img.onload = null;
+                if (loadNotify)
+                {
+                    loadNotify(img);
+                }
                 repaintWholeCache();
             }
             uriWHToImage[requestedUriWH] = img;
@@ -344,7 +365,7 @@ function decodeStringPool(stream, c, byteLength, poolMatrix, prefetchResource)
                 if (clipSizes[index])
                 {
                     console.log("Prefetching: " + str + " for component " + index + " of size " + clipSizes[index].w + ";" + clipSizes[index].h);
-                    getImage(index, str);
+                    getImage(index, str, null);
                 }
                 else
                 {
@@ -1144,7 +1165,56 @@ window.setInterval(measureConnection, 60000);
 var CLIPBOARD_PASTE_EVENT_CODE = 403;
 var CLIPBOARD_COPY_EVENT_CODE = 404;
 
+var CLIPBOARD_TEXT_PLAIN = 0;
+var CLIPBOARD_IMAGE_PNG = 1;
+
 function handlePaste(evt)
+{
+    if (evt.clipboardData.getData('text/plain'))
+    {
+        handlePasteText(evt);
+    }
+    else
+    {
+        if (evt.clipboardData.items.length > 1)
+        {
+            console.log("CB contains " + evt.clipboardData.items.length + " items. Only 1st will be processed");
+        }
+        else
+        {
+            //for (var i = 0 ; i < evt.clipboardData.items.length ; i++)
+            var i=0;
+            {
+                var clipboardItem = evt.clipboardData.items[i];
+                var type = clipboardItem.type;
+                console.log("item " + i + " type=" + type);
+                var blob = clipboardItem.getAsFile();
+                console.log("item " + i + " blob=" + blob);
+
+                var reader = new FileReader();
+                reader.addEventListener("loadend", function() {
+                    var blobArray = new Uint8Array(reader.result);
+                    var bytearray = new Uint8Array(4 + blobArray.length);
+
+                    bytearray[0] = CLIPBOARD_PASTE_EVENT_CODE - 400;
+                    bytearray[1] = blobArray.length & 0xFF;
+                    bytearray[2] = ((blobArray.length & 0xFF00) >> 8);
+                    bytearray[3] = CLIPBOARD_IMAGE_PNG;
+
+                    for (var i=0; i<blobArray.length; i++)
+                    {
+                        bytearray[4+i] = blobArray[i];
+                    }
+
+                    sendEventToServer(bytearray.buffer);
+                });
+                reader.readAsArrayBuffer(blob);
+            }
+        }
+    }
+}
+
+function handlePasteText(evt)
 {
     var text;
 
@@ -1182,15 +1252,16 @@ function handlePaste(evt)
 
     if (text && text.length)
     {
-        var bytearray = new Uint8Array(3 + text.length);
+        var bytearray = new Uint8Array(4 + text.length);
 
         bytearray[0] = CLIPBOARD_PASTE_EVENT_CODE - 400;
         bytearray[1] = text.length & 0xFF;
         bytearray[2] = ((text.length & 0xFF00) >> 8);
+        bytearray[3] = CLIPBOARD_TEXT_PLAIN;
 
         for (var i=0; i<text.length; i++)
         {
-            bytearray[3+i] = text.charCodeAt(i);
+            bytearray[4+i] = text.charCodeAt(i);
         }
 
         sendEventToServer(bytearray.buffer);

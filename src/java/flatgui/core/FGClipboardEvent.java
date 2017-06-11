@@ -23,6 +23,10 @@ public class FGClipboardEvent
     public static final int CLIPBOARD_PASTE = CLIPBOARD_FIRST;
     public static final int CLIPBOARD_COPY = CLIPBOARD_FIRST+1;
 
+    // Content types
+    public static final int CLIPBOARD_TEXT_PLAIN = 0;
+    public static final int CLIPBOARD_IMAGE_PNG = 1;
+
     private final int type_;
 
     private Transferable data_;

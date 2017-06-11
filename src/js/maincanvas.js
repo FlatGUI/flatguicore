@@ -315,20 +315,20 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     // This is ok, look vector update with new image may arrive before string pool update, just need to check
                     if (imageUrl)
                     {
-                        var img = getImage(componentIndex, imageUrl);
+                        var img = getImage(componentIndex, imageUrl, null);
                         ctx.drawImage(img, codeObj.x, codeObj.y);
                     }
                     c += codeObj.len;
                     break;
                 case CODE_FIT_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
-                    var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i]);
+                    var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i], null);
                     ctx.drawImage(img, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
                     c += codeObj.len;
                     break;
                 case CODE_FILL_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
-                    var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i]);
+                    var img = getImage(componentIndex, resourceStringPools[componentIndex][codeObj.i], null);
                     var w = img.width;
                     var h = img.height;
                     if (codeObj.w <= w && codeObj.h <= h)

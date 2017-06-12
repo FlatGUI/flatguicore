@@ -17,7 +17,8 @@ import java.util.function.Consumer;
  */
 public class FGServerRunner
 {
-    public static void runApplication(String containerNs, String containerVarName, int port, Consumer<FGRemoteAppContainer> instanceConsumer)
+    public static void runApplication(String containerNs, String containerVarName, int port,
+                                             Consumer<FGRemoteAppContainer> instanceConsumer, Consumer<FGAppServer> serverConsumer)
     {
         InputStream compoundSampleIs = FGServerRunner.class.getClassLoader().getResourceAsStream(containerNsToSrcFileName(containerNs));
         String compoundSampleSourceCode = new Scanner(compoundSampleIs).useDelimiter("\\Z").next();
@@ -26,6 +27,10 @@ public class FGServerRunner
         {
             IFGTemplate compondSampleTemplate = new FGLegacyGlueTemplate(compoundSampleSourceCode, containerNs, containerVarName);
             FGAppServer server = new FGAppServer(compondSampleTemplate, port, FGAppServer.DEFAULT_MAPPING, null, instanceConsumer);
+            if (serverConsumer != null)
+            {
+                serverConsumer.accept(server);
+            }
             server.start();
             server.join();
         }

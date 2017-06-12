@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Denys Lebediev and contributors. All rights reserved.
+ * Copyright (c) 2017 Denys Lebediev and contributors. All rights reserved.
  * The use and distribution terms for this software are covered by the
  * Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
  * which can be found in the file LICENSE at the root of this distribution.
@@ -7,19 +7,20 @@
  * the terms of this license.
  * You must not remove this notice, or any other, from this software.
  */
-
-package flatgui.core.awt;
+package flatgui.util.resourceserver;
 
 import java.awt.*;
-import java.io.IOException;
 
 /**
  * @author Denis Lebedev
  */
-public interface IFGImageLoader
+public interface IFGResourceServer
 {
-    String CLASSPATH_PROTOCOL = "classpath://";
-    String LOCAL_PROTOCOL_AND_ROOT = "file:///";
-
-    Image getImage(String url) throws IOException;
+    /**
+     * Accepts image data, stores it, and returns URI by which image may be accessed
+     * @param name image name (will be used in stored resource id)
+     * @param image image data
+     * @return URI to access newly created resource
+     */
+    String storeImage(String name, Image image);
 }

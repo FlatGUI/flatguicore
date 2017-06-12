@@ -306,20 +306,22 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     // This is ok, look vector update with new image may arrive before string pool update, just need to check
                     if (imageUrl)
                     {
+                        imageUrl = resourceUriPrefix+imageUrl;
                         addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, null, null);
                     }
                     c += codeObj.len;
                     break;
                 case CODE_FIT_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
-
-                    addImageToG(gElem, componentIndex, resourceStringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
+                    addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
 
                     c += codeObj.len;
                     break;
                 case CODE_FILL_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
-                    fillImageToG(gElem, componentIndex, resourceStringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
+                    fillImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
                     c += codeObj.len;
                     break;
                 case CODE_SET_FONT:

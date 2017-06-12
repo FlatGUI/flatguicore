@@ -8,6 +8,8 @@
  * You must not remove this notice, or any other, from this software.
  */
 
+var resourceUriPrefix;
+
 /*
  * Per-component data
  */
@@ -364,8 +366,9 @@ function decodeStringPool(stream, c, byteLength, poolMatrix, prefetchResource)
             {
                 if (clipSizes[index])
                 {
-                    console.log("Prefetching: " + str + " for component " + index + " of size " + clipSizes[index].w + ";" + clipSizes[index].h);
-                    getImage(index, str, null);
+                    var resourceUri = resourceUriPrefix+str;
+                    console.log("Prefetching: " + resourceUri + " for component " + index + " of size " + clipSizes[index].w + ";" + clipSizes[index].h);
+                    getImage(index, resourceUri, null);
                 }
                 else
                 {
@@ -777,6 +780,9 @@ function openSocket()
 
     webSocket.onopen = function(event)
     {
+        // len of "ws://" is 5
+	    resourceUriPrefix = "http://" + serverWebSocketUri.substring(5) + "/media?image=";
+
         connectionOpen = true;
         tryAlternativeServers=false;// If re-connect then only to where it was
         displayUserTextMessage("Open.", 10, 30);

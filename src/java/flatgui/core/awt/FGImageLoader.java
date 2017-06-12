@@ -36,7 +36,8 @@ public class FGImageLoader implements IFGImageLoader
         }
         else
         {
-            return ImageIO.read(new URL(url));
+            String localUrl = LOCAL_PROTOCOL_AND_ROOT + System.getProperty("user.dir") + File.separator + url;
+            return ImageIO.read(new URL(localUrl));
         }
     }
 

@@ -15,7 +15,6 @@ import flatgui.core.util.FGChangeEvent;
 import flatgui.core.util.IFGChangeListener;
 
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -78,7 +77,10 @@ public class FGPaintVectorBinaryCoder
         ICommandCoder setFontCoder = new SetFontStrPoolCoder(stringPoolIdSupplier, fontsWithMetricsAlreadyReceived);
         registerCoder("setFont", new ExtendedCommandCoder(setFontCoder));
 
-        uidAwareCoders_ = Arrays.asList(drawStringCoder, drawImageCoder, fitImageCoder, fillImageCoder, setFontCoder);
+        ICommandCoder fitVideoCoder = new FitVideoStrPoolCoder(stringPoolIdSupplier);
+        registerCoder("fitVideo", new ExtendedCommandCoder(fitVideoCoder));
+
+        uidAwareCoders_ = Arrays.asList(drawStringCoder, drawImageCoder, fitImageCoder, fillImageCoder, setFontCoder, fitVideoCoder);
     }
 
     public void setCodedComponentUid(Object componentId, int uid)
@@ -1227,6 +1229,26 @@ public class FGPaintVectorBinaryCoder
             }
             stream[n+1] = sId.byteValue();
             return 2;
+        }
+    }
+
+    public static class FitVideoStrPoolCoder extends ImageStrPoolCoder
+    {
+        public FitVideoStrPoolCoder(StringPoolIdSupplier stringPoolIdSupplier)
+        {
+            super(stringPoolIdSupplier);
+        }
+
+        @Override
+        public int writeCommand(byte[] stream, int n, List command)
+        {
+            return super.writeCommand(stream, n, command);
+        }
+
+        @Override
+        protected byte getImageCommandCode()
+        {
+            return 9;
         }
     }
 

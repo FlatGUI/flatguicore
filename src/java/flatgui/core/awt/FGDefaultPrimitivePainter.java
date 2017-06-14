@@ -41,6 +41,7 @@ public class FGDefaultPrimitivePainter implements IFGPrimitivePainter
     private static final String FILL_IMAGE = "fillImage";
     private static final String SET_FONT = "setFont";
 
+    private static final String FIT_VIDEO = "fitVideo";
 
     private static Map<Class, Class> NUMBER_CLASS_TO_PRIMITIVE = new HashMap<>();
     private static Set<String> COMMANDS_ALLOWED_WHEN_CLIPPED_OUT;
@@ -84,6 +85,7 @@ public class FGDefaultPrimitivePainter implements IFGPrimitivePainter
         customMethods_.put(FIT_IMAGE, this::fitImage);
         customMethods_.put(FILL_IMAGE, this::fillImage);
         customMethods_.put(SET_FONT, this::setFont);
+        customMethods_.put(FIT_VIDEO, this::fitVideo);
 
         methodByNameCache_ = new HashMap<>();
 
@@ -267,5 +269,19 @@ public class FGDefaultPrimitivePainter implements IFGPrimitivePainter
             }
             lastFontStr_ = fontStr;
         }
+    }
+
+    private void fitVideo(Graphics2D g, Object[] argValues)
+    {
+        // TODO how to support video?
+        //   - render clickable link that would open the file using Desktop?
+        //   - use https://github.com/Chrriis/DJ-Native-Swing?
+
+        int x = ((Number)argValues[1]).intValue();
+        int y = ((Number)argValues[2]).intValue();
+        //int w = ((Number)argValues[3]).intValue();
+        int h = ((Number)argValues[4]).intValue();
+
+        g.drawString("[?]", x, y+h/2);
     }
 }

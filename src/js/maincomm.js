@@ -624,6 +624,8 @@ function decodeCommandVector(stream, byteLength)
         default:
            throw new Error("Unknown command code: " + stream[0]);
     }
+
+    onCommandVectorProcessed();
 }
 
 var TEXT_SEL_ID = "textSel";

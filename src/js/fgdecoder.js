@@ -92,6 +92,8 @@ var CODE_FILL_IMAGE_STRPOOL = 6;
 var CODE_SET_FONT = 7;
 var CODE_SET_FONT_AND_REQUEST_METRICS = 8;
 
+var CODE_FIT_VIDEO_STRPOOL = 9;
+
 
 function readUByte(stream, c)
 {
@@ -482,7 +484,7 @@ function decodeImageURIStrPool(stream, c)
 
     var header = 5;
 
-    if ((stream[c] == CODE_FIT_IMAGE_STRPOOL) || (stream[c] == CODE_FILL_IMAGE_STRPOOL))
+    if ((stream[c] == CODE_FIT_IMAGE_STRPOOL) || (stream[c] == CODE_FILL_IMAGE_STRPOOL) || (stream[c] == CODE_FIT_VIDEO_STRPOOL))
     {
         w = readUByte(stream, c+5);
         h = readUByte(stream, c+6);

@@ -144,4 +144,5 @@
 (defn fitImage [imgUri x y w h] ["fitImage" imgUri x y w h])    ;3 (regular), 4 (cached)
 (defn fillImage [imgUri x y w h] ["fillImage" imgUri x y w h])  ;5 (regular), 6 (cached)
 (defn setFont [font-str] ["setFont" font-str])      ;7
-
+; set font and request metrics at once -- 8
+(defn fitVideo [videoUri x y w h] ["fitVideo" videoUri x y w h])    ;9 (cached)

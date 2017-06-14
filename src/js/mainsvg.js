@@ -149,6 +149,113 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
     getImage(componentIndex, imageUrl, loadNotify);
 }
 
+function addVideoToG(gElem, componentIndex, imageUrl, x, y, w, h)
+{
+    var vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
+    //vid.setAttribute('x', x);
+    //vid.setAttribute('y', y);
+    vid.setAttribute('width', w);
+    vid.setAttribute('height', h);
+    var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
+    source.setAttribute('src', imageUrl);
+    vid.appendChild(source);
+
+    // This works perfectly well in Firefox but does not work in Chrome
+    // (the issue is discussed here https://stackoverflow.com/questions/8185845/svg-foreignobject-behaves-as-though-absolutely-positioned-in-webkit-browsers)
+    //
+    // So below is workaround: absolute-positioned outsize element - "video holder"
+    //
+//    var foreignObject = document.createElementNS(svgNS, 'foreignObject');
+//    foreignObject.setAttribute('x', x);
+//    foreignObject.setAttribute('y', y);
+//    foreignObject.setAttribute('width', w);
+//    foreignObject.setAttribute('height', h);
+//    var foDiv = document.createElementNS("http://www.w3.org/1999/xhtml", 'div');
+//    foDiv.setAttribute('x', x);
+//    foDiv.setAttribute('y', y);
+//    foDiv.setAttribute('width', w);
+//    foDiv.setAttribute('height', h);
+//    foDiv.setAttribute('xmlns', "http://www.w3.org/1999/xhtml");
+//    foDiv.appendChild(vid);
+//    foreignObject.appendChild(foDiv);
+//    gElem.appendChild(foreignObject);
+
+    addVideoHolder(componentIndex, vid, x, y, w, h);
+}
+
+// BEGIN "video holder" workaround
+
+var videoHolders = [];
+
+function getVideoHolderId(componentIndex, holderIndex)
+{
+    return "video"+componentIndex+"_"+holderIndex;
+}
+
+function addVideoHolder(componentIndex, vid, x, y, w, h)
+{
+    var componentVideoHolders = videoHolders[componentIndex];
+    if (componentVideoHolders == null)
+    {
+        componentVideoHolders = [];
+        videoHolders[componentIndex] = componentVideoHolders;
+    }
+    var holderIndex = componentVideoHolders.length;
+
+    var id = getVideoHolderId(componentIndex, holderIndex);
+    var d = document.createElement("div")
+    d.id = id;
+    d.style.position = 'absolute'
+    var absPos = getComponentAbsPosition(componentIndex);
+    d.style.left = (absPos.x + x) + 'px';
+    d.style.top = (absPos.y + y) + 'px';
+    d.setAttribute('relX', x);
+    d.setAttribute('relY', y);
+    d.style.width = w + 'px';
+    d.style.height = h + 'px';
+    var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0;
+    d.style.visibility = visible ? 'visible' : 'hidden';
+
+    d.appendChild(vid);
+    document.body.appendChild(d);
+
+    componentVideoHolders[holderIndex] = d;
+}
+
+function updateVideoHoldersAbsPos()
+{
+    for (var componentIndex=0; componentIndex<videoHolders.length; componentIndex++)
+    {
+        var absPos = getComponentAbsPosition(componentIndex);
+
+        var componentVideoHolders = videoHolders[componentIndex];
+        if (componentVideoHolders != null)
+        {
+            for (var holderIndex=0; holderIndex<componentVideoHolders.length; holderIndex++)
+            {
+                var x = parseInt(componentVideoHolders[holderIndex].getAttribute('relX'));
+                var y = parseInt(componentVideoHolders[holderIndex].getAttribute('relY'));
+                componentVideoHolders[holderIndex].style.left = (absPos.x + x) + 'px';
+                componentVideoHolders[holderIndex].style.top = (absPos.y + y) + 'px';
+
+                var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0;
+                componentVideoHolders[holderIndex].style.visibility = visible ? 'visible' : 'hidden';
+            }
+        }
+    }
+}
+
+var needVideoHoldersPosUpdate = false;
+function onCommandVectorProcessed()
+{
+    if (needVideoHoldersPosUpdate)
+    {
+        updateVideoHoldersAbsPos();
+        needVideoHoldersPosUpdate = false;
+    }
+}
+// // // END "video holder" workaround
+
 function setClipToG(gElem, codeObj)
 {
 }
@@ -280,6 +387,15 @@ function decodeLookVector(componentIndex, stream, byteLength)
         gCElem.replaceChild(gShapesNew, gShapes);
         gShapes = gShapesNew;
     }
+    var componentVideoHolders = videoHolders[componentIndex];
+    if (componentVideoHolders != null)
+    {
+        for (var v=0; v<componentVideoHolders.length; v++)
+        {
+            componentVideoHolders[v].parentNode.removeChild(componentVideoHolders[v]);
+        }
+        videoHolders[componentIndex] = null;
+    }
 
     var gElem = gShapes;
 
@@ -315,13 +431,18 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     codeObj = decodeImageURIStrPool(stream, c);
                     imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
                     addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
-
                     c += codeObj.len;
                     break;
                 case CODE_FILL_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
                     imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
                     fillImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    c += codeObj.len;
+                    break;
+                case CODE_FIT_VIDEO_STRPOOL:
+                    codeObj = decodeImageURIStrPool(stream, c);
+                    videoUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
+                    addVideoToG(gElem, componentIndex, videoUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
                     c += codeObj.len;
                     break;
                 case CODE_SET_FONT:
@@ -529,11 +650,13 @@ function updateTransform(index)
 function processPositionMatrixUpdate(index)
 {
     updateTransform(index);
+    needVideoHoldersPosUpdate = true;
 }
 
 function processViewportMatrixUpdate(index)
 {
     updateTransform(index);
+    needVideoHoldersPosUpdate = true;
     if (viewports[index])
     {
         var clipId = getClipId(index);

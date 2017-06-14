@@ -118,9 +118,16 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
             eventsToTargetIndex = Collections.emptyMap();
         }
 
-        for (Object event : eventsToTargetIndex.keySet())
+        try
         {
-            container_.evolve(eventsToTargetIndex.get(event), event);
+            for (Object event : eventsToTargetIndex.keySet())
+            {
+                container_.evolve(eventsToTargetIndex.get(event), event);
+            }
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
         }
     }
 

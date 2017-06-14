@@ -354,6 +354,11 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     }
                     c += codeObj.len;
                     break;
+                case CODE_FIT_VIDEO_STRPOOL:
+                    codeObj = decodeImageURIStrPool(stream, c);
+                    fillText("[?]", codeObj.x, codeObj.y+codeObj.h/2);
+                    c += codeObj.len;
+                    break;
                 case CODE_SET_FONT:
                 case CODE_SET_FONT_AND_REQUEST_METRICS:
                     if (opcodeBase == CODE_SET_FONT_AND_REQUEST_METRICS)
@@ -500,6 +505,8 @@ function decodeLookVector(componentIndex, stream, byteLength)
         }
     }
 }
+
+function onCommandVectorProcessed(){}
 
 function processPositionMatrixUpdate(index)
 {

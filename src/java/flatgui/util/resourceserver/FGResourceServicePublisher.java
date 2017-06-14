@@ -15,6 +15,9 @@ import java.awt.*;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -47,7 +50,16 @@ public class FGResourceServicePublisher extends HttpServlet implements IFGCustom
     {
         // TODO org.eclipse.jetty.websocket.api.MessageTooLargeException: Binary message size [112430] exceeds maximum size [65536]
         String imageName = req.getParameter("image");
+        System.out.println("Received request: " + imageName);
+        if (imageName != null)
+        {
+            respondImage(resp, imageName);
+            return;
+        }
+    }
 
+    private void respondImage(HttpServletResponse resp, String imageName) throws IOException
+    {
         Image image = imageLoader_.getImage(imageName);
         if (image instanceof RenderedImage)
         {
@@ -61,8 +73,20 @@ public class FGResourceServicePublisher extends HttpServlet implements IFGCustom
         }
         else
         {
-            System.out.println("Could NOT find requested image: " + image);
+            Path path = Paths.get(imageName);
+            if (Files.exists(path))
+            {
+                byte[] data = Files.readAllBytes(path);
+                OutputStream o = resp.getOutputStream();
+                o.write(data);
+                o.flush();
+                o.close();
+                System.out.println("Served requested file: " + imageName);
+            }
+            else
+            {
+                System.out.println("Could NOT find requested image: " + imageName);
+            }
         }
-
     }
 }

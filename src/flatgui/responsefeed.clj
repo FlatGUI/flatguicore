@@ -28,7 +28,7 @@
 ;;; These commands contain strings but it's not enough to just transmit them (in case of client/server
 ;;; GUI running), these string are resources (like images) so client needs to start loading them right
 ;;; away. So that when resources are actually needed, they are alredy loaded.
-(def resource-string-commands #{"drawImage" "fitImage" "fillImage"})
+(def resource-string-commands #{"drawImage" "fitImage" "fillImage" "fitVideo"})
 
 (defn get-data-for-clipboard [container] (first (:data-for-clipboard container)))
 

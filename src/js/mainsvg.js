@@ -53,7 +53,8 @@ function measureTextImpl(s)
         s = "i";
     }
     textMeasurer.textContent = s;
-    var w = textMeasurer.getComputedTextLength();
+    // Using round because Chrome (at least ver 59) yields decimal width that's more precise than needed
+    var w = Math.round(textMeasurer.getComputedTextLength());
     textMeasurer.textContent = '';
     return w+LETTER_SPACING;
 }
@@ -211,9 +212,12 @@ function addVideoHolder(componentIndex, vid, x, y, w, h)
     d.style.top = (absPos.y + y) + 'px';
     d.setAttribute('relX', x);
     d.setAttribute('relY', y);
+    d.setAttribute('width', w);
+    d.setAttribute('height', h);
     d.style.width = w + 'px';
     d.style.height = h + 'px';
-    var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0;
+    var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0
+        && (x + viewports[componentIndex].w + w) < clipSizes[componentIndex].w && (y + viewports[componentIndex].h + h) < clipSizes[componentIndex].h;
     d.style.visibility = visible ? 'visible' : 'hidden';
 
     d.appendChild(vid);
@@ -235,10 +239,13 @@ function updateVideoHoldersAbsPos()
             {
                 var x = parseInt(componentVideoHolders[holderIndex].getAttribute('relX'));
                 var y = parseInt(componentVideoHolders[holderIndex].getAttribute('relY'));
+                var w = parseInt(componentVideoHolders[holderIndex].getAttribute('width'));
+                var h = parseInt(componentVideoHolders[holderIndex].getAttribute('height'));
                 componentVideoHolders[holderIndex].style.left = (absPos.x + x) + 'px';
                 componentVideoHolders[holderIndex].style.top = (absPos.y + y) + 'px';
 
-                var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0;
+                var visible = x + viewports[componentIndex].w >= 0 && y + viewports[componentIndex].h >= 0
+                    && (x + viewports[componentIndex].w + w) < clipSizes[componentIndex].w && (y + viewports[componentIndex].h + h) < clipSizes[componentIndex].h;
                 componentVideoHolders[holderIndex].style.visibility = visible ? 'visible' : 'hidden';
             }
         }

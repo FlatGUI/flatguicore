@@ -83,9 +83,81 @@ function genChildrenSubElemId(index)
 
 var currentlyDecodedColorStr;
 
+var currentlyDecodedLookNodeList;
+var currentlyDecodedLookNodeIndex = 0;
+var lookNodesToRecycle = [];
+var lookNodesToRecycleCount = 0;
+
+function startLookDecoding(gElem)
+{
+    currentlyDecodedLookNodeList = gElem.childNodes;
+    currentlyDecodedLookNodeIndex = 0;
+    lookNodesToRecycle = [];
+    lookNodesToRecycleCount = 0;
+}
+
+function endLookDecoding(gElem)
+{
+    for (var i=0; i<lookNodesToRecycleCount; i++)
+    {
+        if (lookNodesToRecycle[i] != null)
+        {
+            gElem.removeChild(lookNodesToRecycle[i]);
+            lookNodesToRecycle[i] = null;
+        }
+    }
+}
+
+function canReuse(el, tagName, subTagName)
+{
+    return el != null && el.tagName == tagName && (subTagName == null || el.getAttribute('subTagName') == subTagName)
+}
+
+function reuseOrCreateElement(gElem, tagName, subTagName)
+{
+    console.log("reuseOrCreateElement " + tagName + " " + subTagName);
+    var existingEl = currentlyDecodedLookNodeList[currentlyDecodedLookNodeIndex];
+    currentlyDecodedLookNodeIndex++;
+    if (canReuse(existingEl, tagName, subTagName))
+    {
+        return existingEl;
+    }
+    else
+    {
+        var recycledEl = null;
+        for (var i=0; i<lookNodesToRecycleCount; i++)
+        {
+            if (lookNodesToRecycle[i] != null && canReuse(lookNodesToRecycle[i], tagName, subTagName))
+            {
+                recycledEl = lookNodesToRecycle[i];
+                lookNodesToRecycle[i] = null;
+                break;
+            }
+        }
+
+        lookNodesToRecycle[lookNodesToRecycleCount] = existingEl;
+        lookNodesToRecycleCount++
+
+        if (recycledEl != null)
+        {
+            return recycledEl;
+        }
+        else
+        {
+            var newInst = document.createElementNS(svgNS, tagName);
+            if (subTagName != null)
+            {
+                newInst.setAttribute('subTagName', subTagName);
+            }
+            gElem.appendChild(newInst);
+            return newInst;
+        }
+    }
+}
+
 function addImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
 {
-    var im = document.createElementNS(svgNS, 'image');
+    var im = reuseOrCreateElement(gElem, 'image', null);
     im.setAttribute('x', x);
     im.setAttribute('y', y);
     if (w && h)
@@ -95,21 +167,21 @@ function addImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
     }
     else
     {
-        var loadNotify = function(img){
-            im.setAttribute('width', img.width);
-            im.setAttribute('height', img.height);
+        if (im.getAttribute('href') != imageUrl)
+        {
+            var loadNotify = function(img){
+                im.setAttribute('width', img.width);
+                im.setAttribute('height', img.height);
+            }
+            getImage(componentIndex, imageUrl, loadNotify);
         }
-        getImage(componentIndex, imageUrl, loadNotify);
     }
     im.setAttribute('href', imageUrl);
-    gElem.appendChild(im);
 }
 
 function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
 {
     var loadNotify = function(img){
-        console.log("Got image w = " + img.width);
-        console.log("Got image h = " + img.height);
 
         if (w <= img.width && h <= img.height)
         {
@@ -118,14 +190,25 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
         else
         {
             var patternId = 'pattern'+componentIndex;
-            var pt = document.createElementNS(svgNS, 'pattern');
+            var pt
+            var oldPt = document.getElementById(patternId);
+            if (oldPt == null)
+            {
+                pt = document.createElementNS(svgNS, 'pattern');
+                defs.appendChild(pt);
+            }
+            else
+            {
+                pt = oldPt;
+            }
+
             pt.setAttribute('id', patternId);
             pt.setAttribute('x', x);
             pt.setAttribute('y', y);
             pt.setAttribute('width', img.width);
             pt.setAttribute('height', img.height);
             pt.setAttribute('patternUnits', "userSpaceOnUse");
-            var im = document.createElementNS(svgNS, 'image');
+            var im = oldPt == null ? document.createElementNS(svgNS, 'image') : gElem.childNodes[0];
             im.setAttribute('x', 0);
             im.setAttribute('y', 0);
             im.setAttribute('width', img.width);
@@ -133,18 +216,12 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
             im.setAttribute('href', imageUrl);
             pt.appendChild(im);
 
-            var r = document.createElementNS(svgNS,'rect');
+            var r = reuseOrCreateElement(gElem, 'rect', 'fillImage');
             r.setAttribute('x',x);
             r.setAttribute('y',y);
             r.setAttribute('width', w);
             r.setAttribute('height', h);
             r.style.fill = 'url(#'+patternId+')'
-
-            var oldPt = document.getElementById(patternId);
-            if (oldPt) defs.removeChild(oldPt);
-            defs.appendChild(pt);
-
-            gElem.appendChild(r);
         }
     }
     getImage(componentIndex, imageUrl, loadNotify);
@@ -152,20 +229,17 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
 
 function addVideoToG(gElem, componentIndex, imageUrl, x, y, w, h)
 {
-    var vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
-    //vid.setAttribute('x', x);
-    //vid.setAttribute('y', y);
-    vid.setAttribute('width', w);
-    vid.setAttribute('height', h);
-    var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
-    source.setAttribute('src', imageUrl);
-    vid.appendChild(source);
-
     // This works perfectly well in Firefox but does not work in Chrome
     // (the issue is discussed here https://stackoverflow.com/questions/8185845/svg-foreignobject-behaves-as-though-absolutely-positioned-in-webkit-browsers)
     //
     // So below is workaround: absolute-positioned outsize element - "video holder"
     //
+//    var vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
+//    vid.setAttribute('width', w);
+//    vid.setAttribute('height', h);
+//    var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
+//    source.setAttribute('src', imageUrl);
+//    vid.appendChild(source);
 //    var foreignObject = document.createElementNS(svgNS, 'foreignObject');
 //    foreignObject.setAttribute('x', x);
 //    foreignObject.setAttribute('y', y);
@@ -181,7 +255,7 @@ function addVideoToG(gElem, componentIndex, imageUrl, x, y, w, h)
 //    foreignObject.appendChild(foDiv);
 //    gElem.appendChild(foreignObject);
 
-    addVideoHolder(componentIndex, vid, x, y, w, h);
+    addVideoHolder(componentIndex, x, y, w, h);
 }
 
 // BEGIN "video holder" workaround
@@ -193,7 +267,7 @@ function getVideoHolderId(componentIndex, holderIndex)
     return "video"+componentIndex+"_"+holderIndex;
 }
 
-function addVideoHolder(componentIndex, vid, x, y, w, h)
+function addVideoHolder(componentIndex, x, y, w, h)
 {
     var componentVideoHolders = videoHolders[componentIndex];
     if (componentVideoHolders == null)
@@ -204,7 +278,7 @@ function addVideoHolder(componentIndex, vid, x, y, w, h)
     var holderIndex = componentVideoHolders.length;
 
     var id = getVideoHolderId(componentIndex, holderIndex);
-    var d = document.createElement("div")
+    var d = reuseOrCreateElement(gElem, 'div', 'videoHolder');//document.createElement("div")
     d.id = id;
     d.style.position = 'absolute'
     var absPos = getComponentAbsPosition(componentIndex);
@@ -220,8 +294,27 @@ function addVideoHolder(componentIndex, vid, x, y, w, h)
         && (x + viewports[componentIndex].w + w) < clipSizes[componentIndex].w && (y + viewports[componentIndex].h + h) < clipSizes[componentIndex].h;
     d.style.visibility = visible ? 'visible' : 'hidden';
 
-    d.appendChild(vid);
-    document.body.appendChild(d);
+    var vid;
+    if (d.childNodes[0] != null)
+    {
+        vid = d.childNodes[0];
+        vid.setAttribute('width', w);
+        vid.setAttribute('height', h);
+        var source = vid.childNodes[0];
+        source.setAttribute('src', imageUrl);
+    }
+    else
+    {
+        vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
+        d.appendChild(vid);
+        vid.setAttribute('width', w);
+        vid.setAttribute('height', h);
+        var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
+        source.setAttribute('src', imageUrl);
+        vid.appendChild(source);
+    }
+
+    //document.body.appendChild(d);
 
     componentVideoHolders[holderIndex] = d;
 }
@@ -285,29 +378,64 @@ function setFontToPrimitive(gElem, p, fill)
     p.style.font = currentFont
 }
 
+// TODO reuse
 function setTextToG(gElem, componentIndex, text, x, y)
 {
     var preciseTextMeasurement = checkFlagForComponent(componentIndex, STATE_FLAGS_PRECISE_TEXT_MEASUREMENT);
     if (preciseTextMeasurement)
     {
-        var g = document.createElementNS(svgNS, "g");
+        var g = reuseOrCreateElement(gElem, 'g', 'preciseText');
         setColorToPrimitive(gElem, g, true);
         setFontToPrimitive(gElem, g);
+
+        var toAppend = [];
+        var toAppendCount = 0;
+
         for (var j=0; j<text.length; j++)
         {
             var c = text.charAt(j);
-            var t = document.createElementNS(svgNS, 'text');
+            var t;
+            if (j < g.childElementCount)
+            {
+                t = g.childNodes[j];
+            }
+            else
+            {
+                t = document.createElementNS(svgNS, 'text');
+                toAppend[toAppendCount] = t;
+                toAppendCount++;
+            }
             t.setAttribute('x', x);
             t.setAttribute('y', y);
             t.textContent = c;
-            g.appendChild(t);
+
             x += measureTextImpl(c);
         }
-        gElem.appendChild(g);
+
+        if (text.length < g.childElementCount)
+        {
+            var toRemove = [];
+            var toRemoveCount = g.childElementCount-text.length;
+            for (j=0; j<toRemoveCount; j++)
+            {
+                toRemove[j] = g.childNodes[text.length+j];
+            }
+            for (j=0; j<toRemoveCount; j++)
+            {
+                g.removeChild(toRemove[j]);
+            }
+        }
+        else
+        {
+            for (j=0; j<toAppendCount; j++)
+            {
+                g.appendChild(toAppend[j]);
+            }
+        }
     }
     else
     {
-        var t = document.createElementNS(svgNS, 'text');
+        var t = reuseOrCreateElement(gElem, 'text');
         t.setAttribute('x', x);
         t.setAttribute('y', y);
         t.setAttribute('kerning', 0);
@@ -316,13 +444,12 @@ function setTextToG(gElem, componentIndex, text, x, y)
         setColorToPrimitive(gElem, t, true);
         setFontToPrimitive(gElem, t);
         t.textContent = text;
-        gElem.appendChild(t);
     }
 }
 
 function setRectToG(gElem, x, y, w, h, rad, fill)
 {
-    var r = document.createElementNS(svgNS,'rect');
+    var r = reuseOrCreateElement(gElem, 'rect', fill ? 'fill' : 'draw');
     r.setAttribute('x',x);
     r.setAttribute('y',y);
     if (rad > 0)
@@ -333,29 +460,26 @@ function setRectToG(gElem, x, y, w, h, rad, fill)
     r.setAttribute('width',w);
     r.setAttribute('height',h);
     setColorToPrimitive(gElem, r, fill);
-    gElem.appendChild(r);
 }
 
 function setCircleToG(gElem, x, y, r, fill)
 {
-    var c = document.createElementNS(svgNS,'circle');
+    var c = reuseOrCreateElement(gElem, 'circle', fill ? 'fill' : 'draw');
     c.setAttribute('cx',x);
     c.setAttribute('cy',y);
     c.setAttribute('r',r);
     setColorToPrimitive(gElem, c, fill);
-    gElem.appendChild(c);
 }
 
 function setLineToG(gElem, x1, y1, x2, y2)
 {
-    var l = document.createElementNS(svgNS, 'line');
+    var l = reuseOrCreateElement(gElem, 'line', null);
     l.setAttribute('x1', x1);
     l.setAttribute('y1', y1);
     l.setAttribute('x2', x2);
     l.setAttribute('y2', y2);
     setColorToPrimitive(gElem, l, false);
     l.setAttribute('stroke-width', 1);
-    gElem.appendChild(l);
 }
 
 
@@ -388,21 +512,24 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
     var gShapes = document.getElementById(genShapesSubElemId(componentIndex));
 
-    if (gShapes.childElementCount > 0)
-    {
-        var gShapesNew = gShapes.cloneNode(false);
-        gCElem.replaceChild(gShapesNew, gShapes);
-        gShapes = gShapesNew;
-    }
-    var componentVideoHolders = videoHolders[componentIndex];
-    if (componentVideoHolders != null)
-    {
-        for (var v=0; v<componentVideoHolders.length; v++)
-        {
-            componentVideoHolders[v].parentNode.removeChild(componentVideoHolders[v]);
-        }
-        videoHolders[componentIndex] = null;
-    }
+//    if (gShapes.childElementCount > 0)
+//    {
+//        var gShapesNew = gShapes.cloneNode(false);
+//        gCElem.replaceChild(gShapesNew, gShapes);
+//        gShapes = gShapesNew;
+//    }
+//    var componentVideoHolders = videoHolders[componentIndex];
+//    if (componentVideoHolders != null)
+//    {
+//        for (var v=0; v<componentVideoHolders.length; v++)
+//        {
+//            componentVideoHolders[v].parentNode.removeChild(componentVideoHolders[v]);
+//        }
+//        videoHolders[componentIndex] = null;
+//    }
+
+    console.log("-------- started decoding --------------");
+    startLookDecoding(gShapes);
 
     var gElem = gShapes;
 
@@ -526,6 +653,9 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                         codeObj = decodeString(stream, c);
                         decodeLog( "drawString " + JSON.stringify(codeObj));
+
+                        console.log("---- string " + stringPools[componentIndex][codeObj.i]);
+
                         if (stringPools[componentIndex] && stringPools[componentIndex][codeObj.i])
                         {
 
@@ -545,6 +675,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     c+= codeObj.len;
                     break;
                 case CODE_FILL_RECT:
+                    console.log("---- fillRect ");
                     codeObj = decodeRect(stream, c);
                     decodeLog( "fillRect " + JSON.stringify(codeObj));
 
@@ -583,6 +714,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     c+= codeObj.len;
                     break;
                 case CODE_DRAW_LINE:
+                    console.log("---- line ");
                     codeObj = decodeRect(stream, c);
                     decodeLog( "drawLine " + JSON.stringify(codeObj));
 
@@ -630,6 +762,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
             }
         }
     }
+    endLookDecoding(gElem);
 }
 
 function getClipId(index)

@@ -84,27 +84,28 @@ function genChildrenSubElemId(index)
 var currentlyDecodedColorStr;
 
 var currentlyDecodedLookNodeList;
-var currentlyDecodedLookNodeIndex = 0;
-var lookNodesToRecycle = [];
-var lookNodesToRecycleCount = 0;
+var currentlyDecodedLookNodeIndex;
+var aheadCount;
 
 function startLookDecoding(gElem)
 {
+    console.log("--------- START LOOK DECODING ----------------------");
+
     currentlyDecodedLookNodeList = gElem.childNodes;
     currentlyDecodedLookNodeIndex = 0;
-    lookNodesToRecycle = [];
-    lookNodesToRecycleCount = 0;
+    aheadCount = 0;
 }
 
-function endLookDecoding(gElem)
+function endLookDecoding(gElem, shapeCount)
 {
-    for (var i=0; i<lookNodesToRecycleCount; i++)
+    var removeCount = gElem.childElementCount - shapeCount;
+    console.log("--------- END LOOK DECODING ------------- removeCount = " + removeCount);
+    while (removeCount > 0)
     {
-        if (lookNodesToRecycle[i] != null)
-        {
-            gElem.removeChild(lookNodesToRecycle[i]);
-            lookNodesToRecycle[i] = null;
-        }
+        var c = currentlyDecodedLookNodeList[gElem.childElementCount-1];
+        console.log("Removing " + c);
+        gElem.removeChild(c);
+        removeCount--;
     }
 }
 
@@ -115,44 +116,40 @@ function canReuse(el, tagName, subTagName)
 
 function reuseOrCreateElement(gElem, tagName, subTagName)
 {
-    console.log("reuseOrCreateElement " + tagName + " " + subTagName);
     var existingEl = currentlyDecodedLookNodeList[currentlyDecodedLookNodeIndex];
     currentlyDecodedLookNodeIndex++;
     if (canReuse(existingEl, tagName, subTagName))
     {
         return existingEl;
     }
-    else
+
+    while (aheadCount > 0)
     {
-        var recycledEl = null;
-        for (var i=0; i<lookNodesToRecycleCount; i++)
+        gElem.removeChild(existingEl);
+        aheadCount--;
+        existingEl = currentlyDecodedLookNodeList[currentlyDecodedLookNodeIndex];
+        if (canReuse(existingEl, tagName, subTagName))
         {
-            if (lookNodesToRecycle[i] != null && canReuse(lookNodesToRecycle[i], tagName, subTagName))
-            {
-                recycledEl = lookNodesToRecycle[i];
-                lookNodesToRecycle[i] = null;
-                break;
-            }
-        }
-
-        lookNodesToRecycle[lookNodesToRecycleCount] = existingEl;
-        lookNodesToRecycleCount++
-
-        if (recycledEl != null)
-        {
-            return recycledEl;
-        }
-        else
-        {
-            var newInst = document.createElementNS(svgNS, tagName);
-            if (subTagName != null)
-            {
-                newInst.setAttribute('subTagName', subTagName);
-            }
-            gElem.appendChild(newInst);
-            return newInst;
+            return existingEl;
         }
     }
+
+    var newInst = document.createElementNS(svgNS, tagName);
+    if (subTagName != null)
+    {
+        newInst.setAttribute('subTagName', subTagName);
+    }
+    if (existingEl != null)
+    {
+        gElem.insertBefore(newInst, existingEl);
+        aheadCount++;
+    }
+    else
+    {
+        gElem.appendChild(newInst);
+    }
+
+    return newInst;
 }
 
 function addImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
@@ -528,10 +525,9 @@ function decodeLookVector(componentIndex, stream, byteLength)
 //        videoHolders[componentIndex] = null;
 //    }
 
-    console.log("-------- started decoding --------------");
-    startLookDecoding(gShapes);
-
     var gElem = gShapes;
+    startLookDecoding(gElem);
+    var shapeCount = 0;
 
     var c = 0;
     while (c < byteLength)
@@ -558,6 +554,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                         imageUrl = resourceUriPrefix+imageUrl;
                         addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, null, null);
+                        shapeCount++;
                     }
                     c += codeObj.len;
                     break;
@@ -565,18 +562,21 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     codeObj = decodeImageURIStrPool(stream, c);
                     imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
                     addImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    shapeCount++;
                     c += codeObj.len;
                     break;
                 case CODE_FILL_IMAGE_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
                     imageUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
                     fillImageToG(gElem, componentIndex, imageUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    shapeCount++;
                     c += codeObj.len;
                     break;
                 case CODE_FIT_VIDEO_STRPOOL:
                     codeObj = decodeImageURIStrPool(stream, c);
                     videoUrl = resourceUriPrefix+resourceStringPools[componentIndex][codeObj.i];
                     addVideoToG(gElem, componentIndex, videoUrl, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    shapeCount++;
                     c += codeObj.len;
                     break;
                 case CODE_SET_FONT:
@@ -653,14 +653,12 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     {
                         codeObj = decodeString(stream, c);
                         decodeLog( "drawString " + JSON.stringify(codeObj));
-
-                        console.log("---- string " + stringPools[componentIndex][codeObj.i]);
-
                         if (stringPools[componentIndex] && stringPools[componentIndex][codeObj.i])
                         {
 
                             //fillMultilineTextNoWrap(stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
                             setTextToG(gElem, componentIndex, stringPools[componentIndex][codeObj.i], codeObj.x, codeObj.y);
+                            shapeCount++;
                         }
                         c += codeObj.len;
                     }
@@ -671,16 +669,17 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
                     //ctx.strokeRect(codeObj.x+0.5, codeObj.y+0.5, codeObj.w, codeObj.h);
                     setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, 0, false);
+                    shapeCount++;
 
                     c+= codeObj.len;
                     break;
                 case CODE_FILL_RECT:
-                    console.log("---- fillRect ");
                     codeObj = decodeRect(stream, c);
                     decodeLog( "fillRect " + JSON.stringify(codeObj));
 
                     //ctx.fillRect(codeObj.x, codeObj.y, codeObj.w, codeObj.h);
                     setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, 0, true);
+                    shapeCount++;
 
                     c+= codeObj.len;
                     break;
@@ -693,6 +692,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     //ctx.arc(codeObj.x+r+0.5, codeObj.y+r+0.5, codeObj.w/2, 0, 2*Math.PI);
                     //ctx.stroke();
                     setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r, false);
+                    shapeCount++;
 
                     c+= codeObj.len;
                     break;
@@ -710,11 +710,11 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     //ctx.arc(codeObj.x+r+0.5, codeObj.y+r+0.5, r, 0, 2*Math.PI);
                     //ctx.fill();
                     setCircleToG(gElem, codeObj.x+r, codeObj.y+r, r, true);
+                    shapeCount++;
 
                     c+= codeObj.len;
                     break;
                 case CODE_DRAW_LINE:
-                    console.log("---- line ");
                     codeObj = decodeRect(stream, c);
                     decodeLog( "drawLine " + JSON.stringify(codeObj));
 
@@ -723,6 +723,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     //ctx.lineTo(codeObj.w+0.5, codeObj.h+0.5);
                     //ctx.stroke();
                     setLineToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h);
+                    shapeCount++;
 
                     c+= codeObj.len;
                     break;
@@ -748,12 +749,14 @@ function decodeLookVector(componentIndex, stream, byteLength)
                     codeObj = decodeRoundRect(stream, c);
                     decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
                     setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, codeObj.r, false);
+                    shapeCount++;
                     c+= codeObj.len;
                     break;
                 case CODE_FILL_ROUND_RECT:
                     codeObj = decodeRoundRect(stream, c);
                     decodeLog( "drawRoundRect " + JSON.stringify(codeObj));
                     setRectToG(gElem, codeObj.x, codeObj.y, codeObj.w, codeObj.h, codeObj.r, true);
+                    shapeCount++;
                     c+= codeObj.len;
                     break;
                 default:
@@ -762,7 +765,7 @@ function decodeLookVector(componentIndex, stream, byteLength)
             }
         }
     }
-    endLookDecoding(gElem);
+    endLookDecoding(gElem, shapeCount);
 }
 
 function getClipId(index)

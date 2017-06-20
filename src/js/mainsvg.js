@@ -30,6 +30,7 @@ textMeasurer.setAttribute('y', '0');
 textMeasurer.setAttribute('fill', '#000');
 textMeasurer.textContent = '';
 hostSVG.appendChild(textMeasurer);
+var symbolMeasurements = [];
 
 var defs = document.createElementNS(svgNS, 'defs');
 hostSVG.appendChild(defs);
@@ -46,17 +47,34 @@ function handleResize(evt)
 }
 window.onresize = handleResize;
 
+function measure1CharText(charCode)
+{
+    var l = symbolMeasurements[charCode];
+    if (l == null)
+    {
+        textMeasurer.textContent = String.fromCharCode(charCode);
+        // Using round because Chrome (at least ver 59) yields decimal width that's more precise than needed
+        var w = Math.round(textMeasurer.getComputedTextLength());
+        textMeasurer.textContent = '';
+        l = w+LETTER_SPACING;
+        symbolMeasurements[charCode] = l;
+    }
+    return l;
+}
+
 function measureTextImpl(s)
 {
     if (s == " ")
     {
         s = "i";
     }
-    textMeasurer.textContent = s;
-    // Using round because Chrome (at least ver 59) yields decimal width that's more precise than needed
-    var w = Math.round(textMeasurer.getComputedTextLength());
-    textMeasurer.textContent = '';
-    return w+LETTER_SPACING;
+
+    var l = 0;
+    for (var i=0; i<s.length; i++)
+    {
+        l += measure1CharText(s.charCodeAt(i));
+    }
+    return l;
 }
 
 function applyCurrentFont()
@@ -123,17 +141,6 @@ function reuseOrCreateElement(gElem, tagName, subTagName)
         return existingEl;
     }
 
-    while (aheadCount > 0)
-    {
-        gElem.removeChild(existingEl);
-        aheadCount--;
-        existingEl = currentlyDecodedLookNodeList[currentlyDecodedLookNodeIndex];
-        if (canReuse(existingEl, tagName, subTagName))
-        {
-            return existingEl;
-        }
-    }
-
     var newInst = document.createElementNS(svgNS, tagName);
     if (subTagName != null)
     {
@@ -141,7 +148,8 @@ function reuseOrCreateElement(gElem, tagName, subTagName)
     }
     if (existingEl != null)
     {
-        gElem.insertBefore(newInst, existingEl);
+        //gElem.insertBefore(newInst, existingEl);
+        gElem.replaceChild(newInst, existingEl);
         aheadCount++;
     }
     else
@@ -164,14 +172,11 @@ function addImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
     }
     else
     {
-        if (im.getAttribute('href') != imageUrl)
-        {
-            var loadNotify = function(img){
-                im.setAttribute('width', img.width);
-                im.setAttribute('height', img.height);
-            }
-            getImage(componentIndex, imageUrl, loadNotify);
+        var loadNotify = function(img){
+            im.setAttribute('width', img.width);
+            im.setAttribute('height', img.height);
         }
+        getImage(componentIndex, imageUrl, loadNotify);
     }
     im.setAttribute('href', imageUrl);
 }
@@ -205,7 +210,7 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
             pt.setAttribute('width', img.width);
             pt.setAttribute('height', img.height);
             pt.setAttribute('patternUnits', "userSpaceOnUse");
-            var im = oldPt == null ? document.createElementNS(svgNS, 'image') : gElem.childNodes[0];
+            var im = oldPt == null ? document.createElementNS(svgNS, 'image') : pt.childNodes[0];
             im.setAttribute('x', 0);
             im.setAttribute('y', 0);
             im.setAttribute('width', img.width);
@@ -226,17 +231,20 @@ function fillImageToG(gElem, componentIndex, imageUrl, x, y, w, h)
 
 function addVideoToG(gElem, componentIndex, imageUrl, x, y, w, h)
 {
+    var vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
+    //vid.setAttribute('x', x);
+    //vid.setAttribute('y', y);
+    vid.setAttribute('width', w);
+    vid.setAttribute('height', h);
+    var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
+    source.setAttribute('src', imageUrl);
+    vid.appendChild(source);
+
     // This works perfectly well in Firefox but does not work in Chrome
     // (the issue is discussed here https://stackoverflow.com/questions/8185845/svg-foreignobject-behaves-as-though-absolutely-positioned-in-webkit-browsers)
     //
     // So below is workaround: absolute-positioned outsize element - "video holder"
     //
-//    var vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
-//    vid.setAttribute('width', w);
-//    vid.setAttribute('height', h);
-//    var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
-//    source.setAttribute('src', imageUrl);
-//    vid.appendChild(source);
 //    var foreignObject = document.createElementNS(svgNS, 'foreignObject');
 //    foreignObject.setAttribute('x', x);
 //    foreignObject.setAttribute('y', y);
@@ -252,7 +260,7 @@ function addVideoToG(gElem, componentIndex, imageUrl, x, y, w, h)
 //    foreignObject.appendChild(foDiv);
 //    gElem.appendChild(foreignObject);
 
-    addVideoHolder(componentIndex, x, y, w, h);
+    addVideoHolder(componentIndex, vid, x, y, w, h);
 }
 
 // BEGIN "video holder" workaround
@@ -264,7 +272,7 @@ function getVideoHolderId(componentIndex, holderIndex)
     return "video"+componentIndex+"_"+holderIndex;
 }
 
-function addVideoHolder(componentIndex, x, y, w, h)
+function addVideoHolder(componentIndex, vid, x, y, w, h)
 {
     var componentVideoHolders = videoHolders[componentIndex];
     if (componentVideoHolders == null)
@@ -275,7 +283,7 @@ function addVideoHolder(componentIndex, x, y, w, h)
     var holderIndex = componentVideoHolders.length;
 
     var id = getVideoHolderId(componentIndex, holderIndex);
-    var d = reuseOrCreateElement(gElem, 'div', 'videoHolder');//document.createElement("div")
+    var d = document.createElement("div")
     d.id = id;
     d.style.position = 'absolute'
     var absPos = getComponentAbsPosition(componentIndex);
@@ -291,27 +299,8 @@ function addVideoHolder(componentIndex, x, y, w, h)
         && (x + viewports[componentIndex].w + w) < clipSizes[componentIndex].w && (y + viewports[componentIndex].h + h) < clipSizes[componentIndex].h;
     d.style.visibility = visible ? 'visible' : 'hidden';
 
-    var vid;
-    if (d.childNodes[0] != null)
-    {
-        vid = d.childNodes[0];
-        vid.setAttribute('width', w);
-        vid.setAttribute('height', h);
-        var source = vid.childNodes[0];
-        source.setAttribute('src', imageUrl);
-    }
-    else
-    {
-        vid = document.createElementNS("http://www.w3.org/1999/xhtml", 'video');
-        d.appendChild(vid);
-        vid.setAttribute('width', w);
-        vid.setAttribute('height', h);
-        var source = document.createElementNS("http://www.w3.org/1999/xhtml", 'source');
-        source.setAttribute('src', imageUrl);
-        vid.appendChild(source);
-    }
-
-    //document.body.appendChild(d);
+    d.appendChild(vid);
+    document.body.appendChild(d);
 
     componentVideoHolders[holderIndex] = d;
 }
@@ -509,21 +498,15 @@ function decodeLookVector(componentIndex, stream, byteLength)
 
     var gShapes = document.getElementById(genShapesSubElemId(componentIndex));
 
-//    if (gShapes.childElementCount > 0)
-//    {
-//        var gShapesNew = gShapes.cloneNode(false);
-//        gCElem.replaceChild(gShapesNew, gShapes);
-//        gShapes = gShapesNew;
-//    }
-//    var componentVideoHolders = videoHolders[componentIndex];
-//    if (componentVideoHolders != null)
-//    {
-//        for (var v=0; v<componentVideoHolders.length; v++)
-//        {
-//            componentVideoHolders[v].parentNode.removeChild(componentVideoHolders[v]);
-//        }
-//        videoHolders[componentIndex] = null;
-//    }
+    var componentVideoHolders = videoHolders[componentIndex];
+    if (componentVideoHolders != null)
+    {
+        for (var v=0; v<componentVideoHolders.length; v++)
+        {
+            componentVideoHolders[v].parentNode.removeChild(componentVideoHolders[v]);
+        }
+        videoHolders[componentIndex] = null;
+    }
 
     var gElem = gShapes;
     startLookDecoding(gElem);

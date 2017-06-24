@@ -779,6 +779,8 @@ canvas.addEventListener("mouseup", sendMouseUpEventToServer, false);
 canvas.addEventListener("click", sendMouseClickEventToServer, false);
 canvas.addEventListener("mousemove", sendMouseMoveEventToServer, false);
 
+canvas.addEventListener("wheel", sendMouseWheelEventToServer);
+
 canvas.ondragstart = function(e)
 {
     if (e && e.preventDefault) { e.preventDefault(); }

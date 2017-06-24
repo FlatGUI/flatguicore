@@ -3,6 +3,7 @@
  */
 package flatgui.core.engine.ui;
 
+import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseWheelEvent;
 import flatgui.core.engine.Container;
@@ -48,6 +49,11 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
         double mouseY = scaleMouseY(mouseEvent.getY());
 
         Integer targetComponentUid = getTargetComponentUid(0, container, mouseEvent, mouseX, mouseY);
+
+        if (mouseEvent instanceof MouseWheelEvent)
+        {
+            System.out.println("-DLTEMP- FGInputEventDecoder.getMouseWheelEvent target = " + targetComponentUid);
+        }
 
         if (newLeftButtonDown)
         {
@@ -220,6 +226,7 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
                     ((MouseWheelEvent) e).getScrollAmount(),
                     ((MouseWheelEvent) e).getWheelRotation(),
                     ((MouseWheelEvent) e).getPreciseWheelRotation(),
+                    e instanceof FGIncomingMouseWheelEvent ? ((FGIncomingMouseWheelEvent) e).getScrollAmountX() : 0,
                     null,
                     null,
                     Double.valueOf(mouseXRel),

@@ -340,12 +340,20 @@ public class FGContainerWebSocket implements WebSocketListener
         statusMessage.append("|retrieving initial state...");
         setTextToRemote(statusMessage.toString());
 
+        FGAppServer.getFGLogger().info("Container is up " + System.identityHashCode(this) +
+                " session: " + fgSession_ +
+                " remote: " + session_.getRemoteAddress());
         container_.resetCache();
 
         pendingEvents_.forEach(b -> onWebSocketBinary(b.getPayload(), b.getOffset(), b.getLen()));
         pendingEvents_.clear();
 
         collectAndSendResponse(null, false);
+
+        FGAppServer.getFGLogger().info("Container ready " + System.identityHashCode(this) +
+                " session: " + fgSession_ +
+                " remote: " + session_.getRemoteAddress());
+        container_.resetCache();
     }
 
     private boolean isStarted()

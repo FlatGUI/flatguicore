@@ -12,6 +12,7 @@ package flatgui.core.websocket;
 
 import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
+import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.core.engine.ui.FGKeyEventParser;
 import flatgui.core.engine.ui.FGTransferable;
 
@@ -20,6 +21,7 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.*;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -151,7 +153,16 @@ public class FGInputEventDecoder
                 }
                 y += ((array[ofs + 3] & 0x0F) << 8);
 
-                return getMouseEvent(id, x, y);
+                if (id == MouseEvent.MOUSE_WHEEL)
+                {
+                    int sX = array[ofs + 4];
+                    int sY = array[ofs + 5];
+                    return getMouseWheelEvent(id, x, y, sX, sY);
+                }
+                else
+                {
+                    return getMouseRegularEvent(id, x, y);
+                }
             }
             else
             {
@@ -408,7 +419,7 @@ public class FGInputEventDecoder
         }
     }
 
-    private static MouseEvent getMouseEvent(int id, int x, int y)
+    private static MouseEvent getMouseRegularEvent(int id, int x, int y)
     {
         boolean buttonEvent = id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED ||
                 id == MouseEvent.MOUSE_CLICKED || id == MouseEvent.MOUSE_DRAGGED;
@@ -421,4 +432,10 @@ public class FGInputEventDecoder
         return e;
     }
 
+    private static MouseEvent getMouseWheelEvent(int id, int x, int y, int sX, int sY)
+    {
+        MouseWheelEvent e = new FGIncomingMouseWheelEvent(dummySourceComponent_, id, 0, 0, x, y, 0, false,
+                MouseWheelEvent.WHEEL_UNIT_SCROLL, sY, (sY != 0 ? (int)Math.signum(sY) : (int)Math.signum(sX)), sX);
+        return e;
+    }
 }

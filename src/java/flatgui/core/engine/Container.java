@@ -13,9 +13,11 @@ import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
+import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.util.CompactList;
 import flatgui.util.ObjectMatrix;
 
+import java.awt.event.MouseWheelEvent;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
@@ -476,7 +478,17 @@ public class Container
         {
             Integer nodeIndex = propertyIdToNodeIndex.get(propertyId);
             Node node = nodes_.get(nodeIndex);
-            if (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReason.getClass()))
+            Class<?> evolveReasonClass;
+            if (evolveReason instanceof FGIncomingMouseWheelEvent)
+            {
+                // TODO this is a hack
+                evolveReasonClass = MouseWheelEvent.class;
+            }
+            else
+            {
+                evolveReasonClass = evolveReason.getClass();
+            }
+            if (node.getEvolver() != null && containerParser_.isInterestedIn(node.getInputDependencies(), evolveReasonClass))
             {
                 return true;
             }

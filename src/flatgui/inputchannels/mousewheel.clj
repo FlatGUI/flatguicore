@@ -9,13 +9,16 @@
 (ns ^{:doc "Mouse wheel input channel"
       :author "Denys Lebediev"}
   flatgui.inputchannels.mousewheel
-  (:import [java.awt.event MouseWheelEvent])
+  (:import [java.awt.event MouseWheelEvent]
+           (flatgui.core.awt FGMouseWheelEvent))
   (:require [flatgui.inputchannels.channelbase :as channelbase]))
 
 
 (channelbase/definputparser mouse-wheel? MouseWheelEvent true)
 
 (channelbase/definputparser get-wheel-rotation MouseWheelEvent (.getWheelRotation repaint-reason))
+
+(channelbase/definputparser get-wheel-rotation-x FGMouseWheelEvent (.getScrollAmountX repaint-reason))
 
 ;;; Dependency check
 

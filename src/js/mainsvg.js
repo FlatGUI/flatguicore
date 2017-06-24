@@ -107,8 +107,6 @@ var aheadCount;
 
 function startLookDecoding(gElem)
 {
-    console.log("--------- START LOOK DECODING ----------------------");
-
     currentlyDecodedLookNodeList = gElem.childNodes;
     currentlyDecodedLookNodeIndex = 0;
     aheadCount = 0;
@@ -117,7 +115,6 @@ function startLookDecoding(gElem)
 function endLookDecoding(gElem, shapeCount)
 {
     var removeCount = gElem.childElementCount - shapeCount;
-    console.log("--------- END LOOK DECODING ------------- removeCount = " + removeCount);
     while (removeCount > 0)
     {
         var c = currentlyDecodedLookNodeList[gElem.childElementCount-1];
@@ -1004,10 +1001,8 @@ hostSVG.addEventListener("mousedown", sendMouseDownEventToServer, false);
 hostSVG.addEventListener("mouseup", sendMouseUpEventToServer, false);
 hostSVG.addEventListener("click", sendMouseClickEventToServer, false);
 hostSVG.addEventListener("mousemove", sendMouseMoveEventToServer, false);
-//hostSVG.addEventListener("mousedown", function(){console.log("D")}, false);
-//hostSVG.addEventListener("mouseup", function(){console.log("U")}, false);
-//hostSVG.addEventListener("click", function(){console.log("C")}, false);
-//hostSVG.addEventListener("mousemove", function(){console.log("M")}, false);
+
+hostSVG.addEventListener("wheel", sendMouseWheelEventToServer);
 
 function getEncodedHostResizeEvent()
 {

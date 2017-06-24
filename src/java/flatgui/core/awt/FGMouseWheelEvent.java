@@ -19,6 +19,8 @@ import java.util.Collection;
  */
 public class FGMouseWheelEvent extends MouseWheelEvent
 {
+    private int scrollAmountX_;
+
     /**
      * Vector of mouse x relative coord for clicked target component path
      */
@@ -38,6 +40,7 @@ public class FGMouseWheelEvent extends MouseWheelEvent
     public FGMouseWheelEvent (Component source, int id, long when, int modifiers,
         int x, int y, int xAbs, int yAbs, int clickCount, boolean popupTrigger,
         int scrollType, int scrollAmount, int wheelRotation, double preciseWheelRotation,
+        int scrollAmountX,
         Object xRelativeVec, Object yRelativeVec,
         Double xRel, Double yRel,
         Collection<Object> targetIdPath)
@@ -45,11 +48,17 @@ public class FGMouseWheelEvent extends MouseWheelEvent
         super(source, id, when, modifiers,
                 x, y, xAbs, yAbs, clickCount, popupTrigger,
                 scrollType, scrollAmount, wheelRotation, preciseWheelRotation);
+        scrollAmountX_ = scrollAmountX;
         xRelativeVec_ = xRelativeVec;
         yRelativeVec_ = yRelativeVec;
         xRel_ = xRel;
         yRel_ = yRel;
         targetIdPath_ = targetIdPath;
+    }
+
+    public int getScrollAmountX()
+    {
+        return scrollAmountX_;
     }
 
     public Object getXRelativeVec()

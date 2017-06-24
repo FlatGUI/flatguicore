@@ -786,7 +786,7 @@ function openSocket()
 	    resourceUriPrefix = "http://" + serverWebSocketUri.substring(5) + "/media?image=";
 
         connectionOpen = true;
-        tryAlternativeServers=false;// If re-connect then only to where it was
+        tryAlternativeServers=false;// If re-connect then only to where it was TODO most likely remove this. May need to reconnect to new one in case of server restarts
         displayUserTextMessage("Open.", 10, 30);
         displayStatus("open");
 
@@ -1165,6 +1165,43 @@ function sendMouseMoveEventToServer(evt)
             }
         }
     }
+}
+
+function sendMouseWheelEventToServer(event)
+{
+  var sX = 0, sY = 0;
+
+  if ('detail' in event) { sY = event.detail; }
+  if ('wheelDelta' in event) { sY = -event.wheelDelta / 120; }
+  if ('wheelDeltaY' in event) { sY = -event.wheelDeltaY / 120; }
+  if ('wheelDeltaX' in event) { sX = -event.wheelDeltaX / 120; }
+
+  // side scrolling on FF with DOMMouseScroll
+  if ('axis' in event && event.axis === event.HORIZONTAL_AXIS)
+  {
+      sX = sY;
+      sY = 0;
+  }
+
+  if ('deltaY' in event) { pY = event.deltaY; }
+  if ('deltaX' in event) { pX = event.deltaX; }
+
+  if (pX && !sX && 'deltaX' in event) { sX = (event.deltaX < 1) ? -1 : 1; }
+  if (pY && !sY && 'deltaY' in event) { sY = (event.deltaY < 1) ? -1 : 1; }
+
+  var rect = getHostBoundingClientRect();
+  var x = event.clientX - rect.left;
+  var y = event.clientY - rect.top;
+
+  var bytearray = new Uint8Array(6);
+  bytearray[0] = 507 - 400;
+  bytearray[1] = x & 0xFF;
+  bytearray[2] = y & 0xFF;
+  bytearray[3] = ((x >> 4) & 0xF0) | ((y >> 8) & 0x0F);
+  bytearray[4] = sX;
+  bytearray[5] = sY;
+
+  sendEventToServer(bytearray);
 }
 
 window.setInterval(commitPendingMouseEvents, mouseIntervalMillis * 5);

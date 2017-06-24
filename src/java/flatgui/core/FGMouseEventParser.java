@@ -10,6 +10,7 @@
 package flatgui.core;
 
 import clojure.lang.Keyword;
+import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.core.awt.FGMouseEvent;
 import flatgui.core.awt.FGMouseTargetComponentInfo;
 import flatgui.core.awt.FGMouseWheelEvent;
@@ -163,6 +164,7 @@ public class FGMouseEventParser implements IFGInputEventParser<MouseEvent>
                     ((MouseWheelEvent) e).getScrollAmount(),
                     ((MouseWheelEvent) e).getWheelRotation(),
                     ((MouseWheelEvent) e).getPreciseWheelRotation(),
+                    e instanceof FGIncomingMouseWheelEvent ? ((FGIncomingMouseWheelEvent) e).getScrollAmountX() : 0,
                     xRelativeVec,
                     yRelativeVec,
                     null,

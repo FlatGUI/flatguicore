@@ -9,7 +9,9 @@ import flatgui.core.FGClipboardEvent;
 import flatgui.core.FGHostStateEvent;
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.IFGInteropUtil;
+import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.core.engine.AppContainer;
+import flatgui.core.engine.IInputEventParser;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -49,7 +51,11 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
         mouseEventParser_ = mouseEventParser;
         getInputEventParser().registerReasonClassParser(MouseEvent.class, mouseEventParser_);
-        getInputEventParser().registerReasonClassParser(MouseWheelEvent.class, new FGMouseEventParser(unitSizePx));
+
+        IInputEventParser<MouseEvent, MouseEvent> mouseWheelParser = new FGMouseEventParser(unitSizePx);
+        getInputEventParser().registerReasonClassParser(MouseWheelEvent.class, mouseWheelParser);
+        getInputEventParser().registerReasonClassParser(FGIncomingMouseWheelEvent.class, mouseWheelParser);
+
         getInputEventParser().registerReasonClassParser(KeyEvent.class, new FGKeyEventParser());
         getInputEventParser().registerReasonClassParser(FGHostStateEvent.class, (c, inputEvent) ->
         {

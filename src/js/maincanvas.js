@@ -803,5 +803,5 @@ function getEncodedHostResizeEvent()
 }
 
 // Start streaming
-
+showSplash();
 openSocket();

@@ -693,6 +693,135 @@ function addComponentImpl(parentIndex, addedChildIndex)
 
 var messages = document.getElementById("messages");
 
+/**
+ * Splash
+ */
+var splash = null;
+var splashVisible = false;
+
+function adjustSplashToScreenSize(evt)
+{
+    splash = document.getElementById("splash");
+    splash.setAttribute('width', splashVisible ? window.innerWidth : 0);
+    splash.setAttribute('height', splashVisible ? window.innerHeight : 0);
+    var backR = splash.childNodes[0];
+    if (backR != null)
+    {
+        backR.setAttribute('width', splashVisible ? window.innerWidth : 0);
+        backR.setAttribute('height', splashVisible ? window.innerHeight : 0);
+    }
+
+    var r = splash.childNodes[1];
+    if (r != null)
+    {
+        r.setAttribute('transform','translate('+(window.innerWidth/2-16)+','+(window.innerHeight/2-16)+')');
+    }
+    var t = splash.childNodes[2];
+    if (t != null)
+    {
+        t.setAttribute('transform','translate('+(window.innerWidth/2+8)+','+(window.innerHeight/2+64)+')');
+    }
+}
+window.addEventListener('resize', adjustSplashToScreenSize);
+
+function showSplash()
+{
+    splashVisible = true;
+    if (splash == null)
+    {
+        var svgNS = "http://www.w3.org/2000/svg";
+
+        splash = document.getElementById("splash");
+        splash.style.position = 'absolute'
+        splash.style.left = 0 + 'px';
+        splash.style.top = 0 + 'px';
+        splash.setAttribute('visibility', 'visible');
+
+        var backR = document.createElementNS(svgNS, 'rect');
+        backR.setAttribute('x', 0);
+        backR.setAttribute('y', 0);
+        backR.setAttribute('fill', '#FFFFFF');
+        backR.setAttribute('fill-opacity', '0.95');
+        splash.appendChild(backR);
+
+        var r = document.createElementNS(svgNS, 'rect');
+        r.setAttribute('x', 0);
+        r.setAttribute('y', 0);
+        r.setAttribute('rx', 4);
+        r.setAttribute('ry', 4);
+        r.setAttribute('width', 16);
+        r.setAttribute('height', 16);
+        r.setAttribute('fill', '#4E4E4E');
+        splash.appendChild(r);
+
+        var t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('x', 0);
+        t.setAttribute('y', 0);
+        t.setAttribute('fill', '#4E4E4E');
+        t.style.font = '18px sans-serif';
+        t.setAttribute('text-anchor', 'middle');
+        t.textContent = "Connecting...";
+        splash.appendChild(t);
+
+        adjustSplashToScreenSize(null);
+
+        var a = document.createElementNS(svgNS, 'animateMotion');
+        a.setAttribute('path', "M0,16 L16,0 L32,16 L16,32 L0,16");
+        a.setAttribute('begin', '0s');
+        a.setAttribute('dur', '2s');
+        a.setAttribute('fill', 'remove');
+        a.setAttribute('repeatCount', 'indefinite');
+        r.appendChild(a);
+    }
+}
+
+function showSplashMessage(msg)
+{
+    splash = document.getElementById("splash");
+    var r = splash.childNodes[1];
+    if (r != null)
+    {
+        r.setAttribute('visibility', 'hidden');
+    }
+    var t = splash.childNodes[2];
+    if (t != null)
+    {
+        t.textContent = msg;
+    }
+}
+
+//TODO
+//function showRestoringSplash()
+//{
+//    showSplashMessage("Restoring connection. We are sorry for the interruption...");
+//}
+
+function showErrorSplash()
+{
+    showSplashMessage("We are sorry for not being able to connect to our servers at this time :(");
+}
+
+function showStopSplash()
+{
+    splashVisible = true;
+    splash = document.getElementById("splash");
+    splash.setAttribute('visibility', 'visible');
+    var t = splash.childNodes[2];
+    if (t != null)
+    {
+        t.style.font = '24px sans-serif';
+    }
+    adjustSplashToScreenSize(null);
+    showSplashMessage("Unfortunately, connection has stopped :(");
+}
+
+function hideSplash()
+{
+    splash.setAttribute('visibility', 'hidden');
+    adjustSplashToScreenSize(null);
+    splashVisible = false;
+}
+
 var lastMouseX = -1;
 var lastMouseY = -1;
 
@@ -791,6 +920,8 @@ function openSocket()
         displayStatus("open");
 
         handleResize(null);
+
+        hideSplash();
 
         measureConnection();
     };
@@ -898,6 +1029,10 @@ function openSocket()
             }
             else
             {
+                if (connectionOpen)
+                {
+                    showStopSplash();
+                }
                 displayUserTextMessage("Connection to remote server is closed. Please reload.", 10, 50);
                 displayStatus("closed");
             }
@@ -908,14 +1043,7 @@ function openSocket()
         }
     };
 
-    webSocket.onclose = function(event)
-    {
-        displayUserTextMessage("Connection to remote server is closed. Please reload.", 10, 50);
-        displayStatus("closed");
-        connectionOpen = false;
-    };
-
-    webSocket.onerror = function(event)
+    var errorOrClose = function(event)
     {
         var msg = "Could not connect to "+serverWebSocketUri+" (server #"+serverAttempt+" of "+serverWebSocketUris.length+")";
         console.log(msg);
@@ -930,12 +1058,21 @@ function openSocket()
             if (tryAlternativeServers)
             {
                 console.log("Fatal error: non of "+serverWebSocketUris.length+" servers responded.");
+                showErrorSplash();
             }
+            else if (connectionOpen)
+            {
+                showStopSplash();
+            }
+
             displayUserTextMessage(msg, 10, 70);
             displayStatus("error, closed");
             connectionOpen = false;
         }
     };
+
+    webSocket.onclose = errorOrClose;
+    webSocket.onerror = errorOrClose;
 }
 
 //// //// //// ////

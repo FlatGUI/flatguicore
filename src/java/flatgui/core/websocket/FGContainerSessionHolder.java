@@ -18,6 +18,9 @@ import flatgui.core.engine.ui.FGAppContainer;
 import flatgui.core.engine.ui.FGRemoteAppContainer;
 import flatgui.core.engine.ui.FGRemoteClojureResultCollector;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,41 +35,82 @@ import java.util.stream.Stream;
 class FGContainerSessionHolder
 {
     private static final String SPECIAL_CHARS = ".:/=";
-    private static final long IDLE_SESSION_TIMEOUT = 15 * 60 * 1000;
+
+    private static final int MEGABYTE = 1024 * 1024;
+    private static final int SECOND = 1000;
+
+    private static final long LONG_IDLE_SESSION_TIMEOUT = 15 * 60 * SECOND;
+    private static final long SHORT_IDLE_SESSION_TIMEOUT = 30 * SECOND;
+
+    private static final double CANNOT_ACCEPT_MEMORY_RATIO = 0.9d;
+    private static final double VERY_LOW_MEMORY_RATIO = 0.75d;
+    private static final double LOW_MEMORY_RATIO = 0.6d;
 
     private final IFGContainerHost<FGContainerSession> sessionHost_;
     private final Map<Object, FGContainerSession> sessionMap_;
+
+    enum HeapMemoryState {Ok, Low, VeryLow, CannotAccept}
 
     FGContainerSessionHolder(IFGContainerHost<FGContainerSession> sessionHost)
     {
         sessionHost_ = sessionHost;
         sessionMap_ = new ConcurrentHashMap<>();
 
-        Timer repaintTimer = new Timer("FlatGUI web container idle session cleaner", true);
-        repaintTimer.schedule(new TimerTask()
+        Timer longIdleTimer = new Timer("FlatGUI web container long idle session cleaner", true);
+        longIdleTimer.schedule(new TimerTask()
         {
             @Override
             public void run()
             {
                 synchronized (FGContainerSessionHolder.this)
                 {
-                    int sessionCount = sessionMap_.size();
-                    sessionMap_.entrySet().removeIf(e -> e.getValue().isIdle(IDLE_SESSION_TIMEOUT));
-                    int newSessionCount = sessionMap_.size();
-                    if (newSessionCount != sessionCount)
+                    cleanIdleSessions(LONG_IDLE_SESSION_TIMEOUT, "long cleaner");
+                }
+            }
+        }, LONG_IDLE_SESSION_TIMEOUT, LONG_IDLE_SESSION_TIMEOUT);
+
+        Timer shortIdleTimer = new Timer("FlatGUI web container short idle session cleaner", true);
+        shortIdleTimer.schedule(new TimerTask()
+        {
+            @Override
+            public void run()
+            {
+                synchronized (FGContainerSessionHolder.this)
+                {
+                    HeapMemoryState memoryState = getHeapMemoryState(false);
+                    if (memoryState != HeapMemoryState.Ok)
                     {
-                        FGAppServer.getFGLogger().info(toString() +
-                            " cleaned sessions. Before: " + sessionCount + "; after: " + newSessionCount + ".");
+                        cleanIdleSessions(SHORT_IDLE_SESSION_TIMEOUT, "short cleaner");
                     }
                 }
             }
-        }, IDLE_SESSION_TIMEOUT, IDLE_SESSION_TIMEOUT);
+        }, SHORT_IDLE_SESSION_TIMEOUT, SHORT_IDLE_SESSION_TIMEOUT);
+    }
+
+    private void cleanIdleSessions(long timeout, String urgencyComment)
+    {
+        int sessionCount = sessionMap_.size();
+        sessionMap_.entrySet().removeIf(e -> e.getValue().isIdle(timeout));
+        int newSessionCount = sessionMap_.size();
+        if (newSessionCount != sessionCount)
+        {
+            FGAppServer.getFGLogger().info(toString() +
+                    " cleaned sessions ("+ urgencyComment +"). Before: " + sessionCount + "; after: " + newSessionCount + ".");
+        }
     }
 
     FGContainerSession getSession(IFGTemplate template, InetAddress remoteAddress,
                                   List<byte[]> initialFontMetricsTransmissions,
                                   Set<String> fontCollector)
     {
+
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
+        long maxMemory = heapUsage.getMax() / MEGABYTE;
+        long usedMemory = heapUsage.getUsed() / MEGABYTE;
+        FGAppServer.getFGLogger().info("[creating session] " + usedMemory + " of " + maxMemory + " MB of heap used, " +
+            sessionMap_.size() + " sessions");
+
         Object sessionId = getSessionId(template, remoteAddress);
 
         // TODO always create new since font metrics may change?
@@ -95,7 +139,9 @@ class FGContainerSessionHolder
                         //glueContainer.initialize();
                         FGWebInteropUtil interop = fgContainer.getInteropUtil();
                         initialFontMetricsTransmissions.forEach(t -> fontCollector.add(interop.setMetricsTransmission(t)));
-                        return sessionHost_.hostContainer(glueContainer, fontsWithMetricsAlreadyReceived);
+
+                        FGContainerSession session = sessionHost_.hostContainer(glueContainer, fontsWithMetricsAlreadyReceived);
+                        return session;
                     }
                     else
                     {
@@ -113,6 +159,16 @@ class FGContainerSessionHolder
             " returning for remoteAddress=" + remoteAddress + " session: " + s);
 
         return s;
+    }
+
+    void stopSession(Object sessionId)
+    {
+        HeapMemoryState memoryState = getHeapMemoryState(true);
+        if (memoryState == HeapMemoryState.VeryLow || memoryState == HeapMemoryState.CannotAccept)
+        {
+            FGAppServer.getFGLogger().info("Killing stopped session '" + sessionId +"' because memory state is: " + memoryState);
+            sessionMap_.remove(sessionId);
+        }
     }
 
     synchronized long getActiveOrIdleSessionCount()
@@ -154,6 +210,35 @@ class FGContainerSessionHolder
     synchronized <R> Stream<R> mapSessions(Function<FGContainerSession, R> sessionProcessor)
     {
         return sessionMap_.values().stream().map(sessionProcessor);
+    }
+
+    static HeapMemoryState getHeapMemoryState(boolean logUsage)
+    {
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
+        double maxMemory = heapUsage.getMax();
+        double usedMemory = heapUsage.getUsed();
+        double ratio = usedMemory / maxMemory;
+        if (logUsage)
+        {
+            FGAppServer.getFGLogger().info("Memory state: " + ((int) (usedMemory / MEGABYTE)) + " of " + ((int) (maxMemory / MEGABYTE)) + " MB of heap used, ratio = " + ratio);
+        }
+        if (ratio > CANNOT_ACCEPT_MEMORY_RATIO)
+        {
+            return HeapMemoryState.CannotAccept;
+        }
+        else if (ratio > VERY_LOW_MEMORY_RATIO)
+        {
+            return HeapMemoryState.VeryLow;
+        }
+        else if (ratio > LOW_MEMORY_RATIO)
+        {
+            return HeapMemoryState.Low;
+        }
+        else
+        {
+            return HeapMemoryState.Ok;
+        }
     }
 
     // TODO turn off counter - string pool is broken

@@ -49,7 +49,7 @@ public class FGContainerWebSocket implements WebSocketListener
     private static final int METRICS_INPUT_CODE = 407;
     private static final int PING_INPUT_CODE = 408;
 
-    private enum Phase {CollectingMetrics, Live};
+    private enum Phase {CollectingMetrics, Live}
 
     private final FGContainerSessionHolder sessionHolder_;
     // TODO have some template provider instead
@@ -123,8 +123,8 @@ public class FGContainerWebSocket implements WebSocketListener
     public void onWebSocketClose(int statusCode, String reason)
     {
         FGAppServer.getFGLogger().info("WS Close " + System.identityHashCode(this) +
-                " session: " + fgSession_ +
-                " remote: " + session_.getRemoteAddress() +
+                " session: " + (fgSession_ != null ? fgSession_ : "<null>") +
+                " remote: " + (session_ != null ? session_.getRemoteAddress() : "<null>") +
                 " reason = " + reason);
 
         blinkHelperTimer_.cancel();
@@ -135,20 +135,37 @@ public class FGContainerWebSocket implements WebSocketListener
             sessionCloseConsumer_.accept(new FGSessionInfo(container_.getContainer().getId(), session_.getRemoteAddress()), container_.getContainer());
         }
 
-        container_.unInitialize();
-        fgSession_.markIdle();
+        if (container_ != null) container_.unInitialize();
+        if (fgSession_ != null)
+        {
+            sessionHolder_.stopSession(fgSession_.getSessionId());
+            fgSession_.markIdle();
+        }
         session_ = null;
-        endpointTransportService_.shutdown();
+        if (endpointTransportService_ != null)
+        {
+            endpointTransportService_.shutdown();
+        }
     }
 
     @Override
     public void onWebSocketConnect(Session session)
     {
+        FGContainerSessionHolder.HeapMemoryState memoryState = FGContainerSessionHolder.getHeapMemoryState(true);
+        if (memoryState == FGContainerSessionHolder.HeapMemoryState.CannotAccept)
+        {
+            session.close(new CloseStatus(1000, "Server memory state is " + memoryState +  ". Use alternative server."));
+            FGAppServer.getFGLogger().info("Refused remote endpoint " +
+                    session.getRemoteAddress() + " because memory state is " + memoryState);
+            return;
+        }
+
         if (!acceptingRequests_)
         {
             session.close(new CloseStatus(1000, "Server maintenance. Use alternative server."));
             FGAppServer.getFGLogger().info("Refused remote endpoint due to maintenance mode: " +
                     session.getRemoteAddress());
+            return;
         }
 
         session_ = session;

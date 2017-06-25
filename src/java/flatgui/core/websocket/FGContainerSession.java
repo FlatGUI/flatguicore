@@ -60,6 +60,11 @@ public class FGContainerSession
         lastAccessTime_ = new LongAccumulator((r,t) -> t, 0);
     }
 
+    public Object getSessionId()
+    {
+        return sessionId_;
+    }
+
     public FGWebContainerWrapper getContainer()
     {
         return containerWrapper_;

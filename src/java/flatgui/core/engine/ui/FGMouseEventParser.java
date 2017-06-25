@@ -50,11 +50,6 @@ public class FGMouseEventParser implements IInputEventParser<MouseEvent, MouseEv
 
         Integer targetComponentUid = getTargetComponentUid(0, container, mouseEvent, mouseX, mouseY);
 
-        if (mouseEvent instanceof MouseWheelEvent)
-        {
-            System.out.println("-DLTEMP- FGInputEventDecoder.getMouseWheelEvent target = " + targetComponentUid);
-        }
-
         if (newLeftButtonDown)
         {
             if (!leftButtonDown_)

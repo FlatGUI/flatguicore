@@ -806,11 +806,6 @@ function showStopSplash()
     splashVisible = true;
     splash = document.getElementById("splash");
     splash.setAttribute('visibility', 'visible');
-    var t = splash.childNodes[2];
-    if (t != null)
-    {
-        t.style.font = '24px sans-serif';
-    }
     adjustSplashToScreenSize(null);
     showSplashMessage("Unfortunately, connection has stopped :(");
 }

@@ -151,12 +151,11 @@ public class FGContainerWebSocket implements WebSocketListener
     @Override
     public void onWebSocketConnect(Session session)
     {
-        FGContainerSessionHolder.HeapMemoryState memoryState = FGContainerSessionHolder.getHeapMemoryState(true);
-        if (memoryState == FGContainerSessionHolder.HeapMemoryState.CannotAccept)
+        if (!sessionHolder_.memoryStateAllowsAcceptingNewSessions())
         {
-            session.close(new CloseStatus(1000, "Server memory state is " + memoryState +  ". Use alternative server."));
+            session.close(new CloseStatus(1000, "Server memory state does not allow new sessions. Use alternative server."));
             FGAppServer.getFGLogger().info("Refused remote endpoint " +
-                    session.getRemoteAddress() + " because memory state is " + memoryState);
+                    session.getRemoteAddress() + " because of the memory state");
             return;
         }
 

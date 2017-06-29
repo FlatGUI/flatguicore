@@ -49,6 +49,8 @@ class FGContainerSessionHolder
     private final IFGContainerHost<FGContainerSession> sessionHost_;
     private final Map<Object, FGContainerSession> sessionMap_;
 
+    private int sessionNumWhenCannotStateLastOccured_ = -1;
+
     enum HeapMemoryState {Ok, Low, VeryLow, CannotAccept}
 
     FGContainerSessionHolder(IFGContainerHost<FGContainerSession> sessionHost)
@@ -212,7 +214,7 @@ class FGContainerSessionHolder
         return sessionMap_.values().stream().map(sessionProcessor);
     }
 
-    static HeapMemoryState getHeapMemoryState(boolean logUsage)
+    private synchronized HeapMemoryState getHeapMemoryState(boolean logUsage)
     {
         MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
         MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
@@ -225,19 +227,39 @@ class FGContainerSessionHolder
         }
         if (ratio > CANNOT_ACCEPT_MEMORY_RATIO)
         {
+            if (sessionNumWhenCannotStateLastOccured_ == -1)
+            {
+                sessionNumWhenCannotStateLastOccured_ = sessionMap_.size();
+            }
             return HeapMemoryState.CannotAccept;
         }
         else if (ratio > VERY_LOW_MEMORY_RATIO)
         {
+            sessionNumWhenCannotStateLastOccured_ = -1;
             return HeapMemoryState.VeryLow;
         }
         else if (ratio > LOW_MEMORY_RATIO)
         {
+            sessionNumWhenCannotStateLastOccured_ = -1;
             return HeapMemoryState.Low;
         }
         else
         {
+            sessionNumWhenCannotStateLastOccured_ = -1;
             return HeapMemoryState.Ok;
+        }
+    }
+
+    synchronized boolean memoryStateAllowsAcceptingNewSessions()
+    {
+        FGContainerSessionHolder.HeapMemoryState memoryState = getHeapMemoryState(true);
+        if (memoryState == FGContainerSessionHolder.HeapMemoryState.CannotAccept)
+        {
+            return sessionMap_.size() < sessionNumWhenCannotStateLastOccured_;
+        }
+        else
+        {
+            return true;
         }
     }
 

@@ -42,6 +42,7 @@ public class FGLegacyGlueTemplate extends FGTemplate
 
         preInitAppContainer_ = new FGRemoteAppContainer(dummySessionId, container, preInitResultCollector_);
         preInitAppContainer_.initialize();
+        preInitAppContainer_.freeze();
     }
 
     public final FGRemoteClojureResultCollector getPreInitResultCollector()

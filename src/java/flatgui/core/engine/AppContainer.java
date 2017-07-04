@@ -78,6 +78,21 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         active_ = true;
     }
 
+    public void freeze()
+    {
+        Future<Container> containerFuture = evolverExecutorService_.submit(() -> {container_.freeze(); return container_;});
+        try
+        {
+            container_ = containerFuture.get();
+        }
+        catch (Throwable ex)
+        {
+            ex.printStackTrace();
+        }
+        evolverExecutorService_.shutdown();
+        notifierExecutorService_.shutdown();
+    }
+
     public void unInitialize()
     {
         active_ = false;

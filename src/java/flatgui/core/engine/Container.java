@@ -15,10 +15,10 @@ import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.util.CompactList;
+import flatgui.util.GrowControlArrayList;
 import flatgui.util.ObjectMatrix;
 
 import java.awt.event.MouseWheelEvent;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
  */
 public class Container
 {
+    private final static int INITIAL_REUSABLE_BUFFER_SIZE = 131072;
+    private final static int COMPONENT_GROW_FACTOR = 16;
+
     private final IResultCollector resultCollector_;
 
     private final Set<Integer> vacantComponentIndices_;
@@ -36,12 +39,12 @@ public class Container
 
     private final ObjectMatrix<Object> keys_;
 
-    private final List<ComponentAccessor> components_;
+    private final GrowControlArrayList<ComponentAccessor> components_;
     private final Map<List<Object>, Integer> componentPathToIndex_;
 
-    private final List<Node> nodes_;
-    private final List<Node> nodesWithAmbiguousDependencies_;
-    private final List<Object> values_;
+    private final GrowControlArrayList<Node> nodes_;
+    private final GrowControlArrayList<Node> nodesWithAmbiguousDependencies_;
+    private final GrowControlArrayList<Object> values_;
     private final Map<List<Object>, Integer> pathToIndex_;
 
     private final IContainerAccessor containerAccessor_;
@@ -53,12 +56,12 @@ public class Container
 
     private final Function<List<Object>, Object> globalIndexToValueProvider_;
 
-    private Node[] reusableNodeBuffer_;
-    private Object[] reusableReasonBuffer_;
-    private int indexBufferSize_;
+    private GrowControlArrayList<Node> reusableNodeBuffer_;
+    private GrowControlArrayList<Object> reusableReasonBuffer_;
+
     private int currentCycleBufIndex_;
+
     private int maxIndexBufferSize_;
-    private int totalNodeCount_ = 0;
 
     private Object originalReasonForConsumers_;
     private Set<Integer> nodeIndicesToNotifyConsumers_;
@@ -90,13 +93,20 @@ public class Container
         containerParser_ = containerParser;
         containerParser_.setKeyMatrix(keys_);
         resultCollector_ = resultCollector;
-        components_ = new ArrayList<>();
+
+        int totalComponentCount = containerParser.getTotalComponentCount(container);
+        int totalNodeCount = containerParser.getTotalNodeCount(container);
+
+        GrowControlArrayList.GrowFunction defaultGrowFunction = new GrowControlArrayList.DefaultGrowControl();
+
+        components_ = new GrowControlArrayList<>(totalComponentCount, defaultGrowFunction);
         componentPathToIndex_ = new HashMap<>();
         vacantComponentIndices_ = new HashSet<>();
         vacantNodeIndices_ = new HashSet<>();
-        nodes_ = new ArrayList<>();
-        nodesWithAmbiguousDependencies_ = new ArrayList<>();
-        values_ = new ArrayList<>();
+
+        nodes_ = new GrowControlArrayList<>(totalNodeCount, defaultGrowFunction);
+        nodesWithAmbiguousDependencies_ = new GrowControlArrayList<>(totalNodeCount/4, defaultGrowFunction);
+        values_ = new GrowControlArrayList<>(totalNodeCount, defaultGrowFunction);
         pathToIndex_ = new HashMap<>();
         nodeIndicesToNotifyConsumers_ = new LinkedHashSet<>();
 
@@ -105,12 +115,10 @@ public class Container
         delegateByIdAndPropertyMap_ = new HashMap<>();
         delegateByIdPathAndPropertyMap_ = new HashMap<>();
 
-        reusableNodeBuffer_ = new Node[1048576];
-        reusableReasonBuffer_ = new Object[1048576];
+        GrowControlArrayList.GrowFunction incGrowFunction = (o, i) -> o+1;
+        reusableNodeBuffer_ = new GrowControlArrayList<>(INITIAL_REUSABLE_BUFFER_SIZE, incGrowFunction);
+        reusableReasonBuffer_ = new GrowControlArrayList<>(INITIAL_REUSABLE_BUFFER_SIZE, incGrowFunction);
 
-        totalNodeCount_ = containerParser.getTotalNodeCount(container);
-
-        indexBufferSize_ = 0;
         maxIndexBufferSize_ = 0;
 
         containerAccessor_ = components_::get;
@@ -133,7 +141,11 @@ public class Container
     public Container(Container source,
             String containerId, IContainerParser containerParser, IResultCollector resultCollector, Consumer<Runnable> consumerNotifier)
     {
-        values_ = new ArrayList<>(source.values_);
+        GrowControlArrayList.GrowFunction addFn = (o, i) -> o + Math.max(COMPONENT_GROW_FACTOR, i);
+        int estComponentSize = source.getComponent(0).size();
+        GrowControlArrayList.GrowFunction addNodesFn = (o, i) -> o + Math.max(COMPONENT_GROW_FACTOR*estComponentSize, i);
+
+        values_ = new GrowControlArrayList<>(source.values_, addNodesFn);
         globalIndexToValueProvider_ = path -> getPropertyValue(indexOfPathStrict(path));
         evolverAccess_ = new ConainerEvolverAccess(this);
 
@@ -144,7 +156,7 @@ public class Container
         containerParser_.setKeyMatrix(keys_);
         resultCollector_ = resultCollector;
 
-        components_ = new ArrayList<>(source.components_.size());
+        components_ = new GrowControlArrayList<>(source.components_.size(), addFn);
         components_.addAll(source.components_.stream()
                 .map(sourceComponentAccessor -> new ComponentAccessor(sourceComponentAccessor, values_, globalIndexToValueProvider_))
                 .collect(Collectors.toList()));
@@ -153,11 +165,11 @@ public class Container
         vacantComponentIndices_ = new HashSet<>(source.vacantComponentIndices_);
         vacantNodeIndices_ = new HashSet<>(source.vacantNodeIndices_);
 
-        nodes_ = new ArrayList<>(source.nodes_.size());
+        nodes_ = new GrowControlArrayList<>(source.nodes_.size(), addNodesFn);
         nodes_.addAll(source.nodes_.stream()
                 .map(n -> n instanceof EvolvingNode ? new EvolvingNode((EvolvingNode) n, evolverAccess_) : new Node(n))
                 .collect(Collectors.toList()));
-        nodesWithAmbiguousDependencies_ = new ArrayList<>();
+        nodesWithAmbiguousDependencies_ = new GrowControlArrayList<>(source.nodesWithAmbiguousDependencies_.size(), addFn);
         nodesWithAmbiguousDependencies_.addAll(nodes_.stream()
                 .filter(n -> n.isHasAmbiguousDependencies())
                 .collect(Collectors.toList()));
@@ -171,10 +183,9 @@ public class Container
         delegateByIdAndPropertyMap_ = new HashMap<>();
         delegateByIdPathAndPropertyMap_ = new HashMap<>();
 
-        reusableNodeBuffer_ = new Node[1048576];
-        reusableReasonBuffer_ = new Object[1048576];
+        reusableNodeBuffer_ = new GrowControlArrayList<>(source.getMaxIndexBufferSize(), addNodesFn);
+        reusableReasonBuffer_ = new GrowControlArrayList<>(source.getMaxIndexBufferSize(), addNodesFn);
 
-        indexBufferSize_ = 0;
         maxIndexBufferSize_ = 0;
 
         containerAccessor_ = components_::get;
@@ -219,7 +230,8 @@ public class Container
     public void evolve(Integer componentUid, Object evolveReason)
     {
         long evolveStartTime = System.currentTimeMillis();
-        indexBufferSize_ = 0;
+        reusableNodeBuffer_.clear();
+        reusableReasonBuffer_.clear();
 
         if (debug_) logDebug("----------------Started evolve cycle ---- for reason: " + valueToString(evolveReason));
 
@@ -236,17 +248,17 @@ public class Container
             }
         }
 
-        for (int i=0; i<indexBufferSize_; i++)
+        for (int i=0; i<reusableNodeBuffer_.size(); i++)
         {
-            if (debug_) logDebug(" Initial component: " + reusableNodeBuffer_[i].getNodePath());
+            if (debug_) logDebug(" Initial component: " + reusableNodeBuffer_.get(i).getNodePath());
         }
 
         Set<Integer> addedComponentIds = new HashSet<>();
         currentCycleBufIndex_ = 0;
         nodeIndicesToNotifyConsumers_.clear();
-        while (currentCycleBufIndex_ < indexBufferSize_)
+        while (currentCycleBufIndex_ < reusableNodeBuffer_.size())
         {
-            Node node = reusableNodeBuffer_[currentCycleBufIndex_];
+            Node node = reusableNodeBuffer_.get(currentCycleBufIndex_);
             if (node == null)
             {
                 // Component (with all its nodes) has been removed during this cycle, and its nodes have been
@@ -254,7 +266,7 @@ public class Container
                 currentCycleBufIndex_++;
                 continue;
             }
-            Object triggeringReason = reusableReasonBuffer_[currentCycleBufIndex_];
+            Object triggeringReason = reusableReasonBuffer_.get(currentCycleBufIndex_);
             int nodeIndex = node.getNodeIndex();
             Function<Map<Object, Object>, Object> evolver = node.getEvolver();
 
@@ -610,6 +622,21 @@ public class Container
         }
     }
 
+    public void freeze()
+    {
+       nodes_.trimCapacity();
+       values_.trimCapacity();
+       nodesWithAmbiguousDependencies_.trimCapacity();
+       components_.trimCapacity();
+       reusableNodeBuffer_ = null;
+       reusableReasonBuffer_ = null;
+    }
+
+    public final int getMaxIndexBufferSize()
+    {
+        return maxIndexBufferSize_;
+    }
+
     // Private
 
     private Integer addComponentImpl(Integer parentComponentUid, List<Object> componentPath, ComponentAccessor component)
@@ -618,7 +645,7 @@ public class Container
         if (vacantComponentIndices_.isEmpty())
         {
             index = components_.size();
-            components_.add(index, component);
+            components_.add(component);
         }
         else
         {
@@ -665,11 +692,11 @@ public class Container
             {
                 initializedNodes_.remove(i);
             }
-            for (int r=currentCycleBufIndex_; r < indexBufferSize_; r++)
+            for (int r=currentCycleBufIndex_; r < reusableNodeBuffer_.size(); r++)
             {
-                if (reusableNodeBuffer_[r] == node)
+                if (reusableNodeBuffer_.get(r) == node)
                 {
-                    reusableNodeBuffer_[r] = null;
+                    reusableNodeBuffer_.set(r, null);
                 }
             }
         });
@@ -877,19 +904,16 @@ public class Container
 
     private void addNodeToReusableBuffer(Node node, Object evolveReason)
     {
-        ensureIndexBufferSize(indexBufferSize_ + 1);
-        reusableNodeBuffer_[indexBufferSize_] = node;
-        reusableReasonBuffer_[indexBufferSize_] = evolveReason;
-        indexBufferSize_ ++;
+        reusableNodeBuffer_.add(node);
+        reusableReasonBuffer_.add(evolveReason);
         recordIndexBufferSize();
     }
 
     private void recordIndexBufferSize()
     {
-        if (indexBufferSize_ > maxIndexBufferSize_)
+        if (reusableNodeBuffer_.size() > maxIndexBufferSize_)
         {
-            maxIndexBufferSize_ = indexBufferSize_;
-            System.out.println("[FG tmp] Index buffer size has grown to " + maxIndexBufferSize_ + " est tot = " + totalNodeCount_);
+            maxIndexBufferSize_ = reusableNodeBuffer_.size();
         }
     }
 
@@ -899,7 +923,7 @@ public class Container
 
         Map<Integer, List<Object>> dependents = node.getDependentIndices();
         int dependentCollSize = dependents.size();
-        ensureIndexBufferSize(indexBufferSize_ + dependentCollSize);
+        ensureIndexBufferSize(reusableNodeBuffer_.size() + dependentCollSize);
         for (Integer i : dependents.keySet())
         {
             Node dependent = nodes_.get(i.intValue());
@@ -910,34 +934,19 @@ public class Container
             // TODO delegate reference to Clojure to parser
             invokerRefRelPath = PersistentVector.create(invokerRefRelPath);
 
-            reusableNodeBuffer_[indexBufferSize_] = dependent;
-            reusableReasonBuffer_[indexBufferSize_] = invokerRefRelPath;
+            reusableNodeBuffer_.add(dependent);
+            reusableReasonBuffer_.add(invokerRefRelPath);
 
             if (debug_) logDebug("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
 
-            indexBufferSize_ ++;
             recordIndexBufferSize();
         }
     }
 
     private void ensureIndexBufferSize(int requestedSize)
     {
-        if (requestedSize >= reusableNodeBuffer_.length)
-        {
-            reusableNodeBuffer_ = ensureBufferSize(reusableNodeBuffer_, requestedSize);
-            reusableReasonBuffer_ = ensureBufferSize(reusableReasonBuffer_, requestedSize);
-        }
-    }
-
-    private static <T> T[] ensureBufferSize(T[] oldBuffer, int requestedSize)
-    {
-        if (requestedSize >= oldBuffer.length)
-        {
-            T[] newBuffer = (T[]) Array.newInstance(oldBuffer.getClass().getComponentType(), oldBuffer.length + 128);
-            System.arraycopy(oldBuffer, 0, newBuffer, 0, oldBuffer.length);
-            return newBuffer;
-        }
-        return oldBuffer;
+        reusableNodeBuffer_.ensureCapacity(requestedSize);
+        reusableReasonBuffer_.ensureCapacity(requestedSize);
     }
 
     private void initializeContainer()
@@ -1181,6 +1190,8 @@ public class Container
         boolean isWildcardPathElement(Object e);
 
         int getTotalNodeCount(Map<Object, Object> container);
+
+        int getTotalComponentCount(Map<Object, Object> container);
     }
 
     public interface IComponent extends Map<Object, Object>

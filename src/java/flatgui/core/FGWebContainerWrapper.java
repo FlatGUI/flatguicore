@@ -983,14 +983,17 @@ public class FGWebContainerWrapper
         }
     }
 
+    // TODO remove
     public static class KeyCache implements IKeyCache
     {
-        private int uid_ = 0;
-        private Map<Object, Integer> cache_;
+        //private int uid_ = 0;
+        //private Map<Object, Integer> cache_;
 
-        public KeyCache()
+        public static final KeyCache INSTANCE = new KeyCache();
+
+        private KeyCache()
         {
-            cache_ = new HashMap<>();
+            //cache_ = new HashMap<>();
         }
 
         @Override
@@ -1001,19 +1004,20 @@ public class FGWebContainerWrapper
                 throw new IllegalArgumentException("non-integer key");
             }
 
-            Integer cache = cache_.get(key);
-            if (cache == null)
-            {
-                //cache = Integer.valueOf(uid_);
-                cache = (Integer) key;
-
-                cache_.put(key, cache);
-
-                //System.out.println("-DLTEMP- KeyCahe.getUniqueId CACHE " + key + " -> " + cache.intValue());
-
-                uid_++;
-            }
-            return cache.intValue();
+//            Integer cache = cache_.get(key);
+//            if (cache == null)
+//            {
+//                //cache = Integer.valueOf(uid_);
+//                cache = (Integer) key;
+//
+//                cache_.put(key, cache);
+//
+//                //System.out.println("-DLTEMP- KeyCahe.getUniqueId CACHE " + key + " -> " + cache.intValue());
+//
+//                uid_++;
+//            }
+//            return cache.intValue();
+            return (Integer) key;
         }
     }
 

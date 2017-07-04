@@ -22,6 +22,7 @@ import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Denis Lebedev
@@ -50,10 +51,14 @@ public class Container
 
     private final IContainerParser containerParser_;
 
+    private final Function<List<Object>, Object> globalIndexToValueProvider_;
+
     private Node[] reusableNodeBuffer_;
     private Object[] reusableReasonBuffer_;
     private int indexBufferSize_;
     private int currentCycleBufIndex_;
+    private int maxIndexBufferSize_;
+    private int totalNodeCount_ = 0;
 
     private Object originalReasonForConsumers_;
     private Set<Integer> nodeIndicesToNotifyConsumers_;
@@ -68,7 +73,7 @@ public class Container
 
     private final String containerId_;
 
-    private Consumer<Runnable> consumerNotifier_;
+    private final Consumer<Runnable> consumerNotifier_;
 
     public static boolean debug_ = false;
 
@@ -102,63 +107,83 @@ public class Container
 
         reusableNodeBuffer_ = new Node[1048576];
         reusableReasonBuffer_ = new Object[1048576];
+
+        totalNodeCount_ = containerParser.getTotalNodeCount(container);
+
         indexBufferSize_ = 0;
+        maxIndexBufferSize_ = 0;
 
         containerAccessor_ = components_::get;
         propertyValueAccessor_ = this::getPropertyValue;
-        evolverAccess_ = new IEvolverAccess()
-        {
-            @Override
-            public Integer indexOfPath(List<Object> path)
-            {
-                return Container.this.indexOfPath(path);
-            }
-
-            @Override
-            public Object getPropertyValue(Integer index)
-            {
-                return Container.this.getPropertyValue(index);
-            }
-
-            @Override
-            public Map<Integer, GetPropertyDelegate> getDelegateByIdMap()
-            {
-                return Container.this.delegateByIdMap_;
-            }
-
-            @Override
-            public Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap()
-            {
-                return Container.this.delegateByIdAndPathMap_;
-            }
-
-            @Override
-            public Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
-            {
-                return Container.this.delegateByIdAndPropertyMap_;
-            }
-
-            @Override
-            public Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
-            {
-                return Container.this.delegateByIdPathAndPropertyMap_;
-            }
-
-            @Override
-            public ObjectMatrix<Object> getKeyMatrix()
-            {
-                return Container.this.keys_;
-            }
-        };
+        evolverAccess_ = new ConainerEvolverAccess(this);
         containerMutator_ = (nodeIndex, newValue) ->
             {synchronized (Container.this) {values_.set(nodeIndex, newValue);}};
 
         consumerNotifier_  = consumerNotifier;
 
+        globalIndexToValueProvider_ = path -> getPropertyValue(indexOfPathStrict(path));
+
         addContainer(null, Collections.emptyList(), container, null);
         finishContainerIndexing();
 
         initializeContainer();
+    }
+
+    // TODO light copy: assuming no components will be added/removed during container lifecycle
+    public Container(Container source,
+            String containerId, IContainerParser containerParser, IResultCollector resultCollector, Consumer<Runnable> consumerNotifier)
+    {
+        values_ = new ArrayList<>(source.values_);
+        globalIndexToValueProvider_ = path -> getPropertyValue(indexOfPathStrict(path));
+        evolverAccess_ = new ConainerEvolverAccess(this);
+
+        containerId_ = containerId;
+
+        keys_ = new ObjectMatrix<>(source.keys_);
+        containerParser_ = containerParser;
+        containerParser_.setKeyMatrix(keys_);
+        resultCollector_ = resultCollector;
+
+        components_ = new ArrayList<>(source.components_.size());
+        components_.addAll(source.components_.stream()
+                .map(sourceComponentAccessor -> new ComponentAccessor(sourceComponentAccessor, values_, globalIndexToValueProvider_))
+                .collect(Collectors.toList()));
+
+        componentPathToIndex_ = new HashMap<>(source.componentPathToIndex_);
+        vacantComponentIndices_ = new HashSet<>(source.vacantComponentIndices_);
+        vacantNodeIndices_ = new HashSet<>(source.vacantNodeIndices_);
+
+        nodes_ = new ArrayList<>(source.nodes_.size());
+        nodes_.addAll(source.nodes_.stream()
+                .map(n -> n instanceof EvolvingNode ? new EvolvingNode((EvolvingNode) n, evolverAccess_) : new Node(n))
+                .collect(Collectors.toList()));
+        nodesWithAmbiguousDependencies_ = new ArrayList<>();
+        nodesWithAmbiguousDependencies_.addAll(nodes_.stream()
+                .filter(n -> n.isHasAmbiguousDependencies())
+                .collect(Collectors.toList()));
+
+        //values_ = new ArrayList<>();
+        pathToIndex_ = new HashMap<>(source.pathToIndex_);
+        nodeIndicesToNotifyConsumers_ = new LinkedHashSet<>(source.nodeIndicesToNotifyConsumers_);
+
+        delegateByIdMap_ = new HashMap<>();
+        delegateByIdAndPathMap_ = new HashMap<>();
+        delegateByIdAndPropertyMap_ = new HashMap<>();
+        delegateByIdPathAndPropertyMap_ = new HashMap<>();
+
+        reusableNodeBuffer_ = new Node[1048576];
+        reusableReasonBuffer_ = new Object[1048576];
+
+        indexBufferSize_ = 0;
+        maxIndexBufferSize_ = 0;
+
+        containerAccessor_ = components_::get;
+        propertyValueAccessor_ = this::getPropertyValue;
+        //evolverAccess_ = new ConainerEvolverAccess(this);
+        containerMutator_ = (nodeIndex, newValue) ->
+        {synchronized (Container.this) {values_.set(nodeIndex, newValue);}};
+
+        consumerNotifier_  = consumerNotifier;
     }
 
     public Integer addComponent(Integer parentComponentUid, List<Object> componentPath, ComponentAccessor component)
@@ -672,7 +697,7 @@ public class Container
         componentPath.add(containerParser_.getComponentId(container));
 
         ComponentAccessor component = new ComponentAccessor(
-                componentPath, values_, path -> getPropertyValue(indexOfPathStrict(path)));
+                componentPath, values_, globalIndexToValueProvider_);
         Integer componentUid = addComponent(parentComponentUid, componentPath, component);
         component.setComponentUid(componentUid);
         if (addedIndicesCollector != null)
@@ -856,6 +881,16 @@ public class Container
         reusableNodeBuffer_[indexBufferSize_] = node;
         reusableReasonBuffer_[indexBufferSize_] = evolveReason;
         indexBufferSize_ ++;
+        recordIndexBufferSize();
+    }
+
+    private void recordIndexBufferSize()
+    {
+        if (indexBufferSize_ > maxIndexBufferSize_)
+        {
+            maxIndexBufferSize_ = indexBufferSize_;
+            System.out.println("[FG tmp] Index buffer size has grown to " + maxIndexBufferSize_ + " est tot = " + totalNodeCount_);
+        }
     }
 
     private void addNodeDependentsToEvolvebuffer(Node node)
@@ -881,6 +916,7 @@ public class Container
             if (debug_) logDebug("    Triggered dependent: " + dependent.getNodePath() + " referenced as " + invokerRefRelPath);
 
             indexBufferSize_ ++;
+            recordIndexBufferSize();
         }
     }
 
@@ -1143,6 +1179,8 @@ public class Container
         boolean isInterestedIn(Collection<Object> inputDependencies, Class<?> evolveReasonClass);
 
         boolean isWildcardPathElement(Object e);
+
+        int getTotalNodeCount(Map<Object, Object> container);
     }
 
     public interface IComponent extends Map<Object, Object>
@@ -1211,6 +1249,20 @@ public class Container
             componentPath_ = Collections.unmodifiableList(componentPath);
             propertyIdToIndex_ = new HashMap<>();
             values_ = Collections.unmodifiableList(values);
+            globalIndexToValueProvider_ = globalIndexToValueProvider;
+        }
+
+        ComponentAccessor(ComponentAccessor source, List<Object> values, Function<List<Object>, Object> globalIndexToValueProvider)
+        {
+            componentPath_ = source.getComponentPath();
+            propertyIdToIndex_ = source.getPropertyIdToIndex();
+            values_ = Collections.unmodifiableList(values);
+            childIndices_ = new ArrayList<>(source.childIndices_);
+            childIdToIndex_ = new HashMap<>(source.childIdToIndex_);
+            componentUid_ = source.componentUid_;
+
+            customData_ = source.customData_;
+
             globalIndexToValueProvider_ = globalIndexToValueProvider;
         }
 
@@ -1428,4 +1480,55 @@ public class Container
         }
     }
 
+    static class ConainerEvolverAccess implements IEvolverAccess
+    {
+        private final Container container_;
+
+        public ConainerEvolverAccess(Container container)
+        {
+            container_ = container;
+        }
+
+        @Override
+        public Integer indexOfPath(List<Object> path)
+        {
+            return container_.indexOfPath(path);
+        }
+
+        @Override
+        public Object getPropertyValue(Integer index)
+        {
+            return container_.getPropertyValue(index);
+        }
+
+        @Override
+        public Map<Integer, GetPropertyDelegate> getDelegateByIdMap()
+        {
+            return container_.delegateByIdMap_;
+        }
+
+        @Override
+        public Map<Integer, Map<List<Object>, GetPropertyDelegate>> getDelegateByIdAndPathMap()
+        {
+            return container_.delegateByIdAndPathMap_;
+        }
+
+        @Override
+        public Map<Integer, Map<Keyword, GetPropertyDelegate>> getDelegateByIdAndPropertyMap()
+        {
+            return container_.delegateByIdAndPropertyMap_;
+        }
+
+        @Override
+        public Map<Integer, Map<List<Object>, Map<Keyword, GetPropertyDelegate>>> getDelegateByIdPathAndPropertyMap()
+        {
+            return container_.delegateByIdPathAndPropertyMap_;
+        }
+
+        @Override
+        public ObjectMatrix<Object> getKeyMatrix()
+        {
+            return container_.keys_;
+        }
+    }
 }

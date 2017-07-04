@@ -125,6 +125,11 @@ public class FGWebInteropUtil implements IFGInteropUtil
         return referenceFontStr_;
     }
 
+    public double getUnitSizePx()
+    {
+        return unitSizePx_;
+    }
+
     // Non-public
 
     private void updateFontMetrics()

@@ -23,6 +23,7 @@ import flatgui.core.util.FGStringPool;
  */
 public abstract class FGAbstractModule implements IFGModule
 {
+    @Deprecated
     private static final Var initInstanceFn_ = clojure.lang.RT.var(FG_CORE_NAMESPACE, "app-init-instance");
 
     private static final Var getPaintAllSequence_ = clojure.lang.RT.var("flatgui.paint", "get-paint-all-sequence");

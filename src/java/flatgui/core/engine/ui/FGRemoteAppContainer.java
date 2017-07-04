@@ -29,6 +29,13 @@ public class FGRemoteAppContainer extends FGAppContainer<FGWebInteropUtil>
         resultCollector.initialize(this::getPaintAllSequence);
     }
 
+    public FGRemoteAppContainer(String sessionId, FGRemoteAppContainer source, FGRemoteClojureResultCollector resultCollector)
+    {
+        super(sessionId, null, source.getContainer(), new FGWebInteropUtil((int) source.getInteropUtil().getUnitSizePx()), resultCollector, (int)source.getInteropUtil().getUnitSizePx(),
+            new FGMouseEventParser((int) source.getInteropUtil().getUnitSizePx()));
+        resultCollector.initialize(this::getPaintAllSequence);
+    }
+
     public Collection<ByteBuffer> getDiffsToTransmit()
     {
         return ((FGRemoteClojureResultCollector)getResultCollector()).getDiffsToTransmit();

@@ -15,9 +15,12 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 {
     private final String containerId_;
 
+    // TODO These two are mutually exclusive, so need refactoring
+    private final Map<Object, Object> containerMap_;
+    private final Container containerSource_;
+
     private ContainerParser containerParser_;
     private ResultCollector resultCollector_;
-    private Map<Object, Object> containerMap_;
     private Container container_;
 
     private final InputEventParser reasonParser_;
@@ -26,12 +29,15 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     private boolean active_ = false;
 
-    public AppContainer(String containerId, ContainerParser containerParser, ResultCollector resultCollector, Map<Object, Object> container)
+    public AppContainer(String containerId, ContainerParser containerParser, ResultCollector resultCollector, Map<Object, Object> container, Container containerSource)
     {
         containerId_ = containerId;
         containerParser_ = containerParser;
         resultCollector_ = resultCollector;
+
         containerMap_ = container;
+        containerSource_ = containerSource;
+
         reasonParser_ = new InputEventParser();
     }
 
@@ -51,8 +57,16 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
                 new LinkedBlockingQueue<>(),
                 new FGExecutorThreadFactory("FlatGUI Ev.Notifier ", containerId_));
         Future<Container> containerFuture =
-                evolverExecutorService_.submit(() -> new Container(
-                        containerId_, containerParser_, resultCollector_, containerMap_, this::submitNotifierTask));
+                evolverExecutorService_.submit(() -> {
+                    if (containerSource_ != null)
+                    {
+                        return new Container(containerSource_, containerId_, containerParser_, resultCollector_, this::submitNotifierTask);
+                    }
+                    else
+                    {
+                        return new Container(containerId_, containerParser_, resultCollector_, containerMap_, this::submitNotifierTask);
+                    }
+                });
         try
         {
             container_ = containerFuture.get();

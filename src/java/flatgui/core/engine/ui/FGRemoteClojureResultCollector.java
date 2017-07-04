@@ -46,7 +46,6 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private Supplier<List<Object>> paintAllSequenceSupplier_;
 
     private List<Object> paintAllList_;
-    private boolean paintAllListChanged_;
     private TextSelectionModel textSelectionModel_;
     private List<String> selectedTextComponentLines_;
     private boolean textSelectionModelChanged_;
@@ -79,15 +78,21 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         keyCache_ = keyCache;
         glueModule_ = glueModule;
 
-        paintAllTransmitter_ = new FGWebContainerWrapper.PaintAllTransmitter(keyCache_, null);
+        removedComponentUids_ = new HashSet<>();
+        addedComponentUids_ = new ArrayList<>();
+        addedComponentParentUids_ = new ArrayList<>();
+        removedAddedUidsTriple_ = Tuple.triple(removedComponentUids_, addedComponentParentUids_, addedComponentUids_);
+
+        diffsToTransmit_ = new ArrayList<>(12);
+
         componentIdToStringPool_ = new HashMap<>();
-        lookVecStringPoolMapTransmitter_ = new FGWebContainerWrapper.StringPoolMapTransmitter(keyCache_, null);
         componentIdToResourceStringPool_ = new HashMap<>();
+
+        ///// TODO one constructor?
+        paintAllTransmitter_ = new FGWebContainerWrapper.PaintAllTransmitter(keyCache_, null);
+        lookVecStringPoolMapTransmitter_ = new FGWebContainerWrapper.StringPoolMapTransmitter(keyCache_, null);
         lookVecResourceStringPoolMapTransmitter_ = new FGWebContainerWrapper.ResourceStringPoolMapTransmitter(keyCache_, null);
         propertyToTransWrapper_ = new LinkedHashMap<>();
-
-        diffsToTransmit_ = new ArrayList<>(3 + propertyToTransWrapper_.size());
-
         addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
         addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
                 glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
@@ -101,13 +106,51 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         addTransmitterWrapper(new PositionMatrixMapTransmitterWrapper(keyCache_));
         // TODO client evolver, but that has to be redesigned into property change transition function, to be more generic
         allWrappers_ = new LinkedHashSet<>(propertyToTransWrapper_.values());
-
         textSelectionModelTransmitter_ = new TextSelectionModelTransmitter(glueModule_::getStringPoolId);
         addRemoveComponentsTransmitter_ = new AddRemoveComponentsTransmitter();
-        removedComponentUids_ = new HashSet<>();
-        addedComponentUids_ = new ArrayList<>();
-        addedComponentParentUids_ = new ArrayList<>();
+        /////
+    }
+
+    public FGRemoteClojureResultCollector(FGRemoteClojureResultCollector source,
+                                          FGLegacyCoreGlue.GlueModule glueModule,
+                                          Set<String> fontsWithMetricsAlreadyReceived)
+    {
+        super(source);
+
+        keyCache_ = source.keyCache_;
+        glueModule_ = glueModule;
+
+        removedComponentUids_ = new HashSet<>(source.removedComponentUids_);
+        addedComponentUids_ = new ArrayList<>(source.addedComponentUids_);
+        addedComponentParentUids_ = new ArrayList<>(source.addedComponentParentUids_);
         removedAddedUidsTriple_ = Tuple.triple(removedComponentUids_, addedComponentParentUids_, addedComponentUids_);
+
+        diffsToTransmit_ = new ArrayList<>(source.diffsToTransmit_);
+
+        componentIdToStringPool_ = new HashMap<>(source.componentIdToStringPool_);
+        componentIdToResourceStringPool_ = new HashMap<>(source.componentIdToResourceStringPool_);
+
+        ///// TODO one constructor?
+        paintAllTransmitter_ = new FGWebContainerWrapper.PaintAllTransmitter(keyCache_, null);
+        lookVecStringPoolMapTransmitter_ = new FGWebContainerWrapper.StringPoolMapTransmitter(keyCache_, null);
+        lookVecResourceStringPoolMapTransmitter_ = new FGWebContainerWrapper.ResourceStringPoolMapTransmitter(keyCache_, null);
+        propertyToTransWrapper_ = new LinkedHashMap<>();
+        addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
+        addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
+                glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
+        booleanFlagsMapTransmitterWrapper_ = new BooleanFlagsMapTransmitterWrapper(keyCache_);
+        addTransmitterWrapper(booleanFlagsMapTransmitterWrapper_);
+        //addTransmitterWrapper(new ChildCountMapTransmitterWrapper(keyCache_));
+        addTransmitterWrapper(new ClipSizeMapTransmitterWrapper(keyCache_));
+//        addTransmitterWrapper(new IdentityMapTransmitterWrapper("look-vec", new FGWebContainerWrapper.LookVectorTransmitter(
+//                glueModule_::getStringPoolId, keyCache_, null, fontsWithMetricsAlreadyReceived)));
+        addTransmitterWrapper(new ViewportMatrixMapTransmitterWrapper(keyCache_));
+        addTransmitterWrapper(new PositionMatrixMapTransmitterWrapper(keyCache_));
+        // TODO client evolver, but that has to be redesigned into property change transition function, to be more generic
+        allWrappers_ = new LinkedHashSet<>(propertyToTransWrapper_.values());
+        textSelectionModelTransmitter_ = new TextSelectionModelTransmitter(glueModule_::getStringPoolId);
+        addRemoveComponentsTransmitter_ = new AddRemoveComponentsTransmitter();
+        /////
     }
 
     void initialize(Supplier<List<Object>> paintAllSequenceSupplier)
@@ -209,18 +252,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         if (propertyId == CHILDREN_KW || propertyId == Z_POSITION_KW)
         {
             List<Object> paintAllList = paintAllSequenceSupplier_.get();
-            //if (paintAllList != null)
-            {
-                if (paintAllList_ == null || !paintAllList_.equals(paintAllList))
-                {
-                    paintAllListChanged_ = true;
-                }
-                else
-                {
-                    paintAllListChanged_ = false;
-                }
-                paintAllList_ = paintAllList;
-            }
+            paintAllList_ = paintAllList;
         }
 
         {
@@ -638,6 +670,14 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
             caretLinePos_ = caretLinePos;
             selectionMarkLine_ = selectionMarkLine;
             selectionMarkLinePos_ = selectionMarkLinePos;
+        }
+
+        TextSelectionModel(TextSelectionModel source)
+        {
+            caretLine_ = source.caretLine_;
+            caretLinePos_ = source.caretLinePos_;
+            selectionMarkLine_ = source.selectionMarkLine_;
+            selectionMarkLinePos_ = source.selectionMarkLinePos_;
         }
 
         int getCaretLine()

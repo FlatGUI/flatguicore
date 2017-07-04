@@ -11,6 +11,7 @@ import flatgui.core.IFGEvolveConsumer;
 import flatgui.core.IFGInteropUtil;
 import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.core.engine.AppContainer;
+import flatgui.core.engine.Container;
 import flatgui.core.engine.IInputEventParser;
 
 import java.awt.event.KeyEvent;
@@ -38,14 +39,14 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
     public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx)
     {
-        this(containerId, container, interopUtil, resultCollector, unitSizePx, new FGMouseEventParser(unitSizePx));
+        this(containerId, container, null, interopUtil, resultCollector, unitSizePx, new FGMouseEventParser(unitSizePx));
     }
 
-    public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx,
-                          FGMouseEventParser mouseEventParser)
+    protected FGAppContainer(String containerId, Map<Object, Object> container, Container containerSource, Interop interopUtil, FGClojureResultCollector resultCollector, int unitSizePx,
+                             FGMouseEventParser mouseEventParser)
     {
         super(containerId, new FGClojureContainerParser(),
-                resultCollector, assocInterop(container, interopUtil));
+                resultCollector, container != null ? assocInterop(container, interopUtil) : null, containerSource);
 
         interopUtil_ = interopUtil;
 

@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * @author Denis Lebedev
@@ -21,12 +22,30 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
     private List<Dependency> dependencyIndices_;
     private Set<IFGEvolveConsumer> evolveConsumers_;
 
+    private final List<Object> evolvedComponentPath_;
+
     private final Set<GetPropertyDelegate> allDelegates_;
     private final Container.IEvolverAccess evolverAccess_;
 
     public EvolvingNode(Integer componentUid, int parentComponentUid, Container.SourceNode sourceNode, int nodeUid, Container.IEvolverAccess evolverAccess)
     {
         super(componentUid, parentComponentUid, sourceNode, nodeUid);
+
+        allDelegates_ = new HashSet<>();
+        evolverAccess_ = evolverAccess;
+
+        evolvedComponentPath_ = dropLast(sourceNode.getNodePath());
+    }
+
+    EvolvingNode(EvolvingNode source, Container.IEvolverAccess evolverAccess)
+    {
+        super(source);
+
+        dependencyIndices_ = new ArrayList<>(source.dependencyIndices_.size());
+        dependencyIndices_.addAll(source.dependencyIndices_.stream()
+                .collect(Collectors.toList()));
+
+        evolvedComponentPath_ = source.evolvedComponentPath_;
 
         allDelegates_ = new HashSet<>();
         evolverAccess_ = evolverAccess;
@@ -248,7 +267,7 @@ public class EvolvingNode extends Node implements Function<Map<Object, Object>, 
 
     private GetPropertyDelegate createDelegate()
     {
-        GetPropertyDelegate delegate = new GetPropertyDelegate(dropLast(getNodePath()), evolverAccess_);
+        GetPropertyDelegate delegate = new GetPropertyDelegate(evolvedComponentPath_, evolverAccess_);
         allDelegates_.add(delegate);
         return delegate;
     }

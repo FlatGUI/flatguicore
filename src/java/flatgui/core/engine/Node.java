@@ -25,7 +25,7 @@ public class Node
 
     private final int nodeUid_;
 
-    // TODO It should be enough to have 1 instance of SourceNode per app (not for container) and per cell prototype, not for each cell
+    // TODO It should be enough to have /*done 1 instance of SourceNode per app (not for container)*/ and per cell prototype, not for each cell
     protected final Container.SourceNode sourceNode_;
 
     // TODO Optimize:
@@ -46,6 +46,15 @@ public class Node
         sourceNode_ = sourceNode;
         nodeUid_ = nodeUid;
         dependentIndexToRelPath_ = new HashMap<>();
+    }
+
+    Node(Node source)
+    {
+        componentUid_ = source.componentUid_;
+        parentComponentUid_ = source.parentComponentUid_;
+        sourceNode_ = source.sourceNode_;
+        nodeUid_ = source.nodeUid_;
+        dependentIndexToRelPath_ = new HashMap<>(source.dependentIndexToRelPath_);
     }
 
     public Integer getComponentUid()
@@ -163,8 +172,8 @@ public class Node
 
     public static class Dependency
     {
-        private int nodeIndex_;
-        private List<Object> relPath_;
+        private final int nodeIndex_;
+        private final List<Object> relPath_;
 
         public Dependency(int nodeIndex, List<Object> relPath)
         {

@@ -193,6 +193,24 @@ public class ClojureContainerParser implements Container.IContainerParser
     {
     }
 
+    @Override
+    public int getTotalNodeCount(Map<Object, Object> component)
+    {
+        int n = component.size() - 1; // Minus :evolvers
+
+        Map<Object, Map<Object, Object>> children = (Map<Object, Map<Object, Object>>) component.get(CHILDREN_KEY);
+        if (children != null)
+        {
+            n--; // Minus :children
+            for (Map<Object, Object> child : children.values())
+            {
+                n += getTotalNodeCount(child);
+            }
+        }
+
+        return n;
+    }
+
     static List<Object> buildAbsPath(ObjectMatrix<Object> keyMatrix, List<Object> componentPath, List<Object> relPath)
     {
         try

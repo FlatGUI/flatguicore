@@ -30,7 +30,7 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     public FGTestAppContainer(String containerId, Map<Object, Object> container, int unitSizePx)
     {
-        super(containerId, container, new FGWebInteropUtil(unitSizePx),
+        super(containerId, container, null, new FGWebInteropUtil(unitSizePx),
                 new FGClojureResultCollector(unitSizePx), unitSizePx, new FGTestMouseEventParser(unitSizePx));
     }
 

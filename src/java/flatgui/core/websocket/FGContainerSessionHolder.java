@@ -10,11 +10,9 @@
 
 package flatgui.core.websocket;
 
-import clojure.lang.Var;
 import flatgui.core.*;
 import flatgui.core.engine.remote.FGLegacyCoreGlue;
 import flatgui.core.engine.remote.FGLegacyGlueTemplate;
-import flatgui.core.engine.ui.FGAppContainer;
 import flatgui.core.engine.ui.FGRemoteAppContainer;
 import flatgui.core.engine.ui.FGRemoteClojureResultCollector;
 
@@ -115,27 +113,35 @@ class FGContainerSessionHolder
 
         Object sessionId = getSessionId(template, remoteAddress);
 
-        // TODO always create new since font metrics may change?
+        // TODO always create new since font metrics may change? -- re-request metrics?
 
         FGContainerSession s = sessionMap_.computeIfAbsent(
                 sessionId,
                 k -> {
                     if (template instanceof FGLegacyGlueTemplate)
                     {
-                        Var containerVar = clojure.lang.RT.var(template.getContainerNamespace(), template.getContainerVarName());
-                        Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
+// TODO this was creating new instance, probably remove
+//                        Var containerVar = clojure.lang.RT.var(template.getContainerNamespace(), template.getContainerVarName());
+//                        Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
+//
+//                        FGLegacyCoreGlue.GlueModule glueModule = new FGLegacyCoreGlue.GlueModule(sessionId.toString());
+//
+//                        FGWebContainerWrapper.KeyCache keyCache = FGWebContainerWrapper.KeyCache.INSTANCE;
+//                        Set<String> fontsWithMetricsAlreadyReceived = new HashSet<>();
+//
+//                        FGRemoteClojureResultCollector resultCollector =
+//                                new FGRemoteClojureResultCollector(FGAppContainer.DFLT_UNIT_SIZE_PX,
+//                                        keyCache, glueModule, fontsWithMetricsAlreadyReceived);
+//
+//                        FGRemoteAppContainer fgContainer = new FGRemoteAppContainer(sessionId.toString(), container, resultCollector);
 
                         FGLegacyCoreGlue.GlueModule glueModule = new FGLegacyCoreGlue.GlueModule(sessionId.toString());
-
-                        // TODO it returns identity coerced to int so it does not matter that this is different instance
-                        FGWebContainerWrapper.KeyCache keyCache = new FGWebContainerWrapper.KeyCache();
                         Set<String> fontsWithMetricsAlreadyReceived = new HashSet<>();
-
                         FGRemoteClojureResultCollector resultCollector =
-                                new FGRemoteClojureResultCollector(FGAppContainer.DFLT_UNIT_SIZE_PX,
-                                        keyCache, glueModule, fontsWithMetricsAlreadyReceived);
-
-                        FGRemoteAppContainer fgContainer = new FGRemoteAppContainer(sessionId.toString(), container, resultCollector);
+                                new FGRemoteClojureResultCollector(((FGLegacyGlueTemplate) template).getPreInitResultCollector(),
+                                        glueModule, fontsWithMetricsAlreadyReceived);
+                        FGRemoteAppContainer fgContainer = new FGRemoteAppContainer(sessionId.toString(),
+                            ((FGLegacyGlueTemplate) template).getPreInitAppContainer(), resultCollector);
 
                         FGLegacyCoreGlue glueContainer = new FGLegacyCoreGlue(fgContainer, glueModule);
                         //glueContainer.initialize();

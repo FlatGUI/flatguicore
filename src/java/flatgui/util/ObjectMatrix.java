@@ -30,6 +30,19 @@ public class ObjectMatrix<T> implements RandomAccess, IObjectListCoder<T>, IMatr
         rowSizes_ = new int[ROW_CAPACITY];
     }
 
+    public ObjectMatrix(ObjectMatrix<T> source)
+    {
+        data_ = (T[][]) new Object[ROW_CAPACITY][COL_CAPACITY];
+        for (int i=0; i<source.data_.length; i++)
+        {
+            T[] sourceRow = source.data_[i];
+            data_[i] = (T[]) new Object[sourceRow.length];
+            System.arraycopy(sourceRow, 0, data_[i], 0, sourceRow.length);
+        }
+        rowSizes_ = new int[source.rowSizes_.length];
+        System.arraycopy(source.rowSizes_, 0, rowSizes_, 0, source.rowSizes_.length);
+    }
+
     @Override
     public int[] addPath(List<T> path)
     {

@@ -49,6 +49,14 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
         unitSizePx_ = unitSizePx;
     }
 
+    public FGClojureResultCollector(FGClojureResultCollector source)
+    {
+        changedComponents_ = new HashSet<>();
+        parentToVisiblePopupChildCount_ = new HashMap<>(source.parentToVisiblePopupChildCount_);
+        lookVectors_ = new ArrayList<>(source.lookVectors_);
+        unitSizePx_ = source.unitSizePx_;
+    }
+
     @Override
     public void componentAdded(Integer parentComponentUid, Integer componentUid)
     {

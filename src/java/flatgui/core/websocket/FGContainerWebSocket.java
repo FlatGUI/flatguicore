@@ -96,7 +96,7 @@ public class FGContainerWebSocket implements WebSocketListener
 
         containerAccessor_ = new ContainerAccessor();
 
-        blinkHelperTimer_ = HostComponent.setupBlinkHelperTimer(this::processInputEvent);
+        //blinkHelperTimer_ = HostComponent.setupBlinkHelperTimer(this::processInputEvent);
 
         //predictorTimer_ = new Timer("FlatGUI User Input Predictor Timer", true);
 //        predictorTimer_.schedule(new TimerTask()
@@ -127,7 +127,7 @@ public class FGContainerWebSocket implements WebSocketListener
                 " remote: " + (session_ != null ? session_.getRemoteAddress() : "<null>") +
                 " reason = " + reason);
 
-        blinkHelperTimer_.cancel();
+        //blinkHelperTimer_.cancel();
         //predictorTimer_.cancel();
 
         if (sessionCloseConsumer_ != null)

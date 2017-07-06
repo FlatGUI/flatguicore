@@ -8,6 +8,8 @@ import flatgui.core.FGEvolveResultData;
 import flatgui.core.engine.Container;
 import flatgui.core.websocket.FGWebInteropUtil;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -18,6 +20,8 @@ import java.util.concurrent.Future;
  */
 public class FGRemoteAppContainer extends FGAppContainer<FGWebInteropUtil>
 {
+    private final ActionListener unsolicitedEvloveCallback_;
+
     public FGRemoteAppContainer(String sessionId, Map<Object, Object> container, FGRemoteClojureResultCollector resultCollector)
     {
         this(sessionId, container, DFLT_UNIT_SIZE_PX, resultCollector);
@@ -27,13 +31,15 @@ public class FGRemoteAppContainer extends FGAppContainer<FGWebInteropUtil>
     {
         super(sessionId, container, new FGWebInteropUtil(unitSizePx), resultCollector, unitSizePx);
         resultCollector.initialize(this::getPaintAllSequence);
+        unsolicitedEvloveCallback_ = null;
     }
 
-    public FGRemoteAppContainer(String sessionId, FGRemoteAppContainer source, FGRemoteClojureResultCollector resultCollector)
+    public FGRemoteAppContainer(String sessionId, FGRemoteAppContainer source, FGRemoteClojureResultCollector resultCollector, ActionListener unsolicitedEvloveCallback)
     {
         super(sessionId, null, source.getContainer(), new FGWebInteropUtil((int) source.getInteropUtil().getUnitSizePx()), resultCollector, (int)source.getInteropUtil().getUnitSizePx(),
             new FGMouseEventParser((int) source.getInteropUtil().getUnitSizePx()));
         resultCollector.initialize(this::getPaintAllSequence);
+        unsolicitedEvloveCallback_ = unsolicitedEvloveCallback;
     }
 
     public Collection<ByteBuffer> getDiffsToTransmit()
@@ -140,6 +146,18 @@ public class FGRemoteAppContainer extends FGAppContainer<FGWebInteropUtil>
         }
 
         return m;
+    }
+
+    @Override
+    public void evolve(List<Object> targetPath, Object evolveReason)
+    {
+        super.evolve(targetPath, evolveReason);
+        // This is called explicitly and not as a result of remote client user activity. So need to trigger
+        // transmitting results to the remote explicitly
+        if (unsolicitedEvloveCallback_ != null)
+        {
+            unsolicitedEvloveCallback_.actionPerformed(null);
+        }
     }
 
     // getEvolveReasonToTargetPath was used only for transmitting cursor changes and only to

@@ -16,6 +16,7 @@ import flatgui.core.engine.remote.FGLegacyGlueTemplate;
 import flatgui.core.engine.ui.FGRemoteAppContainer;
 import flatgui.core.engine.ui.FGRemoteClojureResultCollector;
 
+import java.awt.event.ActionListener;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
@@ -101,7 +102,8 @@ class FGContainerSessionHolder
 
     FGContainerSession getSession(IFGTemplate template, InetAddress remoteAddress,
                                   List<byte[]> initialFontMetricsTransmissions,
-                                  Set<String> fontCollector)
+                                  Set<String> fontCollector,
+                                  ActionListener unsolicitedEvolveCallback)
     {
 
         MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
@@ -141,7 +143,7 @@ class FGContainerSessionHolder
                                 new FGRemoteClojureResultCollector(((FGLegacyGlueTemplate) template).getPreInitResultCollector(),
                                         glueModule, fontsWithMetricsAlreadyReceived);
                         FGRemoteAppContainer fgContainer = new FGRemoteAppContainer(sessionId.toString(),
-                            ((FGLegacyGlueTemplate) template).getPreInitAppContainer(), resultCollector);
+                            ((FGLegacyGlueTemplate) template).getPreInitAppContainer(), resultCollector, unsolicitedEvolveCallback);
 
                         FGLegacyCoreGlue glueContainer = new FGLegacyCoreGlue(fgContainer, glueModule);
                         //glueContainer.initialize();

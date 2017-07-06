@@ -49,7 +49,10 @@ public class FGContainerWebSocket implements WebSocketListener
     private static final int METRICS_INPUT_CODE = 407;
     private static final int PING_INPUT_CODE = 408;
 
-    private enum Phase {CollectingMetrics, Live}
+    private enum Phase
+    {
+        CollectingMetrics, Live
+    }
 
     private final FGContainerSessionHolder sessionHolder_;
     // TODO have some template provider instead
@@ -182,7 +185,8 @@ public class FGContainerWebSocket implements WebSocketListener
         {
             currentPhase_ = Phase.CollectingMetrics;
 
-            fonts.stream().forEach(f -> {
+            fonts.stream().forEach(f ->
+            {
                 FGAppServer.getFGLogger().info(session_.getRemoteAddress() + " Requesting metrics for font: " + f);
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
                 FGWebContainerWrapper.StringTransmitter.writeString(stream, 1, f);
@@ -269,7 +273,7 @@ public class FGContainerWebSocket implements WebSocketListener
 
         long processingTime = System.currentTimeMillis() - startTime;
 
-        avgProcessingTime_ = (avgProcessingTime_*totalInboundMessages_ + processingTime) / (totalInboundMessages_+1);
+        avgProcessingTime_ = (avgProcessingTime_ * totalInboundMessages_ + processingTime) / (totalInboundMessages_ + 1);
         totalInboundMessages_++;
     }
 
@@ -318,7 +322,8 @@ public class FGContainerWebSocket implements WebSocketListener
         setTextToRemote(statusMessage.toString());
 
         Set<String> fonts = new HashSet<>();
-        fgSession_ = sessionHolder_.getSession(template_, session_.getRemoteAddress().getAddress(), initialFontMetrics_, fonts);
+        fgSession_ = sessionHolder_.getSession(template_, session_.getRemoteAddress().getAddress(), initialFontMetrics_, fonts,
+                (e) -> collectUnsolicitedResponse());
         fgSession_.setAccosiatedWebSocket(this);
 
         statusMessage.append("|created session");
@@ -395,11 +400,15 @@ public class FGContainerWebSocket implements WebSocketListener
         // Feed input event received from the remote endpoint to the engine
         //
 
+        System.out.println(Thread.currentThread().getName() + " BEGIN INPUT EVENT");
+
         Future<FGEvolveResultData> evolveResultFuture = container_.feedEvent(new FGEvolveInputData(e, false));
         if (evolveResultFuture != null)
         {
             collectAndSendResponse(evolveResultFuture, e instanceof FGHostStateEvent);
         }
+
+        System.out.println(Thread.currentThread().getName() + " END INPUT EVENT");
 
         //debugMessageCount_++;
     }
@@ -407,7 +416,20 @@ public class FGContainerWebSocket implements WebSocketListener
     void collectAndSendResponse(Future<FGEvolveResultData> evolveResultFuture, boolean forceRepaint)
     {
         Collection<ByteBuffer> response = container_.getResponseForClient(evolveResultFuture);
+        sendResponseImpl(response, forceRepaint);
+    }
 
+    void collectUnsolicitedResponse()
+    {
+        System.out.println(Thread.currentThread().getName() + " BEGIN UNSOLICITED");
+
+        container_.getUnsolicitedResponseForClient(response -> sendResponseImpl(response, false));
+
+        System.out.println(Thread.currentThread().getName() + " END UNSOLICITED");
+    }
+
+    private void sendResponseImpl(Collection<ByteBuffer> response, boolean forceRepaint)
+    {
         if (response.size() > 0)
         {
             //System.out.println("-DLTEMP- FGContainerWebSocket.collectAndSendResponse SENDING " + response.size() + " BUFs");

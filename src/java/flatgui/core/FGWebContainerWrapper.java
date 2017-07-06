@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -140,9 +141,14 @@ public class FGWebContainerWrapper
         return changedPathsFuture;
     }
 
+    public Collection<ByteBuffer> getUnsolicitedResponseForClient(Consumer<Collection<ByteBuffer>> responseConsumer)
+    {
+        return getResponseForClientImpl(stateTransmitter_, null, responseConsumer);
+    }
+
     public synchronized Collection<ByteBuffer> getResponseForClient(Future<FGEvolveResultData> evolveResultsFuture)
     {
-        return getResponseForClientImpl(stateTransmitter_, evolveResultsFuture);
+        return getResponseForClientImpl(stateTransmitter_, evolveResultsFuture, null);
     }
 
     public synchronized Collection<ByteBuffer> getForkedResponseForClient(Object evolveReason, Future<FGEvolveResultData> evolveResultsFuture)
@@ -152,7 +158,7 @@ public class FGWebContainerWrapper
         {
             throw new IllegalStateException("stateTransmitter is null for " + evolveReason.toString());
         }
-        return getResponseForClientImpl(stateTransmitter, evolveResultsFuture);
+        return getResponseForClientImpl(stateTransmitter, evolveResultsFuture, null);
     }
 
     public synchronized void clearForks()
@@ -171,8 +177,9 @@ public class FGWebContainerWrapper
     }
 
     private volatile int debug_ = 0;
-    public synchronized Collection<ByteBuffer> getResponseForClientImpl(
-        FGContainerStateTransmitter stateTransmitter, Future<FGEvolveResultData> evolveResultsFuture)
+    public Collection<ByteBuffer> getResponseForClientImpl(
+        FGContainerStateTransmitter stateTransmitter, Future<FGEvolveResultData> evolveResultsFuture,
+        Consumer<Collection<ByteBuffer>> unsolicitedResponseConsumer)
     {
         // TODO
         // 1. computeDataDiffsToTransmit needs to be heavily optimized
@@ -182,15 +189,34 @@ public class FGWebContainerWrapper
         {
             try
             {
-                // TODO eventually get rid of old version of collecting byte buffer data
-                Future<Collection<ByteBuffer>> responseFuture =
-                        fgContainer_.submitTask(() -> stateTransmitter.computeDataDiffsToTransmit(evolveResultsFuture));
-                Collection<ByteBuffer> r = responseFuture.get();
+//                // TODO eventually get rid of old version of collecting byte buffer data
+//                Future<Collection<ByteBuffer>> responseFuture =
+//                        fgContainer_.submitTask(() -> stateTransmitter.computeDataDiffsToTransmit(evolveResultsFuture));
+//                Collection<ByteBuffer> r = responseFuture.get();
 
                 Future<Collection<ByteBuffer>> responseFuture2 =
-                        fgContainer_.submitTask(() -> evolveResultsFuture != null
-                                ? ((FGLegacyCoreGlue)fgContainer_).getDiffsToTransmit()
-                                : ((FGLegacyCoreGlue)fgContainer_).getInitialDataToTransmit());
+                        fgContainer_.submitTask(() -> {
+                            if (evolveResultsFuture != null || unsolicitedResponseConsumer != null)
+                            {
+                                Collection<ByteBuffer> diffs = ((FGLegacyCoreGlue)fgContainer_).getDiffsToTransmit();
+                                if (unsolicitedResponseConsumer != null)
+                                {
+                                    unsolicitedResponseConsumer.accept(diffs);
+                                    return null;
+                                }
+                                return diffs;
+                            }
+                            else
+                            {
+                                return ((FGLegacyCoreGlue)fgContainer_).getInitialDataToTransmit();
+                            }
+                        });
+                if (unsolicitedResponseConsumer != null)
+                {
+                    // Do not wait for Future to finish in this case
+                    return Collections.emptyList();
+                }
+
                 Collection<ByteBuffer> r2 = responseFuture2.get();
 
 //                if (evolveResultsFuture != null)

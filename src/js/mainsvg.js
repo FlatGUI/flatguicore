@@ -30,7 +30,7 @@ textMeasurer.setAttribute('y', '0');
 textMeasurer.setAttribute('fill', '#000');
 textMeasurer.textContent = '';
 hostSVG.appendChild(textMeasurer);
-var symbolMeasurements = [];
+var symbolMeasurements = {};
 
 var defs = document.createElementNS(svgNS, 'defs');
 hostSVG.appendChild(defs);
@@ -49,7 +49,13 @@ window.onresize = handleResize;
 
 function measure1CharText(charCode)
 {
-    var l = symbolMeasurements[charCode];
+    var symbolMeasurementsF = symbolMeasurements[currentFont];
+    if (symbolMeasurementsF == null)
+    {
+        symbolMeasurementsF = [];
+        symbolMeasurements[currentFont] = symbolMeasurementsF;
+    }
+    var l = symbolMeasurementsF[charCode];
     if (l == null)
     {
         textMeasurer.textContent = String.fromCharCode(charCode);
@@ -57,7 +63,8 @@ function measure1CharText(charCode)
         var w = Math.round(textMeasurer.getComputedTextLength());
         textMeasurer.textContent = '';
         l = w+LETTER_SPACING;
-        symbolMeasurements[charCode] = l;
+        symbolMeasurementsF[charCode] = l;
+        console.log("Measured W of " + String.fromCharCode(charCode) + " = " + l);
     }
     return l;
 }

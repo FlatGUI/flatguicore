@@ -165,6 +165,11 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         container_.evolve(targetPath, evolveReason);
     }
 
+    protected void evolveImpl(Integer componentUid, Object evolveReason)
+    {
+        container_.evolve(componentUid, evolveReason);
+    }
+
     protected final ThreadPoolExecutor getEvolverExecutorService()
     {
         return evolverExecutorService_;

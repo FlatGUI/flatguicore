@@ -31,6 +31,7 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
 
     private final FGMouseEventParser mouseEventParser_;
     private final Interop interopUtil_;
+    private final boolean clonedFromTemplate_;
 
     public FGAppContainer(String containerId, Map<Object, Object> container, Interop interopUtil)
     {
@@ -46,7 +47,11 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
                              FGMouseEventParser mouseEventParser)
     {
         super(containerId, new FGClojureContainerParser(),
-                resultCollector, container != null ? assocInterop(container, interopUtil) : null, containerSource);
+                resultCollector,
+                container != null ? assocInterop(container, interopUtil) : null,
+                containerSource);
+
+        clonedFromTemplate_ = containerSource != null;
 
         interopUtil_ = interopUtil;
 
@@ -65,6 +70,18 @@ public class FGAppContainer<Interop extends IFGInteropUtil> extends AppContainer
             return m;
         });
         getInputEventParser().registerReasonClassParser(FGClipboardEvent.class, new FGClipboardEventEventParser());
+    }
+
+    @Override
+    public void initialize()
+    {
+        super.initialize();
+        
+        if (clonedFromTemplate_)
+        {
+            // :interop evolver impl in component.clj accepts IFGInteropUtil as a reason if there is no parent
+            getEvolverExecutorService().submit(() -> evolveImpl(Integer.valueOf(0), getInteropUtil()));
+        }
     }
 
     public final Interop getInteropUtil()

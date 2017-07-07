@@ -400,15 +400,11 @@ public class FGContainerWebSocket implements WebSocketListener
         // Feed input event received from the remote endpoint to the engine
         //
 
-        System.out.println(Thread.currentThread().getName() + " BEGIN INPUT EVENT");
-
         Future<FGEvolveResultData> evolveResultFuture = container_.feedEvent(new FGEvolveInputData(e, false));
         if (evolveResultFuture != null)
         {
             collectAndSendResponse(evolveResultFuture, e instanceof FGHostStateEvent);
         }
-
-        System.out.println(Thread.currentThread().getName() + " END INPUT EVENT");
 
         //debugMessageCount_++;
     }
@@ -421,11 +417,7 @@ public class FGContainerWebSocket implements WebSocketListener
 
     void collectUnsolicitedResponse()
     {
-        System.out.println(Thread.currentThread().getName() + " BEGIN UNSOLICITED");
-
         container_.getUnsolicitedResponseForClient(response -> sendResponseImpl(response, false));
-
-        System.out.println(Thread.currentThread().getName() + " END UNSOLICITED");
     }
 
     private void sendResponseImpl(Collection<ByteBuffer> response, boolean forceRepaint)

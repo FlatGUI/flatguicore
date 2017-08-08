@@ -32,22 +32,6 @@ public class HostComponent extends AbstractHostComponent
     private static final Var extractCursor_ = clojure.lang.RT.var(IFGModule.RESPONSE_FEED_NS, "extract-cursor");
     private static final Var getDataForClipboard_ = clojure.lang.RT.var(IFGModule.RESPONSE_FEED_NS, "get-data-for-clipboard");
 
-    private static final Map<Keyword, Integer> FG_TO_AWT_CUSROR_MAP;
-    static
-    {
-        Map<Keyword, Integer> m = new HashMap<>();
-
-        m.put(Keyword.intern("wait"), Cursor.WAIT_CURSOR);
-        m.put(Keyword.intern("text"), Cursor.TEXT_CURSOR);
-        m.put(Keyword.intern("ns-resize"), Cursor.N_RESIZE_CURSOR);
-        m.put(Keyword.intern("ew-resize"), Cursor.W_RESIZE_CURSOR);
-        m.put(Keyword.intern("nesw-resize"), Cursor.NE_RESIZE_CURSOR);
-        m.put(Keyword.intern("nwse-resize"), Cursor.NW_RESIZE_CURSOR);
-
-        FG_TO_AWT_CUSROR_MAP = Collections.unmodifiableMap(m);
-    }
-
-
     private IFGContainer fgContainer_;
 
     private Function<FGEvolveInputData, Future<FGEvolveResultData>> feedFn_;

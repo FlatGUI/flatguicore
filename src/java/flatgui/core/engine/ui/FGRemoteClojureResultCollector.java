@@ -41,6 +41,49 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private static final Keyword SELECTION_MARK_LINE_POS_KW = Keyword.intern("selection-mark-line-pos");
     private static final Keyword LINES_KW = Keyword.intern("lines");
 
+    public static final byte SET_CURSOR_COMMAND_CODE = 66;
+    private static final byte DEFAULT_CURSOR_CODE = 8;
+    private static final Map<String, Integer> CURSOR_NAME_TO_CODE;
+    static
+    {
+        Map<String, Integer> m = new HashMap<>();
+        m.put("alias", Integer.valueOf(0));
+        m.put("all-scroll", Integer.valueOf(1));
+        m.put("auto", Integer.valueOf(2));
+        m.put("cell", Integer.valueOf(3));
+        m.put("context-menu", Integer.valueOf(4));
+        m.put("col-resize", Integer.valueOf(5));
+        m.put("copy", Integer.valueOf(6));
+        m.put("crosshair", Integer.valueOf(7));
+        m.put("default", Integer.valueOf(DEFAULT_CURSOR_CODE));
+        m.put("e-resize", Integer.valueOf(9));
+        m.put("ew-resize", Integer.valueOf(10));
+        m.put("help", Integer.valueOf(11));
+        m.put("move", Integer.valueOf(12));
+        m.put("n-resize", Integer.valueOf(13));
+        m.put("ne-resize", Integer.valueOf(14));
+        m.put("nw-resize", Integer.valueOf(15));
+        m.put("nwse-resize", m.get("nw-resize"));
+        m.put("ns-resize", Integer.valueOf(16));
+        m.put("no-drop", Integer.valueOf(17));
+        m.put("none", Integer.valueOf(18));
+        m.put("not-allowed", Integer.valueOf(19));
+        m.put("pointer", Integer.valueOf(20));
+        m.put("progress", Integer.valueOf(21));
+        m.put("row-resize", Integer.valueOf(22));
+        m.put("s-resize", Integer.valueOf(23));
+        m.put("se-resize", Integer.valueOf(24));
+        m.put("sw-resize", Integer.valueOf(25));
+        m.put("nesw-resize", m.get("sw-resize"));
+        m.put("text", Integer.valueOf(26));
+        m.put("vertical-text", Integer.valueOf(27));
+        m.put("w-resize", Integer.valueOf(28));
+        m.put("wait", Integer.valueOf(29));
+        m.put("zoom-in", Integer.valueOf(30));
+        m.put("zoom-out", Integer.valueOf(31));
+        CURSOR_NAME_TO_CODE = Collections.unmodifiableMap(m);
+    }
+
     private final FGWebContainerWrapper.IKeyCache keyCache_;
     private final FGLegacyCoreGlue.GlueModule glueModule_;
     private Supplier<List<Object>> paintAllSequenceSupplier_;
@@ -49,6 +92,7 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     private TextSelectionModel textSelectionModel_;
     private List<String> selectedTextComponentLines_;
     private boolean textSelectionModelChanged_;
+    private boolean cursorHasChanged_;
     private Set<Integer> removedComponentUids_;
     private List<Integer> addedComponentUids_;
     private List<Integer> addedComponentParentUids_;
@@ -185,12 +229,16 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
     @Override
     public void postProcessAfterEvolveCycle(Container.IContainerAccessor containerAccessor, Container.IContainerMutator containerMutator)
     {
+        cursorHasChanged_ = hasCursorChanged();
+
         super.postProcessAfterEvolveCycle(containerAccessor, containerMutator);
 
         if (initialized_)
         {
             prepareAccumulatedDataForTrasmitting();
         }
+
+        cursorHasChanged_ = false;
     }
 
     public Collection<ByteBuffer> getInitialDataToTransmit(Container container)
@@ -358,6 +406,15 @@ public class FGRemoteClojureResultCollector extends FGClojureResultCollector
         if (textSelectionModelChanged_)
         {
              diffsToTransmit_.add(textSelectionModelTransmitter_.convertToBinary(textSelectionModelTransmitter_.getCommandCode(), textSelectionModel_));
+        }
+
+        if (cursorHasChanged_)
+        {
+            Keyword cursor = getLatestCursor();
+            Integer cursorCode = cursor != null ? CURSOR_NAME_TO_CODE.get(cursor.getName()) : null;
+            byte cursorCodeByte = cursorCode != null ? cursorCode.byteValue() : DEFAULT_CURSOR_CODE;
+            ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[]{SET_CURSOR_COMMAND_CODE, cursorCodeByte});
+            diffsToTransmit_.add(byteBuffer);
         }
 
         if (!removedComponentUids_.isEmpty() || !addedComponentUids_.isEmpty())

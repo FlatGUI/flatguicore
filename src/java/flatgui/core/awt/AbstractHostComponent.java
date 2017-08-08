@@ -10,6 +10,7 @@
 
 package flatgui.core.awt;
 
+import clojure.lang.Keyword;
 import flatgui.core.*;
 import flatgui.core.util.Tuple;
 
@@ -25,6 +26,21 @@ import java.util.function.Consumer;
 */
 public abstract class AbstractHostComponent extends Canvas
 {
+    protected static final Map<Keyword, Integer> FG_TO_AWT_CUSROR_MAP;
+    static
+    {
+        Map<Keyword, Integer> m = new HashMap<>();
+
+        m.put(Keyword.intern("wait"), Cursor.WAIT_CURSOR);
+        m.put(Keyword.intern("text"), Cursor.TEXT_CURSOR);
+        m.put(Keyword.intern("ns-resize"), Cursor.N_RESIZE_CURSOR);
+        m.put(Keyword.intern("ew-resize"), Cursor.W_RESIZE_CURSOR);
+        m.put(Keyword.intern("nesw-resize"), Cursor.NE_RESIZE_CURSOR);
+        m.put(Keyword.intern("nwse-resize"), Cursor.NW_RESIZE_CURSOR);
+
+        FG_TO_AWT_CUSROR_MAP = Collections.unmodifiableMap(m);
+    }
+
     private IFGPrimitivePainter primitivePainter_;
 
     private Image bufferImage_;

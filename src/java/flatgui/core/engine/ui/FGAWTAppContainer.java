@@ -3,6 +3,7 @@
  */
 package flatgui.core.engine.ui;
 
+import clojure.lang.Keyword;
 import clojure.lang.Var;
 import flatgui.core.FGHostStateEvent;
 import flatgui.core.awt.AbstractHostComponent;
@@ -136,7 +137,9 @@ public class FGAWTAppContainer extends FGAppContainer<FGWebInteropUtil>
         @Override
         protected void changeCursorIfNeeded() throws Exception
         {
-            // TODO
+            Keyword c = getResultCollector().getLatestCursor();
+            Integer cursor = c != null ? FG_TO_AWT_CUSROR_MAP.get(c) : null;
+            setCursor(cursor != null ? Cursor.getPredefinedCursor(cursor.intValue()) : Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         }
 
         @Override

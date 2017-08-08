@@ -45,7 +45,7 @@ public class FGWebContainerWrapper
 
     public static final byte PAINT_ALL_LIST_COMMAND_CODE = 64;
     public static final byte REPAINT_CACHED_COMMAND_CODE = 65;
-    public static final byte SET_CURSOR_COMMAND_CODE = 66;
+    //public static final byte SET_CURSOR_COMMAND_CODE = 66;
     public static final byte PUSH_TEXT_TO_CLIPBOARD = 67;
     public static final byte TEXT_SELECTION_MODEL_COMMAND_CODE = 68;
     public static final byte REMOVE_ADD_COMPONENTS_COMMAND_CODE = 69;
@@ -1061,47 +1061,47 @@ public class FGWebContainerWrapper
         private static final Var extractResourceStringPool_ = clojure.lang.RT.var(RESPONSE_FEED_NS, "extract-resource-string-pool");
         private static final Var extractClientEvolver_ = clojure.lang.RT.var(RESPONSE_FEED_NS, "extract-client-evolver");
 
-        private static final byte DEFAULT_CURSOR_CODE = 8;
-        private static final Map<String, Integer> CURSOR_NAME_TO_CODE;
-        static
-        {
-            Map<String, Integer> m = new HashMap<>();
-            m.put("alias", Integer.valueOf(0));
-            m.put("all-scroll", Integer.valueOf(1));
-            m.put("auto", Integer.valueOf(2));
-            m.put("cell", Integer.valueOf(3));
-            m.put("context-menu", Integer.valueOf(4));
-            m.put("col-resize", Integer.valueOf(5));
-            m.put("copy", Integer.valueOf(6));
-            m.put("crosshair", Integer.valueOf(7));
-            m.put("default", Integer.valueOf(DEFAULT_CURSOR_CODE));
-            m.put("e-resize", Integer.valueOf(9));
-            m.put("ew-resize", Integer.valueOf(10));
-            m.put("help", Integer.valueOf(11));
-            m.put("move", Integer.valueOf(12));
-            m.put("n-resize", Integer.valueOf(13));
-            m.put("ne-resize", Integer.valueOf(14));
-            m.put("nw-resize", Integer.valueOf(15));
-            m.put("nwse-resize", m.get("nw-resize"));
-            m.put("ns-resize", Integer.valueOf(16));
-            m.put("no-drop", Integer.valueOf(17));
-            m.put("none", Integer.valueOf(18));
-            m.put("not-allowed", Integer.valueOf(19));
-            m.put("pointer", Integer.valueOf(20));
-            m.put("progress", Integer.valueOf(21));
-            m.put("row-resize", Integer.valueOf(22));
-            m.put("s-resize", Integer.valueOf(23));
-            m.put("se-resize", Integer.valueOf(24));
-            m.put("sw-resize", Integer.valueOf(25));
-            m.put("nesw-resize", m.get("sw-resize"));
-            m.put("text", Integer.valueOf(26));
-            m.put("vertical-text", Integer.valueOf(27));
-            m.put("w-resize", Integer.valueOf(28));
-            m.put("wait", Integer.valueOf(29));
-            m.put("zoom-in", Integer.valueOf(30));
-            m.put("zoom-out", Integer.valueOf(31));
-            CURSOR_NAME_TO_CODE = Collections.unmodifiableMap(m);
-        }
+//        private static final byte DEFAULT_CURSOR_CODE = 8;
+//        private static final Map<String, Integer> CURSOR_NAME_TO_CODE;
+//        static
+//        {
+//            Map<String, Integer> m = new HashMap<>();
+//            m.put("alias", Integer.valueOf(0));
+//            m.put("all-scroll", Integer.valueOf(1));
+//            m.put("auto", Integer.valueOf(2));
+//            m.put("cell", Integer.valueOf(3));
+//            m.put("context-menu", Integer.valueOf(4));
+//            m.put("col-resize", Integer.valueOf(5));
+//            m.put("copy", Integer.valueOf(6));
+//            m.put("crosshair", Integer.valueOf(7));
+//            m.put("default", Integer.valueOf(DEFAULT_CURSOR_CODE));
+//            m.put("e-resize", Integer.valueOf(9));
+//            m.put("ew-resize", Integer.valueOf(10));
+//            m.put("help", Integer.valueOf(11));
+//            m.put("move", Integer.valueOf(12));
+//            m.put("n-resize", Integer.valueOf(13));
+//            m.put("ne-resize", Integer.valueOf(14));
+//            m.put("nw-resize", Integer.valueOf(15));
+//            m.put("nwse-resize", m.get("nw-resize"));
+//            m.put("ns-resize", Integer.valueOf(16));
+//            m.put("no-drop", Integer.valueOf(17));
+//            m.put("none", Integer.valueOf(18));
+//            m.put("not-allowed", Integer.valueOf(19));
+//            m.put("pointer", Integer.valueOf(20));
+//            m.put("progress", Integer.valueOf(21));
+//            m.put("row-resize", Integer.valueOf(22));
+//            m.put("s-resize", Integer.valueOf(23));
+//            m.put("se-resize", Integer.valueOf(24));
+//            m.put("sw-resize", Integer.valueOf(25));
+//            m.put("nesw-resize", m.get("sw-resize"));
+//            m.put("text", Integer.valueOf(26));
+//            m.put("vertical-text", Integer.valueOf(27));
+//            m.put("w-resize", Integer.valueOf(28));
+//            m.put("wait", Integer.valueOf(29));
+//            m.put("zoom-in", Integer.valueOf(30));
+//            m.put("zoom-out", Integer.valueOf(31));
+//            CURSOR_NAME_TO_CODE = Collections.unmodifiableMap(m);
+//        }
 
         private static final BinaryOperator THROWING_MERGER = (u,v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u));};
 

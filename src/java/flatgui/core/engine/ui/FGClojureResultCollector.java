@@ -28,6 +28,7 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
 {
     private static final Keyword VISIBLE_POPUP_KW = Keyword.intern("_visible-popup");
     private static final Keyword TO_CLIPBOARD_KW = Keyword.intern("->clipboard");
+    protected static final Keyword CURSOR_KW = Keyword.intern("cursor");
 
 
     //private static final String FG_NS = "flatgui.core";
@@ -40,6 +41,9 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
     private final Set<Integer> changedComponents_;
 
     private final List<List<Object>> lookVectors_;
+
+    private volatile boolean cursorHasChanged_;
+    private volatile Keyword latestCursor_;
 
     public FGClojureResultCollector(int unitSizePx)
     {
@@ -119,6 +123,15 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents((Transferable) newValue, this);
         }
+        else if (property.equals(CURSOR_KW))
+        {
+            Keyword newCursor = (Keyword) newValue;
+            if (!Objects.equals(latestCursor_, newCursor))
+            {
+                cursorHasChanged_ = true;
+                latestCursor_ = newCursor;
+            }
+        }
     }
 
     @Override
@@ -149,6 +162,7 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
         }
 
         changedComponents_.clear();
+        cursorHasChanged_ = false;
     }
 
     protected void lookVectorGenerated(Integer componentUid, List<Object> lookVec)
@@ -319,6 +333,16 @@ public class FGClojureResultCollector implements IResultCollector, ClipboardOwne
                 collectPaintAllSequence(sequence, containerAccessor, childIndex);
             }
         }
+    }
+
+    Keyword getLatestCursor()
+    {
+        return latestCursor_;
+    }
+
+    protected final boolean hasCursorChanged()
+    {
+        return cursorHasChanged_;
     }
 
     @Override

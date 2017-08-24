@@ -535,7 +535,7 @@ function decodeCommandVector(stream, byteLength)
             decodeCVLog("Set cursor");
             var cursorCode = stream[c];
             c++;
-            canvas.style.cursor = CURSORS_BY_CODE[cursorCode];
+            applyCursor(CURSORS_BY_CODE[cursorCode]);
             break;
         case PUSH_TEXT_TO_CLIPBOARD:
             decodeCVLog("Push text to clipboard");

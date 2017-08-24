@@ -548,6 +548,10 @@ function processChildCountMap()
  // Do nothing: with canvas impl, whole cache is repainted at once
 }
 
+function applyCursor(cursor)
+{
+    canvas.style.cursor = cursor;
+}
 
 //var ci = 0;
 

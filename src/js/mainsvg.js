@@ -35,6 +35,8 @@ var symbolMeasurements = {};
 var defs = document.createElementNS(svgNS, 'defs');
 hostSVG.appendChild(defs);
 
+applyCursor("default");
+
 function adjustSVGSize()
 {
     hostSVG.setAttribute('width', window.innerWidth);
@@ -880,6 +882,11 @@ function processChildCountMap()
         childCountMapReceived = true;
         constructDOMIfPossible();
     }
+}
+
+function applyCursor(cursor)
+{
+    hostSVG.style.cursor = cursor;
 }
 
 function getComponentAbsPosition(index)

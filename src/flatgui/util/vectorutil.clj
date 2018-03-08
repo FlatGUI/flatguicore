@@ -8,8 +8,27 @@
 
 (ns flatgui.util.vectorutil)
 
+(def empty-vector [])
+
 (defn firstv [v] (if (> (count v) 0) (nth v 0)))
 
 (defn secondv [v] (if (> (count v) 1) (nth v 1)))
 
-(defn take-lastv [n v] (subvec v (- (count v) n)))
+(defn take-lastv [n v]
+  (let [cnt-v (count v)]
+    (cond
+      (empty? v) nil
+      (<= n cnt-v) (subvec v (- cnt-v n))
+      :esle v)))
+
+(defn takev [n v]
+  (if v
+    (if (< n (count v)) (subvec v 0 n) v)
+    empty-vector))
+
+(defn dropv [n v]
+  (if v
+    (if (< n (count v)) (subvec v n) empty-vector)
+    empty-vector))
+
+(defn emptyv? [v] (or (nil? v) (= (count v) 0)))

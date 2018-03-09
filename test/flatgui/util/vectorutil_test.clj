@@ -49,3 +49,10 @@
   (test/is (= [] (vu/dropv 2 [1 2])))
   (test/is (= [3] (vu/dropv 2 [1 2 3])))
   (test/is (= [3 4] (vu/dropv 2 [1 2 3 4]))))
+
+(test/deftest emptyv?-test
+  (test/is (true? (vu/emptyv? nil)))
+  (test/is (true? (vu/emptyv? [])))
+  (test/is (false? (vu/emptyv? [1])))
+  (test/is (false? (vu/emptyv? [1 2])))
+  (test/is (false? (vu/emptyv? [1 2 3]))))

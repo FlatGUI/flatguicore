@@ -26,6 +26,13 @@
   (test/is (= 2 (vu/secondv [1 2 3])))
   (test/is (= 2 (vu/secondv [1 2 3 4]))))
 
+(test/deftest lastv-test
+  (test/is (nil? (vu/lastv nil)))
+  (test/is (nil? (vu/lastv [])))
+  (test/is (= 1 (vu/lastv [1])))
+  (test/is (= 2 (vu/lastv [1 2])))
+  (test/is (= 3 (vu/lastv [1 2 3]))))
+
 (test/deftest take-lastv-test
   (test/is (nil? (vu/take-lastv 2 nil)))
   (test/is (nil? (vu/take-lastv 2 [])))

@@ -14,6 +14,10 @@
 
 (defn secondv [v] (if (> (count v) 1) (nth v 1)))
 
+(defn lastv [v]
+  (let [countv (count v)]
+    (if (> countv 0) (nth v (dec countv)))))
+
 (defn take-lastv [n v]
   (let [cnt-v (count v)]
     (cond

@@ -13,6 +13,7 @@ import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import flatgui.core.IFGEvolveConsumer;
+import flatgui.core.IFGTemplate;
 import flatgui.core.awt.FGIncomingMouseWheelEvent;
 import flatgui.util.CompactList;
 import flatgui.util.GrowControlArrayList;
@@ -195,6 +196,9 @@ public class Container
         {synchronized (Container.this) {values_.set(nodeIndex, newValue);}};
 
         consumerNotifier_  = consumerNotifier;
+
+        int containerSessionIdNodeIndex = getRootComponent().getPropertyIndex(IFGTemplate.CONTAINER_SESSION_ID_KW);
+        containerMutator_.setValue(containerSessionIdNodeIndex, containerId);
     }
 
     public Integer addComponent(Integer parentComponentUid, List<Object> componentPath, ComponentAccessor component)
@@ -222,7 +226,7 @@ public class Container
         Integer componentUid = getComponentUid(targetPath);
         if (componentUid == null)
         {
-            throw new IllegalArgumentException("Component path does not exist: " + targetPath);
+            throw new IllegalArgumentException(containerId_ + " Component path does not exist: " + targetPath);
         }
         evolve(componentUid, evolveReason);
     }

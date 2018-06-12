@@ -3,6 +3,7 @@
  */
 package flatgui.core.engine.remote;
 
+import clojure.lang.Associative;
 import clojure.lang.Var;
 import flatgui.core.FGTemplate;
 import flatgui.core.FGWebContainerWrapper;
@@ -32,7 +33,10 @@ public class FGLegacyGlueTemplate extends FGTemplate
 
         FGLegacyCoreGlue.GlueModule glueModule = new FGLegacyCoreGlue.GlueModule(dummySessionId);
         Var containerVar = clojure.lang.RT.var(containerNamespace, containerVarName);
-        Map<Object, Object> container = (Map<Object, Object>) containerVar.get();
+
+        // Ensure CONTAINER_SESSION_ID_KW is present there as a placeholder for future container id assignment
+        Map<Object, Object> container = (Map<Object, Object>) ((Associative) containerVar.get()).assoc(CONTAINER_SESSION_ID_KW, null);
+
         FGWebContainerWrapper.KeyCache keyCache = FGWebContainerWrapper.KeyCache.INSTANCE;
         Set<String> fontsWithMetricsAlreadyReceived = new HashSet<>();
 

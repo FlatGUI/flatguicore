@@ -116,17 +116,47 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     public void evolve(List<Object> targetPath, Object evolveReason)
     {
-        evolverExecutorService_.submit(() -> container_.evolve(targetPath, evolveReason));
+        evolverExecutorService_.submit(() -> {
+            try
+            {
+                container_.evolve(targetPath, evolveReason);
+            }
+            catch (Throwable ex)
+            {
+                ex.printStackTrace();
+                throw ex;
+            }
+        });
     }
 
     public void evolve(Integer componentUid, Object evolveReason)
     {
-        evolverExecutorService_.submit(() -> container_.evolve(componentUid, evolveReason));
+        evolverExecutorService_.submit(() -> {
+            try
+            {
+                container_.evolve(componentUid, evolveReason);
+            }
+            catch (Throwable ex)
+            {
+                ex.printStackTrace();
+                throw ex;
+            }
+        });
     }
 
     public Future<?> evolve(Object evolveReason)
     {
-        return evolverExecutorService_.submit(() -> evolveImpl(evolveReason));
+        return evolverExecutorService_.submit(() -> {
+            try
+            {
+                evolveImpl(evolveReason);
+            }
+            catch (Throwable ex)
+            {
+                ex.printStackTrace();
+                throw ex;
+            }
+        });
     }
 
     public Object getProperty(List<Object> path, Object property) throws ExecutionException, InterruptedException

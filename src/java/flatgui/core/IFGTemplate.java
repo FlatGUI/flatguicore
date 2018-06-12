@@ -10,11 +10,15 @@
 
 package flatgui.core;
 
+import clojure.lang.Keyword;
+
 /**
  * @author Denis Lebedev
  */
 public interface IFGTemplate
 {
+    Keyword CONTAINER_SESSION_ID_KW = Keyword.intern("container-session-id");
+
     public String getContainerNamespace();
 
     public String getContainerVarName();

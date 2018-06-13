@@ -296,7 +296,7 @@ public class Container
                         }
                         catch (Exception ex)
                         {
-                            logError(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " while initializing ");
+                            logError(containerId_ + " Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " while initializing ");
                             ex.printStackTrace();
                             throw ex;
                         }
@@ -312,7 +312,7 @@ public class Container
                     }
                     catch (Exception ex)
                     {
-                        logError(" Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " for reason: " + triggeringReason);
+                        logError(containerId_ + " Error evolving " + node.getNodePath() + " " + node.getPropertyId() + " for reason: " + triggeringReason);
                         ex.printStackTrace();
                         throw ex;
                     }

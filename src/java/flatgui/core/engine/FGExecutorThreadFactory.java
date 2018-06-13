@@ -31,4 +31,9 @@ public class FGExecutorThreadFactory implements ThreadFactory
             t.setPriority(Thread.NORM_PRIORITY);
         return t;
     }
+
+    public boolean isCurrentThreadCreatedByThisFactory()
+    {
+        return Thread.currentThread().getThreadGroup() == group_;
+    }
 }

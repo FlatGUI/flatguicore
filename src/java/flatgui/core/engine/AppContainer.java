@@ -24,6 +24,8 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
     private Container container_;
 
     private final InputEventParser reasonParser_;
+    private final FGExecutorThreadFactory evolverThreadFactory_;
+    private final FGExecutorThreadFactory notifierThreadFactory_;
     private ThreadPoolExecutor evolverExecutorService_;
     private ThreadPoolExecutor notifierExecutorService_;
 
@@ -39,6 +41,9 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         containerSource_ = containerSource;
 
         reasonParser_ = new InputEventParser();
+
+        evolverThreadFactory_ = new FGExecutorThreadFactory("FlatGUI Evolver ", containerId_);
+        notifierThreadFactory_ = new FGExecutorThreadFactory("FlatGUI Ev.Notifier ", containerId_);
     }
 
     public final String getContainerId()
@@ -51,11 +56,11 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
         evolverExecutorService_ = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
-                new FGExecutorThreadFactory("FlatGUI Evolver ", containerId_));
+                evolverThreadFactory_);
         notifierExecutorService_ = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
-                new FGExecutorThreadFactory("FlatGUI Ev.Notifier ", containerId_));
+                notifierThreadFactory_);
         Future<Container> containerFuture =
                 evolverExecutorService_.submit(() -> {
                     if (containerSource_ != null)
@@ -161,7 +166,16 @@ public class AppContainer<ContainerParser extends Container.IContainerParser, Re
 
     public Object getProperty(List<Object> path, Object property) throws ExecutionException, InterruptedException
     {
-        return getContainer().getPropertyValue(path, property);
+        if (!evolverThreadFactory_.isCurrentThreadCreatedByThisFactory() &&
+                !notifierThreadFactory_.isCurrentThreadCreatedByThisFactory())
+        {
+            Object value = evolverExecutorService_.submit(() -> getContainer().getPropertyValue(path, property)).get();
+            return value;
+        }
+        else
+        {
+            return getContainer().getPropertyValue(path, property);
+        }
     }
 
     protected void evolveImpl(Object evolveReason)

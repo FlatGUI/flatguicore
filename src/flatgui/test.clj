@@ -72,8 +72,9 @@
       c)
     (FGTestAppContainer/createAndInit nil c-var)))
 
-(defn init-container [c]
-  (FGTestAppContainer/init nil c))
+(defn init-container
+  ([c] (FGTestAppContainer/init nil c))
+  ([c interop] (FGTestAppContainer/init nil c interop)))
 
 (defn get-property [container target property] (.getProperty container (path target) property))
 
@@ -90,7 +91,11 @@
                              wait-interval-millis
                              (.getProperty container (path target) property)))
                          v))]
-    (test/is (pred actual-value) (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value))))
+    (test/is
+      (pred actual-value)
+      (let [error-msg (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value)
+            _ (println error-msg)]
+        error-msg))))
 
 (defn wait-for-property [container target property expected-value]
   (wait-for-property-pred container target property (fn [v] (= expected-value v))))

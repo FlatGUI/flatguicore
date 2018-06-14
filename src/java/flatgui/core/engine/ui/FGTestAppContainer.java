@@ -10,28 +10,33 @@
 package flatgui.core.engine.ui;
 
 import clojure.lang.Var;
+import flatgui.core.IFGInteropUtil;
 import flatgui.core.engine.ClojureContainerParser;
 import flatgui.core.websocket.FGWebInteropUtil;
 
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
  * @author Denis Lebedev
  */
-public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
+public class FGTestAppContainer<IO extends IFGInteropUtil> extends FGAppContainer<IO>
 {
     public FGTestAppContainer(String containerId, Map<Object, Object> container)
     {
-        this(containerId != null ? containerId : container.get(ClojureContainerParser.getIdKey()).toString(), container, DFLT_UNIT_SIZE_PX);
+        super(containerId != null ? containerId : container.get(ClojureContainerParser.getIdKey()).toString(),
+                container, null, (IO) new FGWebInteropUtil(DFLT_UNIT_SIZE_PX),
+                new FGClojureResultCollector(DFLT_UNIT_SIZE_PX), DFLT_UNIT_SIZE_PX, new FGTestMouseEventParser(DFLT_UNIT_SIZE_PX));
     }
 
-    public FGTestAppContainer(String containerId, Map<Object, Object> container, int unitSizePx)
+    public FGTestAppContainer(String containerId, Map<Object, Object> container, IO interop)
     {
-        super(containerId, container, null, new FGWebInteropUtil(unitSizePx),
-                new FGClojureResultCollector(unitSizePx), unitSizePx, new FGTestMouseEventParser(unitSizePx));
+        super(containerId != null ? containerId : container.get(ClojureContainerParser.getIdKey()).toString(),
+                container, null, interop,
+                new FGClojureResultCollector(DFLT_UNIT_SIZE_PX), DFLT_UNIT_SIZE_PX, new FGTestMouseEventParser(DFLT_UNIT_SIZE_PX));
     }
 
     public static FGTestAppContainer loadSourceCreateAndInit(String classPathResource, String containerNs, String containerVarName)
@@ -70,6 +75,14 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
         return appContainer;
     }
 
+    public static FGTestAppContainer init(String containerId, Map<Object, Object> container, IFGInteropUtil interop)
+    {
+        FGTestAppContainer appContainer = new FGTestAppContainer(containerId, container, interop);
+        appContainer.initialize();
+
+        return appContainer;
+    }
+
     @Override
     public Future<?> evolve(Object evolveReason)
     {
@@ -99,11 +112,16 @@ public class FGTestAppContainer extends FGAppContainer<FGWebInteropUtil>
 
     private void evolveCons(List<Object> targetPath, Collection<Object> evolveReason)
     {
-        getEvolverExecutorService().submit(() -> evolveReason.forEach(r -> getContainer().evolve(targetPath, r)));
+        evolveReason.forEach(r -> getEvolverExecutorService().submit(() -> evolve(targetPath, r)));
     }
 
     private void evolveCons(Collection<Object> evolveReason)
     {
         evolveReason.forEach(r -> evolve(r));
+    }
+
+    public <T> Future<T> submitTask(Callable<T> callable)
+    {
+        return getEvolverExecutorService().submit(callable);
     }
 }

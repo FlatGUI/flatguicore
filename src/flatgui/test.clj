@@ -78,24 +78,28 @@
 
 (defn get-property [container target property] (.getProperty container (path target) property))
 
-(defn wait-for-property-pred [container target property pred]
-  (let [actual-value (loop [a 0
-                            interval 5
-                            v (.getProperty container (path target) property)]
-                       (if (and (not (pred v)) (< a wait-attempts))
-                         (do
-                           (fg/log-debug (str "Waiting " interval " millis, attempt " (inc a) " of " wait-attempts))
-                           (Thread/sleep interval)
-                           (recur
-                             (inc a)
-                             wait-interval-millis
-                             (.getProperty container (path target) property)))
-                         v))]
-    (test/is
-      (pred actual-value)
-      (let [error-msg (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") actual-value)
-            _ (println error-msg)]
-        error-msg))))
+(defn wait-for-property-pred
+  ([container target property pred val->str-fn]
+   (let [actual-value (loop [a 0
+                             interval 5
+                             v (.getProperty container (path target) property)]
+                        (if (and (not (pred v)) (< a wait-attempts))
+                          (do
+                            (fg/log-debug (str "Waiting " interval " millis, attempt " (inc a) " of " wait-attempts " for " target " " property " while improper value is " (val->str-fn v)))
+                            (Thread/sleep interval)
+                            (recur
+                              (inc a)
+                              wait-interval-millis
+                              (.getProperty container (path target) property)))
+                          v))
+         _ (fg/log-debug (str "Value after timeout is " (val->str-fn actual-value)))
+         ;; Workaround for IntelliJ/Cusrive error reporting bug https://github.com/cursive-ide/cursive/issues/1824
+         create-error-message (fn [] (str "Failed for actual value was " (if (coll? actual-value) (str "[coll count=" (count actual-value) "] ") "") (val->str-fn actual-value)))
+         _ (if (not (pred actual-value)) (println (create-error-message)))]
+     (test/is
+       (pred actual-value)
+       (create-error-message))))
+  ([container target property pred] (wait-for-property-pred container target property pred str)))
 
 (defn wait-for-property [container target property expected-value]
   (wait-for-property-pred container target property (fn [v] (= expected-value v))))
@@ -191,17 +195,17 @@
       (if (< i cnt)
         (recur
           (inc i)
-          (vec (concat e (create-key-type-events key-code char-code))))
+          (into e (create-key-type-events key-code char-code)))
         e))))
 
 (defn create-string-type-events [str]
   (let [len (.length str)]
     (loop [i 0
-           events nil]
+           events []]
       (if (< i len)
         (recur
           (inc i)
-          (concat events (create-key-type-events (int (.charAt str i)) (.charAt str i))))
+          (into events (create-key-type-events (int (.charAt str i)) (.charAt str i))))
         events))))
 
 (defn type-string
@@ -231,8 +235,16 @@
                               (fn [v] (let [sc->id (:screen-coord->cell-id v)]
                                         (= (set coords) (set (map (fn [[k _cid]] k) sc->id)))))))
 
+;(defn wait-table-cell-property
+;  ([container table-path cell-subpath coord property pred val->str-fn]
+;   (let [cid (wait-table-cell-id container table-path coord)]
+;     (wait-for-property-pred container (path (vec (concat (conj table-path cid) cell-subpath))) property pred val->str-fn)))
+;  ([container table-path cell-subpath coord property pred] (wait-table-cell-property container table-path cell-subpath coord property pred str))
+;  ([container table-path coord property pred] (wait-table-cell-property container table-path coord property pred str)))
+
 (defn wait-table-cell-property
-  ([container table-path cell-subpath coord property pred]
+  ([container table-path cell-subpath coord property pred val->str-fn]
    (let [cid (wait-table-cell-id container table-path coord)]
-     (wait-for-property-pred container (path (vec (concat (conj table-path cid) cell-subpath))) property pred)))
-  ([container table-path coord property pred] (wait-table-cell-property container table-path [] coord property pred)))
+     (wait-for-property-pred container (path (vec (concat (conj table-path cid) cell-subpath))) property pred val->str-fn)))
+  ;([container table-path cell-subpath coord property pred] (wait-table-cell-property container table-path cell-subpath coord property pred str))
+  ([container table-path coord property pred] (wait-table-cell-property container table-path [] coord property pred str)))

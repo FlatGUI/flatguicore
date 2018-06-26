@@ -6,7 +6,7 @@
 ; the terms of this license.
 ; You must not remove this notice, or any other, from this software.
 
-(def flatgui-version "0.2.2-SNAPSHOT")
+(def flatgui-version "0.2.3-SNAPSHOT")
 
 (def jetty-version "9.2.7.v20150116")
 
@@ -28,6 +28,8 @@
                         "clojars" {:url "https://clojars.org/repo/"
                                    :username :env/clojars_user
                                    :password :env/clojars_password}}
+  :source-paths ["src/clojure"]
+  :test-paths ["test/clojure" "test/java"]
   :java-source-paths ["src/java" "test/java"]
   :omit-source true
   :aot :all

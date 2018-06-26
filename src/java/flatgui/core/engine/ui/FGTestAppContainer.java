@@ -112,7 +112,7 @@ public class FGTestAppContainer<IO extends IFGInteropUtil> extends FGAppContaine
 
     private void evolveCons(List<Object> targetPath, Collection<Object> evolveReason)
     {
-        evolveReason.forEach(r -> getEvolverExecutorService().submit(() -> evolve(targetPath, r)));
+        evolveReason.forEach(r -> getEvolverExecutorService().submit(() -> getContainer().evolve(targetPath, r)));
     }
 
     private void evolveCons(Collection<Object> evolveReason)
